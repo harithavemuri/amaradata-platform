@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Sign In — AmaraData Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Inter',sans-serif;background:#0f172a;min-height:100vh;display:flex;align-items:center;justify-content:center;}
+    .card{background:#fff;border-radius:14px;padding:40px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.4);}
+    .logo{text-align:center;margin-bottom:28px;}
+    .logo-title{font-size:24px;font-weight:700;color:#0f172a;letter-spacing:.3px;}
+    .logo-sub{font-size:13px;color:#64748b;margin-top:4px;}
+    h2{font-size:16px;font-weight:600;color:#0f172a;margin-bottom:20px;}
+    label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:5px;}
+    input{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;color:#111827;font-family:inherit;margin-bottom:14px;}
+    input:focus{outline:none;border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.15);}
+    button{width:100%;padding:12px;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;font-family:inherit;}
+    button:hover{background:#4f46e5;}
+    .err{color:#dc2626;font-size:13px;margin-top:10px;text-align:center;}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <div class="logo-title">AmaraData</div>
+      <div class="logo-sub">Platform Console</div>
+    </div>
+    <h2>Staff Sign In</h2>
+    <label>Email</label>
+    <input type="email" id="email" placeholder="you@amaradata.com" autocomplete="email">
+    <label>Password</label>
+    <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+    <button onclick="doLogin()">Sign In</button>
+    <div class="err" id="err"></div>
+  </div>
+
+  <script src="/js/platform.js"></script>
+  <script>
+    if (window.__amrd.isLoggedIn()) location.href = '/dashboard.html';
+
+    async function doLogin() {
+        const email    = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        const errEl    = document.getElementById('err');
+        errEl.textContent = '';
+        try {
+            await window.__amrd.login(email, password);
+            location.href = '/dashboard.html';
+        } catch (e) {
+            errEl.textContent = e.message;
+        }
+    }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  </script>
+</body>
+</html>

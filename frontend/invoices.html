@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Invoices — AmaraData Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="/js/platform.js"></script>
+</head>
+<body>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const root = window.__amrd.renderSidebar('Invoices');
+        const fmt  = v => '₹' + Number(v).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+
+        async function load(filter = '') {
+            const url = filter ? `/api/invoices?status=${filter}` : '/api/invoices';
+            const r = await window.__amrd.apiFetch(url);
+            const invoices = r?.data || [];
+
+            root.innerHTML = `
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;align-items:center">
+                    ${['','draft','sent','paid','overdue'].map(s =>
+                        `<button class="amrd-btn amrd-btn-${filter===s?'primary':'ghost'} amrd-btn-sm" onclick="loadFilter('${s}')">
+                            ${s||'All'}
+                         </button>`).join('')}
+                    <div style="flex:1"></div>
+                    <button class="amrd-btn amrd-btn-primary" onclick="openForm()">+ New Invoice</button>
+                </div>
+                <div class="amrd-card" style="padding:0">
+                    <table class="amrd-table">
+                        <thead><tr><th>Invoice #</th><th>Tenant</th><th>Period</th><th>Total</th><th>Due</th><th>Status</th><th></th></tr></thead>
+                        <tbody>
+                            ${invoices.map(i => `
+                            <tr>
+                                <td><strong>${i.invoice_number}</strong></td>
+                                <td>${i.tenant_name}</td>
+                                <td>${i.period_year ? `${i.period_year}-${String(i.period_month).padStart(2,'0')}` : '—'}</td>
+                                <td>${fmt(i.total_amount)}</td>
+                                <td>${i.due_date?.slice(0,10) || '—'}</td>
+                                <td><span class="amrd-badge amrd-badge-${i.status}">${i.status}</span></td>
+                                <td style="display:flex;gap:6px">
+                                    ${i.status === 'draft' ? `<button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="setStatus(${i.id},'sent')">Send</button>` : ''}
+                                    ${i.status === 'sent'  ? `<button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="setStatus(${i.id},'paid')">Mark Paid</button>` : ''}
+                                </td>
+                            </tr>`).join('') || '<tr><td colspan="7" style="color:#94a3b8;text-align:center;padding:24px">No invoices</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+                <div id="form-slot"></div>`;
+        }
+
+        async function openForm() {
+            const tenantsR = await window.__amrd.apiFetch('/api/tenants');
+            const tenants  = tenantsR?.data || [];
+            const today    = new Date().toISOString().slice(0,10);
+            const due      = new Date(Date.now() + 15*86400000).toISOString().slice(0,10);
+            const slot     = document.getElementById('form-slot');
+            slot.innerHTML = `
+                <div class="amrd-card">
+                    <h3>New Invoice</h3>
+                    <div class="amrd-form-row">
+                        <div><label>Tenant *</label>
+                            <select id="f-tenant">
+                                <option value="">-- Select --</option>
+                                ${tenants.map(t=>`<option value="${t.id}">${t.name}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div><label>Billing Period</label>
+                            <input id="f-period" placeholder="YYYY-MM (optional)">
+                        </div>
+                    </div>
+                    <div class="amrd-form-row">
+                        <div><label>Issue Date *</label><input id="f-issue" type="date" value="${today}"></div>
+                        <div><label>Due Date *</label><input id="f-due" type="date" value="${due}"></div>
+                    </div>
+                    <div id="lines-wrap">
+                        <h4 style="font-size:13px;margin:16px 0 8px">Line Items</h4>
+                        <div id="lines"></div>
+                        <button class="amrd-btn amrd-btn-ghost amrd-btn-sm" style="margin-top:8px" onclick="addLine()">+ Add Line</button>
+                    </div>
+                    <div class="amrd-form-row full" style="margin-top:14px"><div><label>Notes</label><textarea id="f-notes" rows="2"></textarea></div></div>
+                    <div style="margin-top:16px;display:flex;gap:10px">
+                        <button class="amrd-btn amrd-btn-primary" onclick="saveInvoice()">Create Invoice</button>
+                        <button class="amrd-btn amrd-btn-ghost" onclick="document.getElementById('form-slot').innerHTML=''">Cancel</button>
+                    </div>
+                    <div id="inv-err" style="color:#dc2626;font-size:13px;margin-top:8px"></div>
+                </div>`;
+            addLine();
+        }
+
+        let lineCount = 0;
+        function addLine() {
+            const n = lineCount++;
+            const wrap = document.getElementById('lines');
+            const div = document.createElement('div');
+            div.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:end';
+            div.innerHTML = `
+                <div><label>Description</label><input id="ld-${n}" placeholder="e.g. Sales commission (2 units)"></div>
+                <div><label>Type</label><select id="lt-${n}">
+                    <option value="sales_pct">Sales %</option>
+                    <option value="rental_pct">Rental %</option>
+                    <option value="hourly">Hourly</option>
+                    <option value="milestone">Milestone</option>
+                    <option value="fixed">Fixed</option>
+                </select></div>
+                <div><label>Qty</label><input id="lq-${n}" type="number" value="1" min="0" step="0.01"></div>
+                <div><label>Unit Price</label><input id="lp-${n}" type="number" value="0" min="0" step="0.01" oninput="calcLine(${n})"></div>
+                <div><button class="amrd-btn amrd-btn-ghost amrd-btn-sm" style="margin-top:18px" onclick="this.closest('div').remove()">✕</button></div>`;
+            wrap.appendChild(div);
+        }
+
+        function calcLine(n) {
+            const q = parseFloat(document.getElementById('lq-'+n)?.value||0);
+            const p = parseFloat(document.getElementById('lp-'+n)?.value||0);
+        }
+
+        async function saveInvoice() {
+            const lines = [];
+            document.getElementById('lines').querySelectorAll('input[id^="ld-"]').forEach(el => {
+                const n = el.id.split('-')[1];
+                const qty = parseFloat(document.getElementById('lq-'+n)?.value||1);
+                const up  = parseFloat(document.getElementById('lp-'+n)?.value||0);
+                lines.push({
+                    description: el.value,
+                    billing_type: document.getElementById('lt-'+n)?.value,
+                    quantity: qty, unit_price: up, amount: +(qty*up).toFixed(2),
+                });
+            });
+            const period = document.getElementById('f-period').value;
+            const [py, pm] = period ? period.split('-') : [null, null];
+            try {
+                await window.__amrd.apiFetch('/api/invoices', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        tenant_id:    document.getElementById('f-tenant').value,
+                        period_year:  py ? parseInt(py) : null,
+                        period_month: pm ? parseInt(pm) : null,
+                        issue_date:   document.getElementById('f-issue').value,
+                        due_date:     document.getElementById('f-due').value,
+                        notes:        document.getElementById('f-notes').value,
+                        line_items:   lines,
+                    }),
+                });
+                await load();
+            } catch (e) {
+                document.getElementById('inv-err').textContent = e.message;
+            }
+        }
+
+        async function setStatus(id, status) {
+            await window.__amrd.apiFetch(`/api/invoices/${id}/status`, {
+                method: 'PATCH', body: JSON.stringify({ status }),
+            });
+            await load(_currentFilter);
+        }
+
+        let _currentFilter = '';
+        window.loadFilter = (f) => { _currentFilter = f; load(f); };
+        window.openForm   = openForm;
+        window.addLine    = addLine;
+        window.calcLine   = calcLine;
+        window.saveInvoice = saveInvoice;
+        window.setStatus  = setStatus;
+        await load();
+    });
+  </script>
+</body>
+</html>

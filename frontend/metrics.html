@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Billing Metrics — AmaraData Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="/js/platform.js"></script>
+</head>
+<body>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const root = window.__amrd.renderSidebar('Billing Metrics');
+        const fmt  = v => '₹' + Number(v).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+        const now  = new Date();
+
+        async function load(year, month) {
+            const url = `/api/metrics?year=${year}&month=${month}`;
+            const [metricsR, tenantsR] = await Promise.all([
+                window.__amrd.apiFetch(url),
+                window.__amrd.apiFetch('/api/tenants'),
+            ]);
+            const metrics = metricsR?.data  || [];
+            const tenants = tenantsR?.data  || [];
+
+            root.innerHTML = `
+                <div style="display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap">
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#374151">Year</label>
+                        <input id="f-year" type="number" value="${year}" style="width:90px;margin-left:8px">
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#374151">Month</label>
+                        <input id="f-month" type="number" min="1" max="12" value="${month}" style="width:70px;margin-left:8px">
+                    </div>
+                    <button class="amrd-btn amrd-btn-primary amrd-btn-sm" onclick="reload()">Load</button>
+                    <div style="flex:1"></div>
+                    <button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="openManual(${JSON.stringify(tenants)})">+ Manual Entry</button>
+                </div>
+                <div class="amrd-card" style="padding:0">
+                    <table class="amrd-table">
+                        <thead><tr><th>Tenant</th><th>Sales (count)</th><th>Sales Value</th><th>Rental Units</th><th>Rental Income</th><th>Active Props</th><th>Collected</th></tr></thead>
+                        <tbody>
+                            ${tenants.map(t => {
+                                const m = metrics.find(x => x.tenant_id === t.id);
+                                if (!m) return `<tr><td>${t.name}</td><td colspan="6" style="color:#94a3b8;font-style:italic">No data for this period</td></tr>`;
+                                return `<tr>
+                                    <td><strong>${t.name}</strong></td>
+                                    <td>${m.sales_count}</td>
+                                    <td>${fmt(m.sales_value)}</td>
+                                    <td>${m.rental_units}</td>
+                                    <td>${fmt(m.rental_income)}</td>
+                                    <td>${m.active_properties}</td>
+                                    <td style="color:#94a3b8;font-size:11px">${m.collected_at?.slice(0,10)}</td>
+                                </tr>`;
+                            }).join('') || '<tr><td colspan="7" style="color:#94a3b8;text-align:center;padding:24px">No tenants configured</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+                <div id="form-slot"></div>`;
+        }
+
+        function openManual(tenants) {
+            const now  = new Date();
+            const slot = document.getElementById('form-slot');
+            slot.innerHTML = `
+                <div class="amrd-card">
+                    <h3>Manual Metric Entry</h3>
+                    <div class="amrd-form-row">
+                        <div><label>Tenant *</label>
+                            <select id="f-tenant">
+                                <option value="">-- Select --</option>
+                                ${tenants.map(t=>`<option value="${t.id}">${t.name}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div><label>Year *</label><input id="f-year2" type="number" value="${now.getFullYear()}"></div>
+                    </div>
+                    <div class="amrd-form-row">
+                        <div><label>Month *</label><input id="f-month2" type="number" min="1" max="12" value="${now.getMonth()||12}"></div>
+                        <div><label>Active Properties</label><input id="f-ap" type="number" value="0"></div>
+                    </div>
+                    <div class="amrd-form-row">
+                        <div><label>Sales Count</label><input id="f-sc" type="number" value="0"></div>
+                        <div><label>Sales Value (₹)</label><input id="f-sv" type="number" value="0"></div>
+                    </div>
+                    <div class="amrd-form-row">
+                        <div><label>Rental Units</label><input id="f-ru" type="number" value="0"></div>
+                        <div><label>Rental Income (₹)</label><input id="f-ri" type="number" value="0"></div>
+                    </div>
+                    <div style="margin-top:16px;display:flex;gap:10px">
+                        <button class="amrd-btn amrd-btn-primary" onclick="saveMetric()">Save</button>
+                        <button class="amrd-btn amrd-btn-ghost" onclick="document.getElementById('form-slot').innerHTML=''">Cancel</button>
+                    </div>
+                    <div id="save-err" style="color:#dc2626;font-size:13px;margin-top:8px"></div>
+                </div>`;
+        }
+
+        async function saveMetric() {
+            try {
+                await window.__amrd.apiFetch('/api/metrics', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        tenant_id:        document.getElementById('f-tenant').value,
+                        period_year:      parseInt(document.getElementById('f-year2').value),
+                        period_month:     parseInt(document.getElementById('f-month2').value),
+                        sales_count:      parseInt(document.getElementById('f-sc').value)||0,
+                        sales_value:      parseFloat(document.getElementById('f-sv').value)||0,
+                        rental_units:     parseInt(document.getElementById('f-ru').value)||0,
+                        rental_income:    parseFloat(document.getElementById('f-ri').value)||0,
+                        active_properties: parseInt(document.getElementById('f-ap').value)||0,
+                    }),
+                });
+                await reload();
+            } catch (e) {
+                document.getElementById('save-err').textContent = e.message;
+            }
+        }
+
+        function reload() {
+            const y = parseInt(document.getElementById('f-year')?.value  || now.getFullYear());
+            const m = parseInt(document.getElementById('f-month')?.value || now.getMonth() + 1);
+            load(y, m);
+        }
+
+        window.reload     = reload;
+        window.openManual = openManual;
+        window.saveMetric = saveMetric;
+
+        await load(now.getFullYear(), now.getMonth() + 1);
+    });
+  </script>
+</body>
+</html>

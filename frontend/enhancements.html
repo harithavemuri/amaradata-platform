@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Enhancements — AmaraData Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="/js/platform.js"></script>
+</head>
+<body>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const root = window.__amrd.renderSidebar('Enhancements');
+
+        async function load(filter = '') {
+            const url = filter ? `/api/enhancements?status=${filter}` : '/api/enhancements';
+            const [enhR, tenantsR] = await Promise.all([
+                window.__amrd.apiFetch(url),
+                window.__amrd.apiFetch('/api/tenants'),
+            ]);
+            const enhancements = enhR?.data    || [];
+            const tenants      = tenantsR?.data || [];
+
+            root.innerHTML = `
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;align-items:center">
+                    ${['','scoped','in_progress','delivered','billed'].map(s =>
+                        `<button class="amrd-btn amrd-btn-${filter===s?'primary':'ghost'} amrd-btn-sm" onclick="loadFilter('${s}')">
+                            ${s||'All'}
+                         </button>`).join('')}
+                    <div style="flex:1"></div>
+                    <button class="amrd-btn amrd-btn-primary" onclick="openForm(null, ${JSON.stringify(tenants)})">+ Log Work</button>
+                </div>
+                <div class="amrd-card" style="padding:0">
+                    <table class="amrd-table">
+                        <thead><tr><th>Title</th><th>Tenant</th><th>Type</th><th>Hours</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+                        <tbody>
+                            ${enhancements.map(e => {
+                                const amt = e.billing_type === 'hourly'
+                                    ? (e.actual_hours || e.estimated_hours || 0) * (e.hourly_rate || 0)
+                                    : (e.milestone_amount || 0);
+                                return `<tr>
+                                    <td><strong>${e.title}</strong>${e.description ? `<br><span style="color:#94a3b8;font-size:11px">${e.description.slice(0,60)}</span>` : ''}</td>
+                                    <td>${e.tenant_name}</td>
+                                    <td>${e.billing_type}</td>
+                                    <td>${e.actual_hours ?? e.estimated_hours ?? '—'}</td>
+                                    <td>${amt ? '₹' + Number(amt).toLocaleString('en-IN') : '—'}</td>
+                                    <td><span class="amrd-badge amrd-badge-${e.status}">${e.status}</span></td>
+                                    <td><button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick='openForm(${JSON.stringify(e)}, ${JSON.stringify(tenants)})'>Edit</button></td>
+                                </tr>`;
+                            }).join('') || '<tr><td colspan="7" style="color:#94a3b8;text-align:center;padding:24px">No enhancements logged</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+                <div id="form-slot"></div>`;
+        }
+
+        function openForm(e, tenants) {
+            const slot = document.getElementById('form-slot');
+            slot.innerHTML = `
+                <div class="amrd-card">
+                    <h3>${e ? 'Edit Enhancement' : 'Log Enhancement'}</h3>
+                    <div class="amrd-form-row">
+                        <div><label>Tenant *</label>
+                            <select id="f-tenant">
+                                <option value="">-- Select --</option>
+                                ${tenants.map(t=>`<option value="${t.id}"${e?.tenant_id==t.id?' selected':''}>${t.name}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div><label>Billing Type</label>
+                            <select id="f-type">
+                                ${['hourly','milestone','fixed'].map(t=>`<option value="${t}"${e?.billing_type===t?' selected':''}>${t}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="amrd-form-row full"><div><label>Title *</label><input id="f-title" value="${e?.title||''}"></div></div>
+                    <div class="amrd-form-row full"><div><label>Description</label><textarea id="f-desc" rows="2">${e?.description||''}</textarea></div></div>
+                    <div class="amrd-form-row">
+                        <div><label>Est. Hours</label><input id="f-ehours" type="number" step="0.5" value="${e?.estimated_hours||''}"></div>
+                        <div><label>Actual Hours</label><input id="f-ahours" type="number" step="0.5" value="${e?.actual_hours||''}"></div>
+                    </div>
+                    <div class="amrd-form-row">
+                        <div><label>Hourly Rate (₹)</label><input id="f-rate" type="number" value="${e?.hourly_rate||''}"></div>
+                        <div><label>Milestone Amount (₹)</label><input id="f-mamount" type="number" value="${e?.milestone_amount||''}"></div>
+                    </div>
+                    <div class="amrd-form-row">
+                        <div><label>Status</label>
+                            <select id="f-status">
+                                ${['scoped','in_progress','delivered','billed','cancelled'].map(s=>`<option value="${s}"${e?.status===s?' selected':''}>${s}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div><label>Delivered Date</label><input id="f-deliv" type="date" value="${e?.delivered_at?.slice(0,10)||''}"></div>
+                    </div>
+                    <div class="amrd-form-row full"><div><label>Notes</label><textarea id="f-notes" rows="2">${e?.notes||''}</textarea></div></div>
+                    <div style="margin-top:16px;display:flex;gap:10px">
+                        <button class="amrd-btn amrd-btn-primary" onclick="save(${e?.id||'null'})">Save</button>
+                        <button class="amrd-btn amrd-btn-ghost" onclick="document.getElementById('form-slot').innerHTML=''">Cancel</button>
+                    </div>
+                    <div id="save-err" style="color:#dc2626;font-size:13px;margin-top:8px"></div>
+                </div>`;
+            slot.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function save(id) {
+            const body = {
+                tenant_id:        document.getElementById('f-tenant').value,
+                title:            document.getElementById('f-title').value,
+                description:      document.getElementById('f-desc').value,
+                billing_type:     document.getElementById('f-type').value,
+                estimated_hours:  document.getElementById('f-ehours').value || null,
+                actual_hours:     document.getElementById('f-ahours').value || null,
+                hourly_rate:      document.getElementById('f-rate').value   || null,
+                milestone_amount: document.getElementById('f-mamount').value || null,
+                status:           document.getElementById('f-status').value,
+                delivered_at:     document.getElementById('f-deliv').value  || null,
+                notes:            document.getElementById('f-notes').value,
+            };
+            try {
+                if (id) {
+                    await window.__amrd.apiFetch(`/api/enhancements/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+                } else {
+                    await window.__amrd.apiFetch('/api/enhancements', { method: 'POST', body: JSON.stringify(body) });
+                }
+                await load(_currentFilter);
+            } catch (e) {
+                document.getElementById('save-err').textContent = e.message;
+            }
+        }
+
+        let _currentFilter = '';
+        window.loadFilter = (f) => { _currentFilter = f; load(f); };
+        window.openForm   = openForm;
+        window.save       = save;
+        await load();
+    });
+  </script>
+</body>
+</html>

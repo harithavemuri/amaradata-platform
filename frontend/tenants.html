@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Tenants — AmaraData Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="/js/platform.js"></script>
+</head>
+<body>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const root = window.__amrd.renderSidebar('Tenants');
+
+        async function load() {
+            const r = await window.__amrd.apiFetch('/api/tenants');
+            const tenants = r?.data || [];
+            root.innerHTML = `
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <span style="color:#64748b;font-size:13px">${tenants.length} tenant(s)</span>
+                    <button class="amrd-btn amrd-btn-primary" onclick="openForm()">+ Add Tenant</button>
+                </div>
+                <div class="amrd-card" style="padding:0">
+                    <table class="amrd-table">
+                        <thead><tr><th>Name</th><th>Contact</th><th>Phone</th><th>Status</th><th>Onboarded</th><th></th></tr></thead>
+                        <tbody>
+                            ${tenants.map(t => `
+                            <tr>
+                                <td><strong>${t.name}</strong><br><span style="color:#94a3b8;font-size:11px">${t.slug}</span></td>
+                                <td>${t.contact_name || '—'}<br><span style="color:#64748b;font-size:11px">${t.contact_email || ''}</span></td>
+                                <td>${t.contact_phone || '—'}</td>
+                                <td><span class="amrd-badge amrd-badge-${t.status}">${t.status}</span></td>
+                                <td>${t.onboarded_at?.slice(0,10) || '—'}</td>
+                                <td><button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick='openForm(${JSON.stringify(t)})'>Edit</button></td>
+                            </tr>`).join('') || '<tr><td colspan="6" style="color:#94a3b8;text-align:center;padding:24px">No tenants yet</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+                <div id="form-slot"></div>`;
+        }
+
+        function openForm(t = null) {
+            const slot = document.getElementById('form-slot');
+            slot.innerHTML = `
+                <div class="amrd-card">
+                    <h3>${t ? 'Edit Tenant' : 'New Tenant'}</h3>
+                    <div class="amrd-form-row">
+                        <div><label>Name *</label><input id="f-name" value="${t?.name||''}"></div>
+                        <div><label>Slug *</label><input id="f-slug" value="${t?.slug||''}"></div>
+                    </div>
+                    <div class="amrd-form-row">
+                        <div><label>Contact Name</label><input id="f-cname" value="${t?.contact_name||''}"></div>
+                        <div><label>Contact Email</label><input id="f-cemail" type="email" value="${t?.contact_email||''}"></div>
+                    </div>
+                    <div class="amrd-form-row">
+                        <div><label>Phone</label><input id="f-phone" value="${t?.contact_phone||''}"></div>
+                        <div><label>Status</label>
+                            <select id="f-status">
+                                ${['active','suspended','churned'].map(s=>`<option value="${s}"${t?.status===s?' selected':''}>${s}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="amrd-form-row">
+                        <div><label>GSTIN</label><input id="f-gstin" value="${t?.gstin||''}"></div>
+                        <div><label>PAN</label><input id="f-pan" value="${t?.pan||''}"></div>
+                    </div>
+                    <div class="amrd-form-row">
+                        <div><label>Onboarded Date</label><input id="f-onboard" type="date" value="${t?.onboarded_at?.slice(0,10)||''}"></div>
+                        <div></div>
+                    </div>
+                    <div class="amrd-form-row full"><div><label>Billing Address</label><textarea id="f-addr" rows="2">${t?.billing_address||''}</textarea></div></div>
+                    <div style="margin-top:16px;display:flex;gap:10px">
+                        <button class="amrd-btn amrd-btn-primary" onclick="save(${t?.id||'null'})">Save</button>
+                        <button class="amrd-btn amrd-btn-ghost" onclick="document.getElementById('form-slot').innerHTML=''">Cancel</button>
+                    </div>
+                    <div id="save-err" style="color:#dc2626;font-size:13px;margin-top:8px"></div>
+                </div>`;
+            slot.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function save(id) {
+            const body = {
+                name:            document.getElementById('f-name').value,
+                slug:            document.getElementById('f-slug').value,
+                contact_name:    document.getElementById('f-cname').value,
+                contact_email:   document.getElementById('f-cemail').value,
+                contact_phone:   document.getElementById('f-phone').value,
+                status:          document.getElementById('f-status').value,
+                gstin:           document.getElementById('f-gstin').value,
+                pan:             document.getElementById('f-pan').value,
+                billing_address: document.getElementById('f-addr').value,
+                onboarded_at:    document.getElementById('f-onboard').value || null,
+            };
+            try {
+                if (id) {
+                    await window.__amrd.apiFetch(`/api/tenants/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+                } else {
+                    await window.__amrd.apiFetch('/api/tenants', { method: 'POST', body: JSON.stringify(body) });
+                }
+                await load();
+            } catch (e) {
+                document.getElementById('save-err').textContent = e.message;
+            }
+        }
+
+        window.openForm = openForm;
+        window.save     = save;
+        await load();
+    });
+  </script>
+</body>
+</html>

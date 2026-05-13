@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Dashboard — AmaraData Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="/js/platform.js"></script>
+</head>
+<body>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const root = window.__amrd.renderSidebar('Dashboard');
+        root.innerHTML = '<p style="color:#94a3b8">Loading…</p>';
+
+        try {
+            const [tenantsR, invoicesR, enhR] = await Promise.all([
+                window.__amrd.apiFetch('/api/tenants'),
+                window.__amrd.apiFetch('/api/invoices'),
+                window.__amrd.apiFetch('/api/enhancements'),
+            ]);
+            const tenants    = tenantsR?.data  || [];
+            const invoices   = invoicesR?.data || [];
+            const enh        = enhR?.data       || [];
+
+            const active     = tenants.filter(t => t.status === 'active').length;
+            const outstanding = invoices.filter(i => ['sent','overdue'].includes(i.status))
+                                        .reduce((s, i) => s + Number(i.total_amount), 0);
+            const overdue    = invoices.filter(i => i.status === 'overdue').length;
+            const unbilled   = enh.filter(e => e.status === 'delivered' && !e.invoice_id).length;
+
+            const fmt = v => '₹' + Number(v).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+
+            root.innerHTML = `
+                <div class="amrd-stat-grid">
+                    <div class="amrd-stat">
+                        <div class="amrd-stat-label">Active Tenants</div>
+                        <div class="amrd-stat-value">${active}</div>
+                        <div class="amrd-stat-sub">${tenants.length} total</div>
+                    </div>
+                    <div class="amrd-stat">
+                        <div class="amrd-stat-label">Outstanding</div>
+                        <div class="amrd-stat-value">${fmt(outstanding)}</div>
+                        <div class="amrd-stat-sub">${overdue} overdue invoices</div>
+                    </div>
+                    <div class="amrd-stat">
+                        <div class="amrd-stat-label">Total Invoices</div>
+                        <div class="amrd-stat-value">${invoices.length}</div>
+                        <div class="amrd-stat-sub">${invoices.filter(i=>i.status==='paid').length} paid</div>
+                    </div>
+                    <div class="amrd-stat">
+                        <div class="amrd-stat-label">Unbilled Work</div>
+                        <div class="amrd-stat-value">${unbilled}</div>
+                        <div class="amrd-stat-sub">delivered enhancements</div>
+                    </div>
+                </div>
+
+                <div class="amrd-card">
+                    <h3>Recent Invoices</h3>
+                    <table class="amrd-table">
+                        <thead><tr><th>Invoice</th><th>Tenant</th><th>Amount</th><th>Due</th><th>Status</th></tr></thead>
+                        <tbody>
+                            ${invoices.slice(0,8).map(i => `
+                            <tr>
+                                <td><a href="/invoices.html">${i.invoice_number}</a></td>
+                                <td>${i.tenant_name}</td>
+                                <td>${fmt(i.total_amount)}</td>
+                                <td>${i.due_date?.slice(0,10) || '—'}</td>
+                                <td><span class="amrd-badge amrd-badge-${i.status}">${i.status}</span></td>
+                            </tr>`).join('') || '<tr><td colspan="5" style="color:#94a3b8;text-align:center">No invoices yet</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="amrd-card">
+                    <h3>Tenants</h3>
+                    <table class="amrd-table">
+                        <thead><tr><th>Name</th><th>Contact</th><th>Status</th><th>Onboarded</th></tr></thead>
+                        <tbody>
+                            ${tenants.map(t => `
+                            <tr>
+                                <td><a href="/tenants.html"><strong>${t.name}</strong></a></td>
+                                <td>${t.contact_email || '—'}</td>
+                                <td><span class="amrd-badge amrd-badge-${t.status}">${t.status}</span></td>
+                                <td>${t.onboarded_at?.slice(0,10) || '—'}</td>
+                            </tr>`).join('') || '<tr><td colspan="4" style="color:#94a3b8;text-align:center">No tenants yet</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>`;
+        } catch (e) {
+            root.innerHTML = `<p style="color:#dc2626">Failed to load: ${e.message}</p>`;
+        }
+    });
+  </script>
+</body>
+</html>
