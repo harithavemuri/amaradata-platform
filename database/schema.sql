@@ -26,12 +26,13 @@ CREATE TABLE IF NOT EXISTS tenants (
     gstin                 VARCHAR(20),
     pan                   VARCHAR(20),
     status                VARCHAR(50)  NOT NULL DEFAULT 'active', -- active | suspended | churned
-    -- Connection info to the tenant's own operational DB (read-only for metrics collection)
+    -- Connection info to the tenant's own operational DB (read-only for metrics collection).
+    -- Credentials are stored in AWS Secrets Manager; tenant_db_secret_arn is the reference.
     tenant_db_host        VARCHAR(255),
     tenant_db_port        INTEGER      DEFAULT 5432,
     tenant_db_name        VARCHAR(100),
     tenant_db_user        VARCHAR(100),
-    tenant_db_password    TEXT,                           -- store encrypted in production
+    tenant_db_secret_arn  VARCHAR(500),                  -- AWS Secrets Manager ARN for DB password
     onboarded_at          DATE,
     notes                 TEXT,
     created_at            TIMESTAMP    NOT NULL DEFAULT NOW(),
@@ -72,6 +73,7 @@ CREATE TABLE IF NOT EXISTS tenant_subscriptions (
 CREATE TABLE IF NOT EXISTS billing_metrics (
     id                  SERIAL PRIMARY KEY,
     tenant_id           INTEGER      NOT NULL REFERENCES tenants(id),
+    subscription_id     INTEGER      REFERENCES tenant_subscriptions(id), -- plan active at collection time
     period_year         INTEGER      NOT NULL,
     period_month        INTEGER      NOT NULL CHECK (period_month BETWEEN 1 AND 12),
     sales_count         INTEGER      NOT NULL DEFAULT 0,
@@ -89,10 +91,13 @@ CREATE TABLE IF NOT EXISTS invoices (
     invoice_number  VARCHAR(50)   UNIQUE NOT NULL,  -- e.g. AMR-2026-0001
     tenant_id       INTEGER       NOT NULL REFERENCES tenants(id),
     period_year     INTEGER,
-    period_month    INTEGER,
+    period_month    INTEGER       CHECK (period_month BETWEEN 1 AND 12),
     issue_date      DATE          NOT NULL,
     due_date        DATE          NOT NULL,
     status          VARCHAR(50)   NOT NULL DEFAULT 'draft', -- draft | sent | paid | overdue | cancelled
+    CONSTRAINT period_both_or_neither CHECK (
+        (period_year IS NULL) = (period_month IS NULL)
+    ),
     subtotal        NUMERIC(12,2) NOT NULL DEFAULT 0,
     tax_pct         NUMERIC(5,2)  NOT NULL DEFAULT 18,      -- GST %
     tax_amount      NUMERIC(12,2) NOT NULL DEFAULT 0,
@@ -147,7 +152,9 @@ CREATE TABLE IF NOT EXISTS payments (
     reference_number VARCHAR(100),
     notes            TEXT,
     recorded_by      INTEGER       REFERENCES amr_users(id),
-    created_at       TIMESTAMP     NOT NULL DEFAULT NOW()
+    created_at       TIMESTAMP     NOT NULL DEFAULT NOW(),
+    -- Prevent duplicate payment recording for the same bank reference per tenant
+    UNIQUE (tenant_id, reference_number)
 );
 
 -- Indexes
@@ -158,6 +165,8 @@ CREATE INDEX IF NOT EXISTS idx_enhancements_tenant   ON enhancements(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_enhancements_status   ON enhancements(status);
 CREATE INDEX IF NOT EXISTS idx_payments_invoice      ON payments(invoice_id);
 CREATE INDEX IF NOT EXISTS idx_tsub_tenant           ON tenant_subscriptions(tenant_id);
+-- Prevent a tenant from having two active subscriptions simultaneously
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tsub_one_active ON tenant_subscriptions(tenant_id) WHERE effective_to IS NULL;
 
 -- Seed: default plan
 INSERT INTO subscription_plans (name, description, sales_pct, rental_pct, hourly_rate, min_monthly_fee)
