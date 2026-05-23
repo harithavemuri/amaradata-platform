@@ -1,0 +1,15 @@
+{
+  "table": "contact_submissions",
+  "columns": [
+    { "name": "id",           "type": "serial",       "primaryKey": true },
+    { "name": "ref_number",   "type": "varchar(30)",  "notNull": true, "unique": true },
+    { "name": "name",         "type": "varchar(255)", "notNull": true },
+    { "name": "email",        "type": "varchar(255)", "notNull": true },
+    { "name": "phone",        "type": "varchar(50)" },
+    { "name": "company",      "type": "varchar(255)" },
+    { "name": "message",      "type": "text",         "notNull": true },
+    { "name": "status",       "type": "varchar(50)",  "notNull": true, "default": "new" },
+    { "name": "submitted_at", "type": "timestamp",    "notNull": true },
+    { "name": "updated_at",   "type": "timestamp",    "notNull": true }
+  ]
+}

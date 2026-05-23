@@ -5,6 +5,9 @@
  *
  * Run manually:   node jobs/collect-metrics.js [--year=2026] [--month=4]
  * Or schedule via cron on the 1st of each month.
+ *
+ * In production, set AMRD_DB_SECRET_ARN on tenants and ensure the Lambda
+ * execution role has secretsmanager:GetSecretValue permission.
  */
 
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
@@ -12,49 +15,57 @@ require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const { Pool }   = require('pg');
 const platformDb = require('../backend/db');
 
+async function getTenantDbPassword(tenant) {
+    if (tenant.tenant_db_secret_arn && process.env.NODE_ENV === 'production') {
+        const { SecretsManagerClient, GetSecretValueCommand } =
+            require('@aws-sdk/client-secrets-manager');
+        const client = new SecretsManagerClient({ region: process.env.AWS_REGION || 'ap-south-1' });
+        const result = await client.send(new GetSecretValueCommand({ SecretId: tenant.tenant_db_secret_arn }));
+        const secret = JSON.parse(result.SecretString);
+        return secret.password;
+    }
+    return tenant.tenant_db_password;
+}
+
 async function collectForTenant(tenant, year, month) {
+    const password = await getTenantDbPassword(tenant);
     const tenantPool = new Pool({
-        host:     tenant.tenant_db_host,
-        port:     tenant.tenant_db_port || 5432,
-        database: tenant.tenant_db_name,
-        user:     tenant.tenant_db_user,
-        password: tenant.tenant_db_password,
+        host:                    tenant.tenant_db_host,
+        port:                    tenant.tenant_db_port || 5432,
+        database:                tenant.tenant_db_name,
+        user:                    tenant.tenant_db_user,
+        password,
         connectionTimeoutMillis: 5000,
     });
 
     try {
         const start = `${year}-${String(month).padStart(2,'0')}-01`;
-        const end   = new Date(year, month, 1).toISOString().slice(0, 10); // first day of next month
+        const end   = new Date(year, month, 1).toISOString().slice(0, 10);
 
-        // Properties sold this month
         const salesRes = await tenantPool.query(
             `SELECT COUNT(*) AS sales_count, COALESCE(SUM(sale_price),0) AS sales_value
              FROM properties WHERE status='sold' AND updated_at >= $1 AND updated_at < $2`,
             [start, end]
         );
-
-        // Rent payments collected this month
         const rentalRes = await tenantPool.query(
             `SELECT COUNT(DISTINCT rental_property_id) AS rental_units,
                     COALESCE(SUM(amount),0) AS rental_income
              FROM rent_payments WHERE payment_date >= $1 AND payment_date < $2 AND status='paid'`,
             [start, end]
         );
-
-        // Total active properties
         const propRes = await tenantPool.query(
             `SELECT COUNT(*) AS active_properties FROM properties WHERE status != 'sold'`
         );
 
         const metrics = {
-            tenant_id:          tenant.id,
-            period_year:        year,
-            period_month:       month,
-            sales_count:        parseInt(salesRes.rows[0].sales_count),
-            sales_value:        parseFloat(salesRes.rows[0].sales_value),
-            rental_units:       parseInt(rentalRes.rows[0].rental_units),
-            rental_income:      parseFloat(rentalRes.rows[0].rental_income),
-            active_properties:  parseInt(propRes.rows[0].active_properties),
+            tenant_id:         tenant.id,
+            period_year:       year,
+            period_month:      month,
+            sales_count:       parseInt(salesRes.rows[0].sales_count),
+            sales_value:       parseFloat(salesRes.rows[0].sales_value),
+            rental_units:      parseInt(rentalRes.rows[0].rental_units),
+            rental_income:     parseFloat(rentalRes.rows[0].rental_income),
+            active_properties: parseInt(propRes.rows[0].active_properties),
         };
 
         await platformDb.query(
@@ -78,9 +89,13 @@ async function collectForTenant(tenant, year, month) {
 }
 
 async function run() {
+    if (process.env.NONDB_MODE === 'true') {
+        console.log('[NonDB mode] Metrics collection requires a live tenant DB. Skipping.');
+        process.exit(0);
+    }
+
     const args  = Object.fromEntries(process.argv.slice(2).map(a => a.replace('--','').split('=')));
     const now   = new Date();
-    // Default to previous month
     const year  = parseInt(args.year  || (now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear()));
     const month = parseInt(args.month || (now.getMonth() === 0 ? 12 : now.getMonth()));
 

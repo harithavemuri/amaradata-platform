@@ -1,0 +1,23 @@
+{
+  "table": "invoices",
+  "columns": [
+    { "name": "id",             "type": "serial",       "primaryKey": true },
+    { "name": "invoice_number", "type": "varchar(50)",  "notNull": true, "unique": true },
+    { "name": "tenant_id",      "type": "integer",      "notNull": true, "references": "tenants(id)" },
+    { "name": "period_year",    "type": "integer" },
+    { "name": "period_month",   "type": "integer" },
+    { "name": "issue_date",     "type": "date",         "notNull": true },
+    { "name": "due_date",       "type": "date",         "notNull": true },
+    { "name": "status",         "type": "varchar(50)",  "notNull": true, "default": "draft" },
+    { "name": "subtotal",       "type": "numeric(12,2)","notNull": true, "default": 0 },
+    { "name": "tax_pct",        "type": "numeric(5,2)", "notNull": true, "default": 18 },
+    { "name": "tax_amount",     "type": "numeric(12,2)","notNull": true, "default": 0 },
+    { "name": "total_amount",   "type": "numeric(12,2)","notNull": true, "default": 0 },
+    { "name": "currency_code",  "type": "char(3)",      "notNull": true, "default": "INR" },
+    { "name": "notes",          "type": "text" },
+    { "name": "paid_at",        "type": "timestamp" },
+    { "name": "created_by",     "type": "integer",      "references": "amr_users(id)" },
+    { "name": "created_at",     "type": "timestamp",    "notNull": true },
+    { "name": "updated_at",     "type": "timestamp",    "notNull": true }
+  ]
+}

@@ -1,0 +1,25 @@
+[
+  {
+    "id": 1,
+    "name": "Rohas Group",
+    "slug": "rohas",
+    "contact_name": "Haritha Vemuri",
+    "contact_email": "info@rohas.in",
+    "contact_phone": "+91-90328-31122",
+    "billing_address": "#103, A Block, Fortune Nest Apartments, Near Jain Public School, Masjid Banda, Kondapur, Hyderabad, Telangana 500084, India",
+    "gstin": null,
+    "pan": null,
+    "status": "active",
+    "tenant_db_host": "localhost",
+    "tenant_db_port": 5432,
+    "tenant_db_name": "rohas",
+    "tenant_db_user": "postgress",
+    "tenant_db_secret_arn": null,
+    "tenant_db_password": "AccySync89@2",
+    "onboarded_at": "2026-01-01",
+    "notes": "Rohas Group real estate platform — managed by AmaraData. Tenant databases: amaracasa, towertwo.",
+    "site_url": "https://d3u4zlri3r48dr.cloudfront.net",
+    "created_at": "2026-01-01T00:00:00.000Z",
+    "updated_at": "2026-05-21T00:00:00.000Z"
+  }
+]

@@ -1,0 +1,164 @@
+<svg viewBox="0 0 1440 600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ha-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0c2340"/>
+      <stop offset="60%" stop-color="#1E3A5F"/>
+      <stop offset="100%" stop-color="#0f4a40"/>
+    </linearGradient>
+    <linearGradient id="ha-block1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#163a5a"/>
+      <stop offset="100%" stop-color="#0d2438"/>
+    </linearGradient>
+    <linearGradient id="ha-block2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a4a5e"/>
+      <stop offset="100%" stop-color="#0e2e3a"/>
+    </linearGradient>
+    <linearGradient id="ha-ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#082a20"/>
+      <stop offset="100%" stop-color="#041810"/>
+    </linearGradient>
+    <linearGradient id="ha-pool" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0D9488" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#064e45" stop-opacity="0.8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Sky -->
+  <rect width="1440" height="600" fill="url(#ha-sky)"/>
+
+  <!-- Moon -->
+  <circle cx="1320" cy="80" r="36" fill="#1E3A5F"/>
+  <circle cx="1306" cy="68" r="32" fill="#e8f4f8" opacity="0.9"/>
+
+  <!-- Stars -->
+  <circle cx="100" cy="50" r="1.2" fill="white" opacity="0.6"/>
+  <circle cx="260" cy="30" r="1" fill="#5EEAD4" opacity="0.7"/>
+  <circle cx="500" cy="65" r="1.4" fill="white" opacity="0.5"/>
+  <circle cx="700" cy="25" r="1" fill="#5EEAD4" opacity="0.6"/>
+  <circle cx="900" cy="50" r="1.2" fill="white" opacity="0.5"/>
+  <circle cx="1100" cy="35" r="1" fill="#5EEAD4" opacity="0.7"/>
+  <circle cx="180" cy="100" r="1" fill="white" opacity="0.3"/>
+  <circle cx="850" cy="90" r="1.2" fill="#5EEAD4" opacity="0.4"/>
+  <circle cx="1200" cy="110" r="1" fill="white" opacity="0.3"/>
+
+  <!-- Background trees/hills -->
+  <ellipse cx="150" cy="480" rx="120" ry="60" fill="#07201a" opacity="0.7"/>
+  <ellipse cx="1290" cy="480" rx="120" ry="60" fill="#07201a" opacity="0.7"/>
+
+  <!-- Left apartment block -->
+  <rect x="80" y="220" width="280" height="300" rx="3" fill="url(#ha-block1)"/>
+  <!-- Balcony slabs left -->
+  <rect x="78" y="240" width="284" height="5" rx="1" fill="#0D9488" opacity="0.4"/>
+  <rect x="78" y="280" width="284" height="5" rx="1" fill="#0D9488" opacity="0.4"/>
+  <rect x="78" y="320" width="284" height="5" rx="1" fill="#0D9488" opacity="0.4"/>
+  <rect x="78" y="360" width="284" height="5" rx="1" fill="#0D9488" opacity="0.4"/>
+  <rect x="78" y="400" width="284" height="5" rx="1" fill="#0D9488" opacity="0.4"/>
+  <rect x="78" y="440" width="284" height="5" rx="1" fill="#0D9488" opacity="0.4"/>
+  <rect x="78" y="480" width="284" height="5" rx="1" fill="#0D9488" opacity="0.4"/>
+  <!-- Left block windows/balconies -->
+  <g opacity="0.35" fill="#0D9488">
+    <rect x="98" y="248" width="36" height="26" rx="2"/><rect x="146" y="248" width="36" height="26" rx="2"/><rect x="194" y="248" width="36" height="26" rx="2"/><rect x="242" y="248" width="36" height="26" rx="2"/><rect x="290" y="248" width="36" height="26" rx="2"/>
+    <rect x="98" y="288" width="36" height="26" rx="2"/><rect x="146" y="288" width="36" height="26" rx="2"/><rect x="194" y="288" width="36" height="26" rx="2"/><rect x="242" y="288" width="36" height="26" rx="2"/><rect x="290" y="288" width="36" height="26" rx="2"/>
+    <rect x="98" y="328" width="36" height="26" rx="2"/><rect x="146" y="328" width="36" height="26" rx="2"/><rect x="194" y="328" width="36" height="26" rx="2"/><rect x="242" y="328" width="36" height="26" rx="2"/><rect x="290" y="328" width="36" height="26" rx="2"/>
+    <rect x="98" y="368" width="36" height="26" rx="2"/><rect x="146" y="368" width="36" height="26" rx="2"/><rect x="194" y="368" width="36" height="26" rx="2"/><rect x="242" y="368" width="36" height="26" rx="2"/><rect x="290" y="368" width="36" height="26" rx="2"/>
+    <rect x="98" y="408" width="36" height="26" rx="2"/><rect x="146" y="408" width="36" height="26" rx="2"/><rect x="194" y="408" width="36" height="26" rx="2"/><rect x="242" y="408" width="36" height="26" rx="2"/><rect x="290" y="408" width="36" height="26" rx="2"/>
+    <rect x="98" y="448" width="36" height="26" rx="2"/><rect x="146" y="448" width="36" height="26" rx="2"/><rect x="194" y="448" width="36" height="26" rx="2"/><rect x="242" y="448" width="36" height="26" rx="2"/><rect x="290" y="448" width="36" height="26" rx="2"/>
+  </g>
+  <!-- Lit windows left -->
+  <rect x="98" y="248" width="36" height="26" rx="2" fill="#5EEAD4" opacity="0.75"/>
+  <rect x="242" y="288" width="36" height="26" rx="2" fill="#5EEAD4" opacity="0.7"/>
+  <rect x="146" y="328" width="36" height="26" rx="2" fill="#0D9488" opacity="0.95"/>
+  <rect x="290" y="368" width="36" height="26" rx="2" fill="#5EEAD4" opacity="0.65"/>
+  <rect x="194" y="408" width="36" height="26" rx="2" fill="#5EEAD4" opacity="0.8"/>
+  <rect x="98" y="448" width="36" height="26" rx="2" fill="#0D9488" opacity="0.9"/>
+  <!-- Plant on balcony left -->
+  <ellipse cx="130" cy="281" rx="8" ry="6" fill="#0D9488" opacity="0.7"/>
+  <ellipse cx="270" cy="321" rx="8" ry="6" fill="#0D9488" opacity="0.7"/>
+
+  <!-- Centre main block -->
+  <rect x="430" y="160" width="580" height="360" rx="3" fill="url(#ha-block2)"/>
+  <!-- Balcony floor lines -->
+  <rect x="428" y="185" width="584" height="6" rx="1" fill="#0D9488" opacity="0.45"/>
+  <rect x="428" y="235" width="584" height="6" rx="1" fill="#0D9488" opacity="0.45"/>
+  <rect x="428" y="285" width="584" height="6" rx="1" fill="#0D9488" opacity="0.45"/>
+  <rect x="428" y="335" width="584" height="6" rx="1" fill="#0D9488" opacity="0.45"/>
+  <rect x="428" y="385" width="584" height="6" rx="1" fill="#0D9488" opacity="0.45"/>
+  <rect x="428" y="435" width="584" height="6" rx="1" fill="#0D9488" opacity="0.45"/>
+  <rect x="428" y="485" width="584" height="6" rx="1" fill="#0D9488" opacity="0.45"/>
+  <!-- Centre block windows -->
+  <g opacity="0.3" fill="#0D9488">
+    <rect x="448" y="193" width="42" height="36" rx="2"/><rect x="504" y="193" width="42" height="36" rx="2"/><rect x="560" y="193" width="42" height="36" rx="2"/><rect x="616" y="193" width="42" height="36" rx="2"/><rect x="672" y="193" width="42" height="36" rx="2"/><rect x="728" y="193" width="42" height="36" rx="2"/><rect x="784" y="193" width="42" height="36" rx="2"/><rect x="840" y="193" width="42" height="36" rx="2"/><rect x="896" y="193" width="42" height="36" rx="2"/><rect x="952" y="193" width="42" height="36" rx="2"/>
+    <rect x="448" y="243" width="42" height="36" rx="2"/><rect x="504" y="243" width="42" height="36" rx="2"/><rect x="560" y="243" width="42" height="36" rx="2"/><rect x="616" y="243" width="42" height="36" rx="2"/><rect x="672" y="243" width="42" height="36" rx="2"/><rect x="728" y="243" width="42" height="36" rx="2"/><rect x="784" y="243" width="42" height="36" rx="2"/><rect x="840" y="243" width="42" height="36" rx="2"/><rect x="896" y="243" width="42" height="36" rx="2"/><rect x="952" y="243" width="42" height="36" rx="2"/>
+    <rect x="448" y="293" width="42" height="36" rx="2"/><rect x="504" y="293" width="42" height="36" rx="2"/><rect x="560" y="293" width="42" height="36" rx="2"/><rect x="616" y="293" width="42" height="36" rx="2"/><rect x="672" y="293" width="42" height="36" rx="2"/><rect x="728" y="293" width="42" height="36" rx="2"/><rect x="784" y="293" width="42" height="36" rx="2"/><rect x="840" y="293" width="42" height="36" rx="2"/><rect x="896" y="293" width="42" height="36" rx="2"/><rect x="952" y="293" width="42" height="36" rx="2"/>
+    <rect x="448" y="343" width="42" height="36" rx="2"/><rect x="504" y="343" width="42" height="36" rx="2"/><rect x="560" y="343" width="42" height="36" rx="2"/><rect x="616" y="343" width="42" height="36" rx="2"/><rect x="672" y="343" width="42" height="36" rx="2"/><rect x="728" y="343" width="42" height="36" rx="2"/><rect x="784" y="343" width="42" height="36" rx="2"/><rect x="840" y="343" width="42" height="36" rx="2"/><rect x="896" y="343" width="42" height="36" rx="2"/><rect x="952" y="343" width="42" height="36" rx="2"/>
+    <rect x="448" y="393" width="42" height="36" rx="2"/><rect x="504" y="393" width="42" height="36" rx="2"/><rect x="560" y="393" width="42" height="36" rx="2"/><rect x="616" y="393" width="42" height="36" rx="2"/><rect x="672" y="393" width="42" height="36" rx="2"/><rect x="728" y="393" width="42" height="36" rx="2"/><rect x="784" y="393" width="42" height="36" rx="2"/><rect x="840" y="393" width="42" height="36" rx="2"/><rect x="896" y="393" width="42" height="36" rx="2"/><rect x="952" y="393" width="42" height="36" rx="2"/>
+    <rect x="448" y="443" width="42" height="36" rx="2"/><rect x="504" y="443" width="42" height="36" rx="2"/><rect x="560" y="443" width="42" height="36" rx="2"/><rect x="616" y="443" width="42" height="36" rx="2"/><rect x="672" y="443" width="42" height="36" rx="2"/><rect x="728" y="443" width="42" height="36" rx="2"/><rect x="784" y="443" width="42" height="36" rx="2"/><rect x="840" y="443" width="42" height="36" rx="2"/><rect x="896" y="443" width="42" height="36" rx="2"/><rect x="952" y="443" width="42" height="36" rx="2"/>
+  </g>
+  <!-- Lit windows centre -->
+  <rect x="504" y="193" width="42" height="36" rx="2" fill="#5EEAD4" opacity="0.8"/>
+  <rect x="672" y="243" width="42" height="36" rx="2" fill="#5EEAD4" opacity="0.75"/>
+  <rect x="840" y="193" width="42" height="36" rx="2" fill="#0D9488" opacity="0.95"/>
+  <rect x="560" y="293" width="42" height="36" rx="2" fill="#5EEAD4" opacity="0.7"/>
+  <rect x="952" y="243" width="42" height="36" rx="2" fill="#5EEAD4" opacity="0.8"/>
+  <rect x="448" y="343" width="42" height="36" rx="2" fill="#0D9488" opacity="0.9"/>
+  <rect x="784" y="343" width="42" height="36" rx="2" fill="#5EEAD4" opacity="0.75"/>
+  <rect x="616" y="393" width="42" height="36" rx="2" fill="#5EEAD4" opacity="0.8"/>
+  <rect x="896" y="393" width="42" height="36" rx="2" fill="#0D9488" opacity="0.9"/>
+  <rect x="728" y="443" width="42" height="36" rx="2" fill="#5EEAD4" opacity="0.7"/>
+  <!-- Plants on balconies -->
+  <ellipse cx="460" cy="236" rx="10" ry="7" fill="#0D9488" opacity="0.8"/>
+  <ellipse cx="750" cy="286" rx="10" ry="7" fill="#0D9488" opacity="0.8"/>
+  <ellipse cx="580" cy="336" rx="10" ry="7" fill="#0D9488" opacity="0.75"/>
+  <ellipse cx="970" cy="236" rx="10" ry="7" fill="#0D9488" opacity="0.75"/>
+
+  <!-- Right block -->
+  <rect x="1080" y="220" width="280" height="300" rx="3" fill="url(#ha-block1)"/>
+  <rect x="1078" y="240" width="284" height="5" rx="1" fill="#0D9488" opacity="0.4"/>
+  <rect x="1078" y="280" width="284" height="5" rx="1" fill="#0D9488" opacity="0.4"/>
+  <rect x="1078" y="320" width="284" height="5" rx="1" fill="#0D9488" opacity="0.4"/>
+  <rect x="1078" y="360" width="284" height="5" rx="1" fill="#0D9488" opacity="0.4"/>
+  <rect x="1078" y="400" width="284" height="5" rx="1" fill="#0D9488" opacity="0.4"/>
+  <rect x="1078" y="440" width="284" height="5" rx="1" fill="#0D9488" opacity="0.4"/>
+  <rect x="1078" y="480" width="284" height="5" rx="1" fill="#0D9488" opacity="0.4"/>
+  <g opacity="0.35" fill="#0D9488">
+    <rect x="1098" y="248" width="36" height="26" rx="2"/><rect x="1146" y="248" width="36" height="26" rx="2"/><rect x="1194" y="248" width="36" height="26" rx="2"/><rect x="1242" y="248" width="36" height="26" rx="2"/><rect x="1290" y="248" width="36" height="26" rx="2"/>
+    <rect x="1098" y="288" width="36" height="26" rx="2"/><rect x="1146" y="288" width="36" height="26" rx="2"/><rect x="1194" y="288" width="36" height="26" rx="2"/><rect x="1242" y="288" width="36" height="26" rx="2"/><rect x="1290" y="288" width="36" height="26" rx="2"/>
+    <rect x="1098" y="328" width="36" height="26" rx="2"/><rect x="1146" y="328" width="36" height="26" rx="2"/><rect x="1194" y="328" width="36" height="26" rx="2"/><rect x="1242" y="328" width="36" height="26" rx="2"/><rect x="1290" y="328" width="36" height="26" rx="2"/>
+    <rect x="1098" y="368" width="36" height="26" rx="2"/><rect x="1146" y="368" width="36" height="26" rx="2"/><rect x="1194" y="368" width="36" height="26" rx="2"/><rect x="1242" y="368" width="36" height="26" rx="2"/><rect x="1290" y="368" width="36" height="26" rx="2"/>
+    <rect x="1098" y="408" width="36" height="26" rx="2"/><rect x="1146" y="408" width="36" height="26" rx="2"/><rect x="1194" y="408" width="36" height="26" rx="2"/><rect x="1242" y="408" width="36" height="26" rx="2"/><rect x="1290" y="408" width="36" height="26" rx="2"/>
+    <rect x="1098" y="448" width="36" height="26" rx="2"/><rect x="1146" y="448" width="36" height="26" rx="2"/><rect x="1194" y="448" width="36" height="26" rx="2"/><rect x="1242" y="448" width="36" height="26" rx="2"/><rect x="1290" y="448" width="36" height="26" rx="2"/>
+  </g>
+  <rect x="1146" y="248" width="36" height="26" rx="2" fill="#5EEAD4" opacity="0.75"/>
+  <rect x="1290" y="288" width="36" height="26" rx="2" fill="#0D9488" opacity="0.9"/>
+  <rect x="1194" y="368" width="36" height="26" rx="2" fill="#5EEAD4" opacity="0.7"/>
+  <rect x="1098" y="408" width="36" height="26" rx="2" fill="#5EEAD4" opacity="0.8"/>
+  <ellipse cx="1110" cy="281" rx="8" ry="6" fill="#0D9488" opacity="0.7"/>
+  <ellipse cx="1260" cy="321" rx="8" ry="6" fill="#0D9488" opacity="0.7"/>
+
+  <!-- Swimming pool -->
+  <rect x="520" y="520" width="400" height="50" rx="6" fill="url(#ha-pool)"/>
+  <rect x="520" y="520" width="400" height="4" rx="2" fill="#5EEAD4" opacity="0.4"/>
+  <!-- Pool lane lines -->
+  <line x1="600" y1="520" x2="600" y2="570" stroke="#0D9488" stroke-width="1" opacity="0.3"/>
+  <line x1="680" y1="520" x2="680" y2="570" stroke="#0D9488" stroke-width="1" opacity="0.3"/>
+  <line x1="760" y1="520" x2="760" y2="570" stroke="#0D9488" stroke-width="1" opacity="0.3"/>
+  <line x1="840" y1="520" x2="840" y2="570" stroke="#0D9488" stroke-width="1" opacity="0.3"/>
+
+  <!-- Ground -->
+  <rect x="0" y="570" width="1440" height="30" fill="url(#ha-ground)"/>
+  <!-- Pathway -->
+  <rect x="680" y="520" width="80" height="50" fill="#0a2a20" opacity="0.5"/>
+
+  <!-- Palm trees -->
+  <rect x="490" y="480" width="10" height="40" fill="#0a2010"/>
+  <ellipse cx="495" cy="474" rx="28" ry="14" fill="#0D9488" opacity="0.55" transform="rotate(-15,495,474)"/>
+  <ellipse cx="495" cy="474" rx="28" ry="14" fill="#0D9488" opacity="0.45" transform="rotate(20,495,474)"/>
+  <rect x="940" y="480" width="10" height="40" fill="#0a2010"/>
+  <ellipse cx="945" cy="474" rx="28" ry="14" fill="#0D9488" opacity="0.55" transform="rotate(15,945,474)"/>
+  <ellipse cx="945" cy="474" rx="28" ry="14" fill="#0D9488" opacity="0.45" transform="rotate(-20,945,474)"/>
+
+  <!-- Teal rooftop accent -->
+  <rect x="430" y="158" width="580" height="6" rx="2" fill="#0D9488" opacity="0.7"/>
+  <rect x="80" y="218" width="280" height="5" rx="2" fill="#0D9488" opacity="0.5"/>
+  <rect x="1080" y="218" width="280" height="5" rx="2" fill="#0D9488" opacity="0.5"/>
+</svg>

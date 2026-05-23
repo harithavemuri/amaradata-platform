@@ -1,0 +1,20 @@
+{
+  "table": "enhancements",
+  "columns": [
+    { "name": "id",               "type": "serial",       "primaryKey": true },
+    { "name": "tenant_id",        "type": "integer",      "notNull": true, "references": "tenants(id)" },
+    { "name": "title",            "type": "varchar(255)", "notNull": true },
+    { "name": "description",      "type": "text" },
+    { "name": "billing_type",     "type": "varchar(50)",  "notNull": true, "default": "hourly" },
+    { "name": "status",           "type": "varchar(50)",  "notNull": true, "default": "scoped" },
+    { "name": "estimated_hours",  "type": "numeric(7,2)" },
+    { "name": "actual_hours",     "type": "numeric(7,2)" },
+    { "name": "hourly_rate",      "type": "numeric(10,2)" },
+    { "name": "milestone_amount", "type": "numeric(12,2)" },
+    { "name": "delivered_at",     "type": "date" },
+    { "name": "invoice_id",       "type": "integer",      "references": "invoices(id)" },
+    { "name": "notes",            "type": "text" },
+    { "name": "created_at",       "type": "timestamp",    "notNull": true },
+    { "name": "updated_at",       "type": "timestamp",    "notNull": true }
+  ]
+}

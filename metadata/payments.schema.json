@@ -1,0 +1,15 @@
+{
+  "table": "payments",
+  "columns": [
+    { "name": "id",               "type": "serial",       "primaryKey": true },
+    { "name": "invoice_id",       "type": "integer",      "notNull": true, "references": "invoices(id)" },
+    { "name": "tenant_id",        "type": "integer",      "notNull": true, "references": "tenants(id)" },
+    { "name": "amount",           "type": "numeric(12,2)","notNull": true },
+    { "name": "payment_date",     "type": "date",         "notNull": true },
+    { "name": "payment_method",   "type": "varchar(50)" },
+    { "name": "reference_number", "type": "varchar(100)" },
+    { "name": "notes",            "type": "text" },
+    { "name": "recorded_by",      "type": "integer",      "references": "amr_users(id)" },
+    { "name": "created_at",       "type": "timestamp",    "notNull": true }
+  ]
+}

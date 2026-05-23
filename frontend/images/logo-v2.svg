@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!--
+    AmaraData logo v2 — "AM Mountain" monogram
+    Large A letterform (wide legs, bold crossbar) with a nested M-shape
+    mountain rising from the crossbar into the hollow.
+    Reads as "A" + "M" (AmaraData) with a data-peak motif.
+    Color: brand teal #0D9488. Works on light and dark backgrounds.
+  -->
+
+  <!-- Outer A silhouette with hollow above crossbar (evenodd) -->
+  <path fill-rule="evenodd" fill="#0D9488"
+    d="M100,8  L192,192 L163,192 L126,118 L74,118 L37,192 L8,192  Z
+       M100,30  L73,108  L127,108 Z"/>
+
+  <!-- Mountain M — two peaks anchored at crossbar corners,
+       gaps ~4 px from the hollow boundary so white slivers show through -->
+  <polygon fill="#0D9488"
+    points="78,108 90,72 100,88 110,72 122,108"/>
+</svg>

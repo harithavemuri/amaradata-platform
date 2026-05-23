@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "created_at": "2026-05-21T18:44:48.534Z",
+    "updated_at": "2026-05-22T21:03:41.835Z",
+    "email": "harithavemuri@gmail.com",
+    "name": "Haritha Vemuri",
+    "role": "staff",
+    "google_id": "116652221844399706730",
+    "picture": "https://lh3.googleusercontent.com/a/ACg8ocKno_sBgRDelPRcHXdySBu5BWy__trV8yeSXca5WQUHNG4uVAgI=s96-c",
+    "is_active": true,
+    "last_login_at": "2026-05-22T21:03:41.834Z"
+  }
+]

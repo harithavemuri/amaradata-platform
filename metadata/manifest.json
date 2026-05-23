@@ -1,0 +1,14 @@
+{
+  "tables": [
+    "amr_users",
+    "tenants",
+    "subscription_plans",
+    "tenant_subscriptions",
+    "billing_metrics",
+    "invoices",
+    "invoice_line_items",
+    "enhancements",
+    "payments",
+    "contact_submissions"
+  ]
+}

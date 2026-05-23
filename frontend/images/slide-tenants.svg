@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 600" font-family="'Segoe UI',Arial,sans-serif">
+  <!-- Background -->
+  <rect width="1400" height="600" fill="#0f172a"/>
+
+  <!-- Sidebar -->
+  <rect width="220" height="600" fill="#1e293b"/>
+  <text x="24" y="38" fill="#0D9488" font-size="18" font-weight="700" letter-spacing="1">AmaraData</text>
+  <text x="24" y="54" fill="#475569" font-size="10">Platform Console</text>
+  <rect x="0" y="68" width="220" height="1" fill="#334155"/>
+  <text x="32" y="100" fill="#64748b" font-size="13">Dashboard</text>
+  <rect x="0" y="116" width="4" height="36" fill="#0D9488"/>
+  <rect x="8" y="124" width="16" height="16" rx="3" fill="#0D9488"/>
+  <text x="32" y="136" fill="#e2e8f0" font-size="13" font-weight="600">Tenants</text>
+  <text x="32" y="168" fill="#64748b" font-size="13">Invoices</text>
+  <text x="32" y="200" fill="#64748b" font-size="13">Enhancements</text>
+  <text x="32" y="232" fill="#64748b" font-size="13">Billing Metrics</text>
+
+  <!-- Top bar -->
+  <rect x="220" y="0" width="1180" height="56" fill="#1e293b"/>
+  <text x="248" y="34" fill="#f1f5f9" font-size="18" font-weight="700">Tenant Management</text>
+  <rect x="1280" y="12" width="100" height="32" rx="6" fill="#0D9488"/>
+  <text x="1298" y="32" fill="#fff" font-size="12" font-weight="600">+ Add Tenant</text>
+
+  <!-- Search bar -->
+  <rect x="248" y="70" width="300" height="36" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="268" y="93" fill="#475569" font-size="13">Search tenants...</text>
+
+  <!-- Tenant cards -->
+  <!-- Card 1 -->
+  <rect x="248" y="124" width="340" height="180" rx="10" fill="#1e293b"/>
+  <rect x="248" y="124" width="340" height="6" rx="10" fill="#0D9488"/>
+  <text x="272" y="158" fill="#f1f5f9" font-size="16" font-weight="700">Rohas Group</text>
+  <rect x="530" y="140" width="46" height="20" rx="10" fill="#10b981" opacity=".15"/>
+  <text x="542" y="155" fill="#10b981" font-size="11" font-weight="600">Active</text>
+  <text x="272" y="178" fill="#64748b" font-size="12">rohas.amaradata.in</text>
+  <text x="272" y="202" fill="#94a3b8" font-size="11" font-weight="600">PLAN</text>
+  <text x="272" y="220" fill="#e2e8f0" font-size="13">Standard</text>
+  <text x="412" y="202" fill="#94a3b8" font-size="11" font-weight="600">MONTHLY VALUE</text>
+  <text x="412" y="220" fill="#10b981" font-size="13" font-weight="600">₹2.17L</text>
+  <text x="272" y="248" fill="#475569" font-size="11">Onboarded: Jan 2024  ·  18 properties</text>
+  <rect x="272" y="262" width="80" height="26" rx="5" fill="#334155"/>
+  <text x="285" y="280" fill="#94a3b8" font-size="11">View Details</text>
+  <rect x="366" y="262" width="80" height="26" rx="5" fill="#1e3a5f"/>
+  <text x="378" y="280" fill="#0D9488" font-size="11">Invoices →</text>
+
+  <!-- Card 2 -->
+  <rect x="608" y="124" width="340" height="180" rx="10" fill="#1e293b"/>
+  <rect x="608" y="124" width="340" height="6" rx="10" fill="#0ea5e9"/>
+  <text x="632" y="158" fill="#f1f5f9" font-size="16" font-weight="700">Lakshmi Infra</text>
+  <rect x="876" y="140" width="46" height="20" rx="10" fill="#10b981" opacity=".15"/>
+  <text x="888" y="155" fill="#10b981" font-size="11" font-weight="600">Active</text>
+  <text x="632" y="178" fill="#64748b" font-size="12">lakshmi.amaradata.in</text>
+  <text x="632" y="202" fill="#94a3b8" font-size="11" font-weight="600">PLAN</text>
+  <text x="632" y="220" fill="#e2e8f0" font-size="13">Standard</text>
+  <text x="772" y="202" fill="#94a3b8" font-size="11" font-weight="600">MONTHLY VALUE</text>
+  <text x="772" y="220" fill="#10b981" font-size="13" font-weight="600">₹1.09L</text>
+  <text x="632" y="248" fill="#475569" font-size="11">Onboarded: Mar 2024  ·  11 properties</text>
+  <rect x="632" y="262" width="80" height="26" rx="5" fill="#334155"/>
+  <text x="645" y="280" fill="#94a3b8" font-size="11">View Details</text>
+  <rect x="726" y="262" width="80" height="26" rx="5" fill="#1e3a5f"/>
+  <text x="738" y="280" fill="#0D9488" font-size="11">Invoices →</text>
+
+  <!-- Card 3 -->
+  <rect x="968" y="124" width="340" height="180" rx="10" fill="#1e293b"/>
+  <rect x="968" y="124" width="340" height="6" rx="10" fill="#8b5cf6"/>
+  <text x="992" y="158" fill="#f1f5f9" font-size="16" font-weight="700">Sai Builders</text>
+  <rect x="1240" y="140" width="62" height="20" rx="10" fill="#ef4444" opacity=".15"/>
+  <text x="1250" y="155" fill="#ef4444" font-size="11" font-weight="600">Overdue</text>
+  <text x="992" y="178" fill="#64748b" font-size="12">sai.amaradata.in</text>
+  <text x="992" y="202" fill="#94a3b8" font-size="11" font-weight="600">PLAN</text>
+  <text x="992" y="220" fill="#e2e8f0" font-size="13">Premium</text>
+  <text x="1132" y="202" fill="#94a3b8" font-size="11" font-weight="600">MONTHLY VALUE</text>
+  <text x="1132" y="220" fill="#10b981" font-size="13" font-weight="600">₹2.53L</text>
+  <text x="992" y="248" fill="#475569" font-size="11">Onboarded: Jun 2024  ·  24 properties</text>
+  <rect x="992" y="262" width="80" height="26" rx="5" fill="#334155"/>
+  <text x="1005" y="280" fill="#94a3b8" font-size="11">View Details</text>
+
+  <!-- Card 4 -->
+  <rect x="248" y="324" width="340" height="180" rx="10" fill="#1e293b"/>
+  <rect x="248" y="324" width="340" height="6" rx="10" fill="#10b981"/>
+  <text x="272" y="358" fill="#f1f5f9" font-size="16" font-weight="700">GreenAcres</text>
+  <rect x="530" y="340" width="46" height="20" rx="10" fill="#10b981" opacity=".15"/>
+  <text x="542" y="355" fill="#10b981" font-size="11" font-weight="600">Active</text>
+  <text x="272" y="378" fill="#64748b" font-size="12">greenacres.amaradata.in</text>
+  <text x="272" y="402" fill="#94a3b8" font-size="11" font-weight="600">PLAN</text>
+  <text x="272" y="420" fill="#e2e8f0" font-size="13">Standard</text>
+  <text x="412" y="402" fill="#94a3b8" font-size="11" font-weight="600">MONTHLY VALUE</text>
+  <text x="412" y="420" fill="#10b981" font-size="13" font-weight="600">₹80,712</text>
+  <text x="272" y="448" fill="#475569" font-size="11">Onboarded: Aug 2024  ·  7 properties</text>
+
+  <!-- Card 5 -->
+  <rect x="608" y="324" width="340" height="180" rx="10" fill="#1e293b"/>
+  <rect x="608" y="324" width="340" height="6" rx="10" fill="#f59e0b"/>
+  <text x="632" y="358" fill="#f1f5f9" font-size="16" font-weight="700">MK Estates</text>
+  <rect x="876" y="340" width="46" height="20" rx="10" fill="#10b981" opacity=".15"/>
+  <text x="888" y="355" fill="#10b981" font-size="11" font-weight="600">Active</text>
+  <text x="632" y="378" fill="#64748b" font-size="12">mkestates.amaradata.in</text>
+  <text x="632" y="402" fill="#94a3b8" font-size="11" font-weight="600">PLAN</text>
+  <text x="632" y="420" fill="#e2e8f0" font-size="13">Standard</text>
+  <text x="772" y="402" fill="#94a3b8" font-size="11" font-weight="600">MONTHLY VALUE</text>
+  <text x="772" y="420" fill="#10b981" font-size="13" font-weight="600">₹1.30L</text>
+  <text x="632" y="448" fill="#475569" font-size="11">Onboarded: Oct 2024  ·  9 properties</text>
+
+  <!-- Summary footer -->
+  <rect x="248" y="520" width="1120" height="50" rx="8" fill="#1e293b"/>
+  <text x="278" y="550" fill="#64748b" font-size="13">Showing 5 of 18 active tenants</text>
+  <text x="1098" y="550" fill="#0D9488" font-size="13" font-weight="600">Total MRR: ₹12.4 Lakhs →</text>
+</svg>

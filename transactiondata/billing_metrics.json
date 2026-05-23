@@ -1,0 +1,72 @@
+[
+  {
+    "id": 1,
+    "tenant_id": 1,
+    "subscription_id": 1,
+    "period_year": 2026,
+    "period_month": 1,
+    "sales_count": 3,
+    "sales_value": 24750000.00,
+    "rental_units": 8,
+    "rental_income": 192000.00,
+    "active_properties": 45,
+    "collected_at": "2026-02-01T00:00:00.000Z",
+    "created_at": "2026-02-01T00:00:00.000Z"
+  },
+  {
+    "id": 2,
+    "tenant_id": 1,
+    "subscription_id": 1,
+    "period_year": 2026,
+    "period_month": 2,
+    "sales_count": 2,
+    "sales_value": 16500000.00,
+    "rental_units": 9,
+    "rental_income": 216000.00,
+    "active_properties": 43,
+    "collected_at": "2026-03-01T00:00:00.000Z",
+    "created_at": "2026-03-01T00:00:00.000Z"
+  },
+  {
+    "id": 3,
+    "tenant_id": 1,
+    "subscription_id": 1,
+    "period_year": 2026,
+    "period_month": 3,
+    "sales_count": 4,
+    "sales_value": 32200000.00,
+    "rental_units": 10,
+    "rental_income": 240000.00,
+    "active_properties": 41,
+    "collected_at": "2026-04-01T00:00:00.000Z",
+    "created_at": "2026-04-01T00:00:00.000Z"
+  },
+  {
+    "id": 4,
+    "tenant_id": 1,
+    "subscription_id": 1,
+    "period_year": 2026,
+    "period_month": 4,
+    "sales_count": 3,
+    "sales_value": 25600000.00,
+    "rental_units": 10,
+    "rental_income": 240000.00,
+    "active_properties": 40,
+    "collected_at": "2026-05-01T00:00:00.000Z",
+    "created_at": "2026-05-01T00:00:00.000Z"
+  },
+  {
+    "id": 5,
+    "tenant_id": 1,
+    "subscription_id": 1,
+    "period_year": 2026,
+    "period_month": 5,
+    "sales_count": 5,
+    "sales_value": 41800000.00,
+    "rental_units": 11,
+    "rental_income": 264000.00,
+    "active_properties": 42,
+    "collected_at": "2026-05-21T00:00:00.000Z",
+    "created_at": "2026-05-21T00:00:00.000Z"
+  }
+]

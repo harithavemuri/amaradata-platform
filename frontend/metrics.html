@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
   <title>Billing Metrics — AmaraData Platform</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="/js/platform.js"></script>
@@ -12,17 +13,19 @@
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
         const root = window.__amrd.renderSidebar('Billing Metrics');
-        const fmt  = v => '₹' + Number(v).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+        const fmt  = v => new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Number(v));
         const now  = new Date();
 
         async function load(year, month) {
-            const url = `/api/metrics?year=${year}&month=${month}`;
-            const [metricsR, tenantsR] = await Promise.all([
-                window.__amrd.apiFetch(url),
-                window.__amrd.apiFetch('/api/tenants'),
-            ]);
-            const metrics = metricsR?.data  || [];
-            const tenants = tenantsR?.data  || [];
+            const gql = await window.__amrd.gqlFetch(
+                `query($year: Int, $month: Int) {
+                    billingMetrics(year: $year, month: $month) { id tenant_id tenant_name period_year period_month sales_count sales_value rental_units rental_income active_properties collected_at }
+                    tenants { id name }
+                }`,
+                { year, month }
+            );
+            const metrics = gql?.billingMetrics || [];
+            const tenants = gql?.tenants        || [];
 
             root.innerHTML = `
                 <div style="display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap">
@@ -82,11 +85,11 @@
                     </div>
                     <div class="amrd-form-row">
                         <div><label>Sales Count</label><input id="f-sc" type="number" value="0"></div>
-                        <div><label>Sales Value (₹)</label><input id="f-sv" type="number" value="0"></div>
+                        <div><label>Sales Value</label><input id="f-sv" type="number" value="0"></div>
                     </div>
                     <div class="amrd-form-row">
                         <div><label>Rental Units</label><input id="f-ru" type="number" value="0"></div>
-                        <div><label>Rental Income (₹)</label><input id="f-ri" type="number" value="0"></div>
+                        <div><label>Rental Income</label><input id="f-ri" type="number" value="0"></div>
                     </div>
                     <div style="margin-top:16px;display:flex;gap:10px">
                         <button class="amrd-btn amrd-btn-primary" onclick="saveMetric()">Save</button>

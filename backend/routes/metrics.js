@@ -2,31 +2,28 @@ const router = require('express').Router();
 const db     = require('../db');
 const { requireAuth } = require('../middleware/auth');
 
-// GET /api/metrics?tenant_id=&year=&month=
-router.get('/', requireAuth, async (req, res) => {
-    try {
-        const { tenant_id, year, month } = req.query;
-        let sql = `SELECT m.*, t.name AS tenant_name
-                   FROM billing_metrics m JOIN tenants t ON t.id = m.tenant_id WHERE 1=1`;
-        const params = [];
-        let n = 1;
-        if (tenant_id) { sql += ` AND m.tenant_id=$${n++}`; params.push(tenant_id); }
-        if (year)      { sql += ` AND m.period_year=$${n++}`;  params.push(year); }
-        if (month)     { sql += ` AND m.period_month=$${n++}`; params.push(month); }
-        sql += ' ORDER BY m.period_year DESC, m.period_month DESC';
-        const { rows } = await db.query(sql, params);
-        res.json({ success: true, data: rows });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
 // POST /api/metrics  (manual upsert — normally done by collect-metrics job)
 router.post('/', requireAuth, async (req, res) => {
     const { tenant_id, period_year, period_month,
             sales_count, sales_value, rental_units, rental_income, active_properties } = req.body;
-    if (!tenant_id || !period_year || !period_month) {
+    if (!tenant_id || !period_year || !period_month)
         return res.status(400).json({ error: 'tenant_id, period_year, period_month required' });
-    }
     try {
+        if (req.db.mode === 'nondb') {
+            const existing = req.db.fileDb.find('billing_metrics').find(
+                r => r.tenant_id == tenant_id && r.period_year == period_year && r.period_month == period_month
+            );
+            const data = {
+                tenant_id, period_year, period_month,
+                sales_count: sales_count||0, sales_value: sales_value||0,
+                rental_units: rental_units||0, rental_income: rental_income||0,
+                active_properties: active_properties||0, collected_at: new Date().toISOString(),
+            };
+            const row = existing
+                ? req.db.fileDb.update('billing_metrics', existing.id, data)
+                : req.db.fileDb.create('billing_metrics', data);
+            return res.status(201).json({ success: true, data: row });
+        }
         const { rows } = await db.query(
             `INSERT INTO billing_metrics
              (tenant_id,period_year,period_month,sales_count,sales_value,rental_units,rental_income,active_properties)

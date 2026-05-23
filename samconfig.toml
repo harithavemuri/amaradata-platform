@@ -1,0 +1,48 @@
+version = 0.1
+
+[default]
+[default.global.parameters]
+stack_name = "amaradata-prod"
+
+[default.build.parameters]
+cached   = true
+parallel = true
+
+[default.deploy.parameters]
+capabilities      = "CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND"
+confirm_changeset = true
+resolve_s3        = true
+s3_prefix         = "amaradata-platform"
+region            = "ap-south-1"
+parameter_overrides = "Tenant=amaradata Env=prod CreateDbCluster=false DbName=amaradata_platform VpcId=vpc-f45ce29c VpcSubnetIds=\"subnet-565fe13e,subnet-7349a73f\" FrontendUrl=https://amaradata.com AcmCertificateArn=arn:aws:acm:us-east-1:797666412164:certificate/7c3cb474-3b95-48b6-83b7-d2f4cb5e6b3c"
+# amaradata Aurora cluster provisioned manually outside CloudFormation; do not recreate
+
+[staging]
+[staging.global.parameters]
+stack_name = "amaradata-staging"
+
+[staging.deploy.parameters]
+capabilities      = "CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND"
+confirm_changeset = true
+resolve_s3        = true
+s3_prefix         = "amaradata-platform-staging"
+region            = "ap-south-1"
+parameter_overrides = "Tenant=amaradata Env=staging CreateDbCluster=false DbName=amaradata_platform VpcId=vpc-f45ce29c VpcSubnetIds=\"subnet-565fe13e,subnet-7349a73f\""
+# staging shares the prod cluster; set CreateDbCluster=true only for prod
+
+[qa]
+[qa.global.parameters]
+stack_name = "amaradata-qa"
+
+[qa.build.parameters]
+cached   = true
+parallel = true
+
+[qa.deploy.parameters]
+capabilities      = "CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND"
+confirm_changeset = true
+resolve_s3        = true
+s3_prefix         = "amaradata-platform-qa"
+region            = "ap-south-1"
+parameter_overrides = "Tenant=amaradata Env=qa CreateDbCluster=false DbName=amaradata_qa VpcId=vpc-f45ce29c VpcSubnetIds=\"subnet-565fe13e,subnet-7349a73f\" FrontendUrl=https://qa.amaradata.com AcmCertificateArn=arn:aws:acm:us-east-1:797666412164:certificate/7c3cb474-3b95-48b6-83b7-d2f4cb5e6b3c"
+# QA shares the amaradata Aurora cluster; uses separate DB: amaradata_qa

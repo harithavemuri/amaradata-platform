@@ -1,0 +1,162 @@
+<svg viewBox="0 0 1440 600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="hc-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a1628"/>
+      <stop offset="70%" stop-color="#112240"/>
+      <stop offset="100%" stop-color="#1E3A5F"/>
+    </linearGradient>
+    <linearGradient id="hc-glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0D9488" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#0D9488" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="hc-tower1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a4a6e"/>
+      <stop offset="100%" stop-color="#0e2d47"/>
+    </linearGradient>
+    <linearGradient id="hc-tower2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1E3A5F"/>
+      <stop offset="100%" stop-color="#112240"/>
+    </linearGradient>
+    <linearGradient id="hc-ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a1f3a"/>
+      <stop offset="100%" stop-color="#061221"/>
+    </linearGradient>
+    <linearGradient id="hc-accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0D9488"/>
+      <stop offset="100%" stop-color="#5EEAD4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Sky -->
+  <rect width="1440" height="600" fill="url(#hc-sky)"/>
+
+  <!-- Ambient glow behind central tower -->
+  <ellipse cx="720" cy="300" rx="380" ry="200" fill="url(#hc-glow)"/>
+
+  <!-- Stars -->
+  <circle cx="120" cy="60" r="1.2" fill="#5EEAD4" opacity="0.7"/>
+  <circle cx="280" cy="40" r="1" fill="white" opacity="0.5"/>
+  <circle cx="450" cy="80" r="1.5" fill="#5EEAD4" opacity="0.6"/>
+  <circle cx="600" cy="30" r="1" fill="white" opacity="0.4"/>
+  <circle cx="820" cy="55" r="1.2" fill="#5EEAD4" opacity="0.7"/>
+  <circle cx="990" cy="35" r="1" fill="white" opacity="0.5"/>
+  <circle cx="1150" cy="70" r="1.5" fill="#5EEAD4" opacity="0.6"/>
+  <circle cx="1320" cy="45" r="1" fill="white" opacity="0.4"/>
+  <circle cx="200" cy="110" r="1" fill="white" opacity="0.3"/>
+  <circle cx="1100" cy="100" r="1" fill="white" opacity="0.3"/>
+  <circle cx="350" cy="130" r="1.2" fill="#5EEAD4" opacity="0.4"/>
+  <circle cx="1050" cy="120" r="1.2" fill="#5EEAD4" opacity="0.4"/>
+
+  <!-- Background city silhouette -->
+  <rect x="0" y="340" width="120" height="160" fill="#0c1e33" opacity="0.6"/>
+  <rect x="80" y="300" width="80" height="200" fill="#0c1e33" opacity="0.6"/>
+  <rect x="130" y="360" width="60" height="140" fill="#0c1e33" opacity="0.5"/>
+  <rect x="1240" y="340" width="120" height="160" fill="#0c1e33" opacity="0.6"/>
+  <rect x="1280" y="295" width="80" height="205" fill="#0c1e33" opacity="0.6"/>
+  <rect x="1200" y="365" width="70" height="135" fill="#0c1e33" opacity="0.5"/>
+
+  <!-- Left mid building -->
+  <rect x="240" y="280" width="140" height="240" rx="2" fill="url(#hc-tower1)"/>
+  <!-- Left building windows grid -->
+  <g fill="#0D9488" opacity="0.35">
+    <rect x="255" y="295" width="16" height="10" rx="1"/><rect x="279" y="295" width="16" height="10" rx="1"/><rect x="303" y="295" width="16" height="10" rx="1"/><rect x="327" y="295" width="16" height="10" rx="1"/><rect x="351" y="295" width="16" height="10" rx="1"/>
+    <rect x="255" y="315" width="16" height="10" rx="1"/><rect x="279" y="315" width="16" height="10" rx="1"/><rect x="303" y="315" width="16" height="10" rx="1"/><rect x="327" y="315" width="16" height="10" rx="1"/><rect x="351" y="315" width="16" height="10" rx="1"/>
+    <rect x="255" y="335" width="16" height="10" rx="1"/><rect x="279" y="335" width="16" height="10" rx="1"/><rect x="303" y="335" width="16" height="10" rx="1"/><rect x="327" y="335" width="16" height="10" rx="1"/><rect x="351" y="335" width="16" height="10" rx="1"/>
+    <rect x="255" y="355" width="16" height="10" rx="1"/><rect x="279" y="355" width="16" height="10" rx="1"/><rect x="303" y="355" width="16" height="10" rx="1"/><rect x="327" y="355" width="16" height="10" rx="1"/><rect x="351" y="355" width="16" height="10" rx="1"/>
+    <rect x="255" y="375" width="16" height="10" rx="1"/><rect x="279" y="375" width="16" height="10" rx="1"/><rect x="303" y="375" width="16" height="10" rx="1"/><rect x="327" y="375" width="16" height="10" rx="1"/><rect x="351" y="375" width="16" height="10" rx="1"/>
+  </g>
+  <!-- lit windows left -->
+  <rect x="279" y="315" width="16" height="10" rx="1" fill="#5EEAD4" opacity="0.8"/>
+  <rect x="351" y="355" width="16" height="10" rx="1" fill="#0D9488" opacity="0.9"/>
+  <rect x="255" y="375" width="16" height="10" rx="1" fill="#5EEAD4" opacity="0.7"/>
+
+  <!-- Right mid building -->
+  <rect x="1060" y="260" width="140" height="260" rx="2" fill="url(#hc-tower1)"/>
+  <g fill="#0D9488" opacity="0.35">
+    <rect x="1075" y="275" width="16" height="10" rx="1"/><rect x="1099" y="275" width="16" height="10" rx="1"/><rect x="1123" y="275" width="16" height="10" rx="1"/><rect x="1147" y="275" width="16" height="10" rx="1"/><rect x="1171" y="275" width="16" height="10" rx="1"/>
+    <rect x="1075" y="295" width="16" height="10" rx="1"/><rect x="1099" y="295" width="16" height="10" rx="1"/><rect x="1123" y="295" width="16" height="10" rx="1"/><rect x="1147" y="295" width="16" height="10" rx="1"/><rect x="1171" y="295" width="16" height="10" rx="1"/>
+    <rect x="1075" y="315" width="16" height="10" rx="1"/><rect x="1099" y="315" width="16" height="10" rx="1"/><rect x="1123" y="315" width="16" height="10" rx="1"/><rect x="1147" y="315" width="16" height="10" rx="1"/><rect x="1171" y="315" width="16" height="10" rx="1"/>
+    <rect x="1075" y="335" width="16" height="10" rx="1"/><rect x="1099" y="335" width="16" height="10" rx="1"/><rect x="1123" y="335" width="16" height="10" rx="1"/><rect x="1147" y="335" width="16" height="10" rx="1"/><rect x="1171" y="335" width="16" height="10" rx="1"/>
+    <rect x="1075" y="355" width="16" height="10" rx="1"/><rect x="1099" y="355" width="16" height="10" rx="1"/><rect x="1123" y="355" width="16" height="10" rx="1"/><rect x="1147" y="355" width="16" height="10" rx="1"/><rect x="1171" y="355" width="16" height="10" rx="1"/>
+  </g>
+  <rect x="1099" y="295" width="16" height="10" rx="1" fill="#5EEAD4" opacity="0.8"/>
+  <rect x="1171" y="335" width="16" height="10" rx="1" fill="#0D9488" opacity="0.9"/>
+  <rect x="1123" y="355" width="16" height="10" rx="1" fill="#5EEAD4" opacity="0.7"/>
+
+  <!-- Central tower base -->
+  <rect x="560" y="100" width="320" height="420" rx="3" fill="url(#hc-tower2)"/>
+  <!-- Central tower facade lines (glass curtain wall) -->
+  <line x1="595" y1="100" x2="595" y2="520" stroke="#0D9488" stroke-width="0.8" opacity="0.3"/>
+  <line x1="630" y1="100" x2="630" y2="520" stroke="#0D9488" stroke-width="0.8" opacity="0.3"/>
+  <line x1="665" y1="100" x2="665" y2="520" stroke="#0D9488" stroke-width="0.8" opacity="0.3"/>
+  <line x1="700" y1="100" x2="700" y2="520" stroke="#0D9488" stroke-width="0.8" opacity="0.3"/>
+  <line x1="735" y1="100" x2="735" y2="520" stroke="#0D9488" stroke-width="0.8" opacity="0.3"/>
+  <line x1="770" y1="100" x2="770" y2="520" stroke="#0D9488" stroke-width="0.8" opacity="0.3"/>
+  <line x1="805" y1="100" x2="805" y2="520" stroke="#0D9488" stroke-width="0.8" opacity="0.3"/>
+  <line x1="840" y1="100" x2="840" y2="520" stroke="#0D9488" stroke-width="0.8" opacity="0.3"/>
+  <!-- horizontal floors -->
+  <line x1="560" y1="140" x2="880" y2="140" stroke="#0D9488" stroke-width="0.6" opacity="0.25"/>
+  <line x1="560" y1="180" x2="880" y2="180" stroke="#0D9488" stroke-width="0.6" opacity="0.25"/>
+  <line x1="560" y1="220" x2="880" y2="220" stroke="#0D9488" stroke-width="0.6" opacity="0.25"/>
+  <line x1="560" y1="260" x2="880" y2="260" stroke="#0D9488" stroke-width="0.6" opacity="0.25"/>
+  <line x1="560" y1="300" x2="880" y2="300" stroke="#0D9488" stroke-width="0.6" opacity="0.25"/>
+  <line x1="560" y1="340" x2="880" y2="340" stroke="#0D9488" stroke-width="0.6" opacity="0.25"/>
+  <line x1="560" y1="380" x2="880" y2="380" stroke="#0D9488" stroke-width="0.6" opacity="0.25"/>
+  <line x1="560" y1="420" x2="880" y2="420" stroke="#0D9488" stroke-width="0.6" opacity="0.25"/>
+  <line x1="560" y1="460" x2="880" y2="460" stroke="#0D9488" stroke-width="0.6" opacity="0.25"/>
+  <line x1="560" y1="500" x2="880" y2="500" stroke="#0D9488" stroke-width="0.6" opacity="0.25"/>
+
+  <!-- Lit windows on central tower -->
+  <rect x="572" y="120" width="18" height="14" rx="1" fill="#5EEAD4" opacity="0.6"/>
+  <rect x="610" y="160" width="18" height="14" rx="1" fill="#5EEAD4" opacity="0.7"/>
+  <rect x="648" y="120" width="18" height="14" rx="1" fill="#0D9488" opacity="0.9"/>
+  <rect x="686" y="200" width="18" height="14" rx="1" fill="#5EEAD4" opacity="0.65"/>
+  <rect x="724" y="140" width="18" height="14" rx="1" fill="#5EEAD4" opacity="0.8"/>
+  <rect x="762" y="180" width="18" height="14" rx="1" fill="#0D9488" opacity="0.9"/>
+  <rect x="800" y="120" width="18" height="14" rx="1" fill="#5EEAD4" opacity="0.6"/>
+  <rect x="840" y="160" width="18" height="14" rx="1" fill="#0D9488" opacity="0.8"/>
+  <rect x="572" y="240" width="18" height="14" rx="1" fill="#5EEAD4" opacity="0.5"/>
+  <rect x="648" y="280" width="18" height="14" rx="1" fill="#5EEAD4" opacity="0.7"/>
+  <rect x="724" y="260" width="18" height="14" rx="1" fill="#0D9488" opacity="0.9"/>
+  <rect x="800" y="300" width="18" height="14" rx="1" fill="#5EEAD4" opacity="0.6"/>
+  <rect x="840" y="240" width="18" height="14" rx="1" fill="#5EEAD4" opacity="0.7"/>
+  <rect x="610" y="320" width="18" height="14" rx="1" fill="#0D9488" opacity="0.85"/>
+  <rect x="762" y="340" width="18" height="14" rx="1" fill="#5EEAD4" opacity="0.75"/>
+
+  <!-- Top cap -->
+  <rect x="600" y="88" width="240" height="14" rx="2" fill="#0D9488" opacity="0.6"/>
+  <rect x="660" y="78" width="120" height="12" rx="2" fill="#0D9488" opacity="0.5"/>
+  <!-- Antenna -->
+  <rect x="717" y="40" width="6" height="40" rx="1" fill="#5EEAD4" opacity="0.7"/>
+  <circle cx="720" cy="38" r="4" fill="#0D9488" opacity="0.9"/>
+
+  <!-- Entrance canopy -->
+  <rect x="630" y="500" width="180" height="20" rx="2" fill="#0D9488" opacity="0.5"/>
+  <rect x="650" y="490" width="4" height="30" fill="#1E3A5F"/>
+  <rect x="786" y="490" width="4" height="30" fill="#1E3A5F"/>
+
+  <!-- Teal accent line on tower left edge -->
+  <rect x="558" y="100" width="4" height="420" rx="2" fill="url(#hc-accent)" opacity="0.7"/>
+
+  <!-- Ground / plaza -->
+  <rect x="0" y="520" width="1440" height="80" fill="url(#hc-ground)"/>
+  <!-- Road markings -->
+  <rect x="0" y="530" width="1440" height="2" fill="#0D9488" opacity="0.2"/>
+  <rect x="400" y="535" width="80" height="3" rx="1" fill="#0D9488" opacity="0.15"/>
+  <rect x="550" y="535" width="80" height="3" rx="1" fill="#0D9488" opacity="0.15"/>
+  <rect x="810" y="535" width="80" height="3" rx="1" fill="#0D9488" opacity="0.15"/>
+  <rect x="960" y="535" width="80" height="3" rx="1" fill="#0D9488" opacity="0.15"/>
+
+  <!-- Trees -->
+  <rect x="490" y="490" width="8" height="32" fill="#0a2a1e"/>
+  <ellipse cx="494" cy="482" rx="22" ry="16" fill="#0D9488" opacity="0.5"/>
+  <rect x="940" y="490" width="8" height="32" fill="#0a2a1e"/>
+  <ellipse cx="944" cy="482" rx="22" ry="16" fill="#0D9488" opacity="0.5"/>
+  <rect x="430" y="498" width="6" height="24" fill="#0a2a1e"/>
+  <ellipse cx="433" cy="491" rx="16" ry="12" fill="#0D9488" opacity="0.4"/>
+  <rect x="1000" y="498" width="6" height="24" fill="#0a2a1e"/>
+  <ellipse cx="1003" cy="491" rx="16" ry="12" fill="#0D9488" opacity="0.4"/>
+
+  <!-- Reflection strip on ground -->
+  <rect x="620" y="520" width="200" height="6" rx="2" fill="#0D9488" opacity="0.15"/>
+</svg>

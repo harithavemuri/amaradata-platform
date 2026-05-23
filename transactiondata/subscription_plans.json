@@ -1,0 +1,15 @@
+[
+  {
+    "id": 1,
+    "name": "Standard",
+    "description": "Default plan — 1% of sales, 2% of rental income, ₹2000/hr enhancements",
+    "sales_pct": 1.00,
+    "rental_pct": 2.00,
+    "hourly_rate": 2000.00,
+    "min_monthly_fee": 0,
+    "currency_code": "INR",
+    "is_active": true,
+    "created_at": "2026-01-01T00:00:00.000Z",
+    "updated_at": "2026-01-01T00:00:00.000Z"
+  }
+]

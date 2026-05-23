@@ -1,0 +1,183 @@
+<svg viewBox="0 0 1440 600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="hv-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0e2d4a"/>
+      <stop offset="45%" stop-color="#1E3A5F"/>
+      <stop offset="100%" stop-color="#0f4a40"/>
+    </linearGradient>
+    <linearGradient id="hv-villa" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a4050"/>
+      <stop offset="100%" stop-color="#0d2838"/>
+    </linearGradient>
+    <linearGradient id="hv-roof" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0D9488"/>
+      <stop offset="100%" stop-color="#076b61"/>
+    </linearGradient>
+    <linearGradient id="hv-pool" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0D9488" stop-opacity="0.7"/>
+      <stop offset="50%" stop-color="#5EEAD4" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#0D9488" stop-opacity="0.7"/>
+    </linearGradient>
+    <linearGradient id="hv-ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a2e1e"/>
+      <stop offset="100%" stop-color="#051a10"/>
+    </linearGradient>
+    <linearGradient id="hv-lawn" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a3a22"/>
+      <stop offset="100%" stop-color="#072614"/>
+    </linearGradient>
+    <radialGradient id="hv-moon" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f0f8ff"/>
+      <stop offset="100%" stop-color="#cce4f0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Sky -->
+  <rect width="1440" height="600" fill="url(#hv-sky)"/>
+
+  <!-- Stars -->
+  <circle cx="80" cy="45" r="1.3" fill="white" opacity="0.6"/>
+  <circle cx="200" cy="28" r="1" fill="#5EEAD4" opacity="0.7"/>
+  <circle cx="380" cy="60" r="1.5" fill="white" opacity="0.5"/>
+  <circle cx="560" cy="22" r="1" fill="#5EEAD4" opacity="0.6"/>
+  <circle cx="760" cy="50" r="1.2" fill="white" opacity="0.5"/>
+  <circle cx="960" cy="30" r="1" fill="#5EEAD4" opacity="0.7"/>
+  <circle cx="1140" cy="55" r="1.3" fill="white" opacity="0.5"/>
+  <circle cx="1360" cy="35" r="1" fill="#5EEAD4" opacity="0.6"/>
+  <circle cx="150" cy="90" r="1" fill="white" opacity="0.3"/>
+  <circle cx="680" cy="80" r="1" fill="#5EEAD4" opacity="0.4"/>
+  <circle cx="1240" cy="95" r="1.2" fill="white" opacity="0.35"/>
+  <circle cx="440" cy="100" r="1" fill="white" opacity="0.25"/>
+
+  <!-- Moon + reflection -->
+  <circle cx="200" cy="110" r="50" fill="#112240" opacity="0.9"/>
+  <circle cx="184" cy="95" r="44" fill="url(#hv-moon)" opacity="0.88"/>
+  <!-- Moon craters -->
+  <circle cx="172" cy="88" r="6" fill="#b8d8ec" opacity="0.4"/>
+  <circle cx="195" cy="108" r="4" fill="#b8d8ec" opacity="0.3"/>
+  <circle cx="210" cy="82" r="3" fill="#b8d8ec" opacity="0.25"/>
+
+  <!-- Distant hills -->
+  <ellipse cx="200" cy="500" rx="280" ry="100" fill="#07211a" opacity="0.8"/>
+  <ellipse cx="1240" cy="500" rx="280" ry="100" fill="#07211a" opacity="0.8"/>
+  <ellipse cx="720" cy="520" rx="400" ry="80" fill="#082a1c" opacity="0.6"/>
+
+  <!-- Lawn / grounds -->
+  <rect x="0" y="480" width="1440" height="120" fill="url(#hv-lawn)"/>
+
+  <!-- ── Main Villa ── -->
+  <!-- Wing left -->
+  <rect x="310" y="330" width="200" height="180" rx="3" fill="url(#hv-villa)"/>
+  <polygon points="290,330 530,330 510,290 310,290" fill="url(#hv-roof)"/>
+  <!-- Wing right -->
+  <rect x="930" y="330" width="200" height="180" rx="3" fill="url(#hv-villa)"/>
+  <polygon points="910,330 1150,330 1130,290 930,290" fill="url(#hv-roof)"/>
+  <!-- Centre main body -->
+  <rect x="480" y="310" width="480" height="200" rx="4" fill="url(#hv-villa)"/>
+  <!-- Centre roof gable -->
+  <polygon points="460,310 980,310 960,240 720,210 480,240" fill="url(#hv-roof)"/>
+  <!-- Chimney -->
+  <rect x="820" y="200" width="28" height="48" rx="2" fill="#0a2838"/>
+  <rect x="816" y="196" width="36" height="8" rx="2" fill="#0D9488" opacity="0.8"/>
+
+  <!-- Central arch entrance -->
+  <rect x="680" y="400" width="80" height="110" rx="40" fill="#061820"/>
+  <rect x="692" y="412" width="56" height="98" rx="30" fill="#0a2030" opacity="0.5"/>
+  <!-- Door detail -->
+  <rect x="700" y="460" width="18" height="50" rx="2" fill="#071a28"/>
+  <rect x="722" y="460" width="18" height="50" rx="2" fill="#071a28"/>
+  <circle cx="720" cy="486" r="3" fill="#0D9488" opacity="0.8"/>
+
+  <!-- Left wing windows -->
+  <rect x="330" y="350" width="52" height="40" rx="3" fill="#061820"/>
+  <rect x="340" y="358" width="15" height="30" rx="1" fill="#0D9488" opacity="0.25"/>
+  <rect x="360" y="358" width="15" height="30" rx="1" fill="#0D9488" opacity="0.25"/>
+  <rect x="410" y="350" width="52" height="40" rx="3" fill="#061820"/>
+  <rect x="420" y="358" width="15" height="30" rx="1" fill="#5EEAD4" opacity="0.6"/>
+  <rect x="440" y="358" width="15" height="30" rx="1" fill="#5EEAD4" opacity="0.6"/>
+  <rect x="330" y="410" width="52" height="36" rx="3" fill="#061820"/>
+  <rect x="340" y="417" width="32" height="24" rx="1" fill="#0D9488" opacity="0.45"/>
+  <rect x="410" y="410" width="52" height="36" rx="3" fill="#061820"/>
+  <rect x="420" y="417" width="32" height="24" rx="1" fill="#5EEAD4" opacity="0.5"/>
+
+  <!-- Right wing windows -->
+  <rect x="978" y="350" width="52" height="40" rx="3" fill="#061820"/>
+  <rect x="988" y="358" width="15" height="30" rx="1" fill="#5EEAD4" opacity="0.55"/>
+  <rect x="1008" y="358" width="15" height="30" rx="1" fill="#5EEAD4" opacity="0.55"/>
+  <rect x="1058" y="350" width="52" height="40" rx="3" fill="#061820"/>
+  <rect x="1068" y="358" width="15" height="30" rx="1" fill="#0D9488" opacity="0.3"/>
+  <rect x="1088" y="358" width="15" height="30" rx="1" fill="#0D9488" opacity="0.3"/>
+  <rect x="978" y="410" width="52" height="36" rx="3" fill="#061820"/>
+  <rect x="988" y="417" width="32" height="24" rx="1" fill="#5EEAD4" opacity="0.5"/>
+  <rect x="1058" y="410" width="52" height="36" rx="3" fill="#061820"/>
+  <rect x="1068" y="417" width="32" height="24" rx="1" fill="#0D9488" opacity="0.4"/>
+
+  <!-- Centre windows -->
+  <rect x="510" y="330" width="60" height="50" rx="3" fill="#061820"/>
+  <rect x="522" y="340" width="17" height="38" rx="1" fill="#5EEAD4" opacity="0.55"/>
+  <rect x="544" y="340" width="17" height="38" rx="1" fill="#5EEAD4" opacity="0.55"/>
+  <rect x="590" y="330" width="60" height="50" rx="3" fill="#061820"/>
+  <rect x="602" y="340" width="17" height="38" rx="1" fill="#0D9488" opacity="0.5"/>
+  <rect x="624" y="340" width="17" height="38" rx="1" fill="#0D9488" opacity="0.5"/>
+  <rect x="790" y="330" width="60" height="50" rx="3" fill="#061820"/>
+  <rect x="802" y="340" width="17" height="38" rx="1" fill="#0D9488" opacity="0.5"/>
+  <rect x="824" y="340" width="17" height="38" rx="1" fill="#0D9488" opacity="0.5"/>
+  <rect x="870" y="330" width="60" height="50" rx="3" fill="#061820"/>
+  <rect x="882" y="340" width="17" height="38" rx="1" fill="#5EEAD4" opacity="0.55"/>
+  <rect x="904" y="340" width="17" height="38" rx="1" fill="#5EEAD4" opacity="0.55"/>
+
+  <!-- Columns at entrance -->
+  <rect x="620" y="390" width="14" height="120" rx="4" fill="#0a2838"/>
+  <rect x="806" y="390" width="14" height="120" rx="4" fill="#0a2838"/>
+
+  <!-- Colonnade steps -->
+  <rect x="590" y="505" width="260" height="10" rx="2" fill="#0c2e40" opacity="0.9"/>
+  <rect x="580" y="510" width="280" height="8" rx="2" fill="#0a2838" opacity="0.8"/>
+
+  <!-- Swimming pool -->
+  <rect x="530" y="510" width="380" height="55" rx="8" fill="url(#hv-pool)"/>
+  <rect x="530" y="510" width="380" height="5" rx="3" fill="#5EEAD4" opacity="0.5"/>
+  <rect x="530" y="560" width="380" height="5" rx="3" fill="#5EEAD4" opacity="0.3"/>
+  <!-- Pool ripple lines -->
+  <ellipse cx="720" cy="537" rx="100" ry="8" fill="none" stroke="#5EEAD4" stroke-width="1" opacity="0.25"/>
+  <ellipse cx="720" cy="537" rx="60" ry="5" fill="none" stroke="#5EEAD4" stroke-width="1" opacity="0.2"/>
+
+  <!-- Driveway path -->
+  <path d="M640,565 L640,600 L800,600 L800,565" fill="#082010" opacity="0.6"/>
+  <rect x="700" y="565" width="40" height="35" fill="#0a2818" opacity="0.5"/>
+
+  <!-- Palm trees left -->
+  <rect x="294" y="430" width="12" height="55" rx="3" fill="#061810"/>
+  <ellipse cx="300" cy="424" rx="34" ry="12" fill="#0D9488" opacity="0.6" transform="rotate(-25,300,424)"/>
+  <ellipse cx="300" cy="424" rx="34" ry="12" fill="#0D9488" opacity="0.5" transform="rotate(10,300,424)"/>
+  <ellipse cx="300" cy="424" rx="34" ry="12" fill="#0D9488" opacity="0.45" transform="rotate(40,300,424)"/>
+  <rect x="248" y="450" width="10" height="35" rx="2" fill="#061810"/>
+  <ellipse cx="253" cy="444" rx="26" ry="10" fill="#0D9488" opacity="0.5" transform="rotate(-20,253,444)"/>
+  <ellipse cx="253" cy="444" rx="26" ry="10" fill="#0D9488" opacity="0.4" transform="rotate(25,253,444)"/>
+
+  <!-- Palm trees right -->
+  <rect x="1134" y="430" width="12" height="55" rx="3" fill="#061810"/>
+  <ellipse cx="1140" cy="424" rx="34" ry="12" fill="#0D9488" opacity="0.6" transform="rotate(25,1140,424)"/>
+  <ellipse cx="1140" cy="424" rx="34" ry="12" fill="#0D9488" opacity="0.5" transform="rotate(-10,1140,424)"/>
+  <ellipse cx="1140" cy="424" rx="34" ry="12" fill="#0D9488" opacity="0.45" transform="rotate(-40,1140,424)"/>
+  <rect x="1182" y="450" width="10" height="35" rx="2" fill="#061810"/>
+  <ellipse cx="1187" cy="444" rx="26" ry="10" fill="#0D9488" opacity="0.5" transform="rotate(20,1187,444)"/>
+  <ellipse cx="1187" cy="444" rx="26" ry="10" fill="#0D9488" opacity="0.4" transform="rotate(-25,1187,444)"/>
+
+  <!-- Hedge/shrubs -->
+  <ellipse cx="460" cy="512" rx="50" ry="18" fill="#0D9488" opacity="0.45"/>
+  <ellipse cx="420" cy="516" rx="34" ry="14" fill="#0a3a20" opacity="0.6"/>
+  <ellipse cx="980" cy="512" rx="50" ry="18" fill="#0D9488" opacity="0.45"/>
+  <ellipse cx="1020" cy="516" rx="34" ry="14" fill="#0a3a20" opacity="0.6"/>
+
+  <!-- Ground shadow -->
+  <rect x="0" y="568" width="1440" height="32" fill="url(#hv-ground)"/>
+
+  <!-- Teal accent on roofline -->
+  <rect x="460" y="238" width="520" height="5" rx="2" fill="#5EEAD4" opacity="0.6"/>
+  <rect x="288" y="288" width="244" height="4" rx="2" fill="#0D9488" opacity="0.5"/>
+  <rect x="908" y="288" width="244" height="4" rx="2" fill="#0D9488" opacity="0.5"/>
+
+  <!-- Moonlight reflection on pool -->
+  <ellipse cx="720" cy="532" rx="60" ry="10" fill="white" opacity="0.06"/>
+</svg>

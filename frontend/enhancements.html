@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
   <title>Enhancements — AmaraData Platform</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="/js/platform.js"></script>
@@ -14,13 +15,15 @@
         const root = window.__amrd.renderSidebar('Enhancements');
 
         async function load(filter = '') {
-            const url = filter ? `/api/enhancements?status=${filter}` : '/api/enhancements';
-            const [enhR, tenantsR] = await Promise.all([
-                window.__amrd.apiFetch(url),
-                window.__amrd.apiFetch('/api/tenants'),
-            ]);
-            const enhancements = enhR?.data    || [];
-            const tenants      = tenantsR?.data || [];
+            const gql = await window.__amrd.gqlFetch(
+                `query($status: String) {
+                    enhancements(status: $status) { id tenant_id tenant_name title description billing_type status estimated_hours hourly_rate milestone_amount delivered_at notes invoice_id }
+                    tenants { id name }
+                }`,
+                { status: filter || null }
+            );
+            const enhancements = gql?.enhancements || [];
+            const tenants      = gql?.tenants      || [];
 
             root.innerHTML = `
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;align-items:center">
@@ -44,7 +47,7 @@
                                     <td>${e.tenant_name}</td>
                                     <td>${e.billing_type}</td>
                                     <td>${e.actual_hours ?? e.estimated_hours ?? '—'}</td>
-                                    <td>${amt ? '₹' + Number(amt).toLocaleString('en-IN') : '—'}</td>
+                                    <td>${amt ? new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Number(amt)) : '—'}</td>
                                     <td><span class="amrd-badge amrd-badge-${e.status}">${e.status}</span></td>
                                     <td><button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick='openForm(${JSON.stringify(e)}, ${JSON.stringify(tenants)})'>Edit</button></td>
                                 </tr>`;
@@ -80,8 +83,8 @@
                         <div><label>Actual Hours</label><input id="f-ahours" type="number" step="0.5" value="${e?.actual_hours||''}"></div>
                     </div>
                     <div class="amrd-form-row">
-                        <div><label>Hourly Rate (₹)</label><input id="f-rate" type="number" value="${e?.hourly_rate||''}"></div>
-                        <div><label>Milestone Amount (₹)</label><input id="f-mamount" type="number" value="${e?.milestone_amount||''}"></div>
+                        <div><label>Hourly Rate</label><input id="f-rate" type="number" value="${e?.hourly_rate||''}"></div>
+                        <div><label>Milestone Amount</label><input id="f-mamount" type="number" value="${e?.milestone_amount||''}"></div>
                     </div>
                     <div class="amrd-form-row">
                         <div><label>Status</label>

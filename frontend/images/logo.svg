@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!--
+    AmaraData wordmark: single-path hollow A.
+    Rules satisfied:
+      1. One color  — no gradient required, just fill="#6366f1" (or any color)
+      2. 16 × 16 px — legible at favicon scale
+      3. Symmetrical — axis of symmetry at x = 50
+      4. Two elements — the A body + the inner cutout (both part of one <path>)
+
+    Outer polygon  — traces the solid A outline
+    Inner triangle — evenodd removes the interior above the crossbar, leaving the
+                     classic hollow A letterform with solid legs and crossbar
+  -->
+  <path fill-rule="evenodd"
+        d="M50,6  L3,94  L23,94 L34,62 L66,62 L77,94 L97,94 Z
+           M50,18 L32,52 L68,52 Z"
+        fill="#0D9488"/>
+</svg>

@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 600" font-family="'Segoe UI',Arial,sans-serif">
+  <!-- Background -->
+  <rect width="1400" height="600" fill="#0f172a"/>
+
+  <!-- Sidebar -->
+  <rect width="220" height="600" fill="#1e293b"/>
+  <text x="24" y="38" fill="#0D9488" font-size="18" font-weight="700" letter-spacing="1">AmaraData</text>
+  <text x="24" y="54" fill="#475569" font-size="10">Platform Console</text>
+  <rect x="0" y="68" width="220" height="1" fill="#334155"/>
+  <text x="32" y="100" fill="#64748b" font-size="13">Dashboard</text>
+  <text x="32" y="132" fill="#64748b" font-size="13">Tenants</text>
+  <rect x="0" y="152" width="4" height="36" fill="#0D9488"/>
+  <rect x="8" y="160" width="16" height="16" rx="3" fill="#0D9488"/>
+  <text x="32" y="172" fill="#e2e8f0" font-size="13" font-weight="600">Invoices</text>
+  <text x="32" y="204" fill="#64748b" font-size="13">Enhancements</text>
+  <text x="32" y="236" fill="#64748b" font-size="13">Billing Metrics</text>
+
+  <!-- Top bar -->
+  <rect x="220" y="0" width="1180" height="56" fill="#1e293b"/>
+  <text x="248" y="34" fill="#f1f5f9" font-size="18" font-weight="700">Invoices</text>
+  <rect x="1240" y="12" width="140" height="32" rx="6" fill="#0D9488"/>
+  <text x="1258" y="32" fill="#fff" font-size="12" font-weight="600">+ Generate Invoice</text>
+
+  <!-- Filter row -->
+  <rect x="248" y="70" width="200" height="36" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="268" y="93" fill="#64748b" font-size="13">All Tenants</text>
+  <rect x="464" y="70" width="160" height="36" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="484" y="93" fill="#64748b" font-size="13">All Statuses</text>
+  <rect x="640" y="70" width="160" height="36" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="660" y="93" fill="#64748b" font-size="13">May 2026</text>
+
+  <!-- Invoice table -->
+  <rect x="248" y="124" width="1120" height="440" rx="10" fill="#1e293b"/>
+  <!-- Header row -->
+  <rect x="248" y="124" width="1120" height="44" rx="10" fill="#162032"/>
+  <text x="278" y="152" fill="#475569" font-size="11" font-weight="700" letter-spacing=".8">INVOICE #</text>
+  <text x="418" y="152" fill="#475569" font-size="11" font-weight="700" letter-spacing=".8">TENANT</text>
+  <text x="618" y="152" fill="#475569" font-size="11" font-weight="700" letter-spacing=".8">PERIOD</text>
+  <text x="778" y="152" fill="#475569" font-size="11" font-weight="700" letter-spacing=".8">AMOUNT</text>
+  <text x="938" y="152" fill="#475569" font-size="11" font-weight="700" letter-spacing=".8">ISSUED</text>
+  <text x="1098" y="152" fill="#475569" font-size="11" font-weight="700" letter-spacing=".8">STATUS</text>
+  <rect x="268" y="168" width="1080" height="1" fill="#334155"/>
+
+  <!-- Row 1 -->
+  <text x="278" y="200" fill="#94a3b8" font-size="13">AMR-2026-0014</text>
+  <text x="418" y="200" fill="#e2e8f0" font-size="13">Rohas Group</text>
+  <text x="618" y="200" fill="#94a3b8" font-size="13">Apr 2026</text>
+  <text x="778" y="200" fill="#e2e8f0" font-size="13" font-weight="600">₹2,17,360</text>
+  <text x="938" y="200" fill="#94a3b8" font-size="13">01 May 2026</text>
+  <rect x="1090" y="186" width="60" height="22" rx="11" fill="#10b981" opacity=".15"/>
+  <text x="1107" y="202" fill="#10b981" font-size="12" font-weight="600">Paid</text>
+  <rect x="268" y="208" width="1080" height="1" fill="#1e2d42"/>
+
+  <!-- Row 2 -->
+  <text x="278" y="240" fill="#94a3b8" font-size="13">AMR-2026-0013</text>
+  <text x="418" y="240" fill="#e2e8f0" font-size="13">Lakshmi Infra</text>
+  <text x="618" y="240" fill="#94a3b8" font-size="13">Apr 2026</text>
+  <text x="778" y="240" fill="#e2e8f0" font-size="13" font-weight="600">₹1,09,028</text>
+  <text x="938" y="240" fill="#94a3b8" font-size="13">01 May 2026</text>
+  <rect x="1090" y="226" width="60" height="22" rx="11" fill="#3b82f6" opacity=".15"/>
+  <text x="1105" y="242" fill="#3b82f6" font-size="12" font-weight="600">Sent</text>
+  <rect x="268" y="248" width="1080" height="1" fill="#1e2d42"/>
+
+  <!-- Row 3 -->
+  <text x="278" y="280" fill="#94a3b8" font-size="13">AMR-2026-0012</text>
+  <text x="418" y="280" fill="#e2e8f0" font-size="13">Sai Builders</text>
+  <text x="618" y="280" fill="#94a3b8" font-size="13">Apr 2026</text>
+  <text x="778" y="280" fill="#e2e8f0" font-size="13" font-weight="600">₹2,53,464</text>
+  <text x="938" y="280" fill="#94a3b8" font-size="13">01 May 2026</text>
+  <rect x="1090" y="266" width="76" height="22" rx="11" fill="#ef4444" opacity=".15"/>
+  <text x="1100" y="282" fill="#ef4444" font-size="12" font-weight="600">Overdue</text>
+  <rect x="268" y="288" width="1080" height="1" fill="#1e2d42"/>
+
+  <!-- Row 4 -->
+  <text x="278" y="320" fill="#94a3b8" font-size="13">AMR-2026-0011</text>
+  <text x="418" y="320" fill="#e2e8f0" font-size="13">GreenAcres</text>
+  <text x="618" y="320" fill="#94a3b8" font-size="13">Apr 2026</text>
+  <text x="778" y="320" fill="#e2e8f0" font-size="13" font-weight="600">₹80,712</text>
+  <text x="938" y="320" fill="#94a3b8" font-size="13">01 May 2026</text>
+  <rect x="1090" y="306" width="60" height="22" rx="11" fill="#10b981" opacity=".15"/>
+  <text x="1107" y="322" fill="#10b981" font-size="12" font-weight="600">Paid</text>
+  <rect x="268" y="328" width="1080" height="1" fill="#1e2d42"/>
+
+  <!-- Row 5 -->
+  <text x="278" y="360" fill="#94a3b8" font-size="13">AMR-2026-0010</text>
+  <text x="418" y="360" fill="#e2e8f0" font-size="13">MK Estates</text>
+  <text x="618" y="360" fill="#94a3b8" font-size="13">Mar 2026</text>
+  <text x="778" y="360" fill="#e2e8f0" font-size="13" font-weight="600">₹1,30,414</text>
+  <text x="938" y="360" fill="#94a3b8" font-size="13">01 Apr 2026</text>
+  <rect x="1090" y="346" width="60" height="22" rx="11" fill="#10b981" opacity=".15"/>
+  <text x="1107" y="362" fill="#10b981" font-size="12" font-weight="600">Paid</text>
+  <rect x="268" y="368" width="1080" height="1" fill="#1e2d42"/>
+
+  <!-- Row 6 -->
+  <text x="278" y="400" fill="#94a3b8" font-size="13">AMR-2026-0009</text>
+  <text x="418" y="400" fill="#e2e8f0" font-size="13">Apex Realty</text>
+  <text x="618" y="400" fill="#94a3b8" font-size="13">Mar 2026</text>
+  <text x="778" y="400" fill="#e2e8f0" font-size="13" font-weight="600">₹1,77,660</text>
+  <text x="938" y="400" fill="#94a3b8" font-size="13">01 Apr 2026</text>
+  <rect x="1090" y="386" width="60" height="22" rx="11" fill="#94a3b8" opacity=".15"/>
+  <text x="1102" y="402" fill="#94a3b8" font-size="12" font-weight="600">Draft</text>
+
+  <!-- GST badge -->
+  <rect x="248" y="520" width="360" height="36" rx="6" fill="#1e3a5f"/>
+  <text x="268" y="543" fill="#60a5fa" font-size="12">GST 18% auto-calculated on all invoices</text>
+
+  <!-- Summary totals -->
+  <text x="1098" y="520" fill="#64748b" font-size="12">Total billed this month:</text>
+  <text x="1098" y="545" fill="#f1f5f9" font-size="20" font-weight="700">₹14,60,348</text>
+</svg>

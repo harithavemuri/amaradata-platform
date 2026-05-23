@@ -1,0 +1,16 @@
+{
+  "table": "tenant_subscriptions",
+  "columns": [
+    { "name": "id",                 "type": "serial",      "primaryKey": true },
+    { "name": "tenant_id",          "type": "integer",     "notNull": true, "references": "tenants(id)" },
+    { "name": "plan_id",            "type": "integer",     "notNull": true, "references": "subscription_plans(id)" },
+    { "name": "effective_from",     "type": "date",        "notNull": true },
+    { "name": "effective_to",       "type": "date" },
+    { "name": "custom_sales_pct",   "type": "numeric(5,2)" },
+    { "name": "custom_rental_pct",  "type": "numeric(5,2)" },
+    { "name": "custom_hourly_rate", "type": "numeric(10,2)" },
+    { "name": "custom_min_fee",     "type": "numeric(10,2)" },
+    { "name": "notes",              "type": "text" },
+    { "name": "created_at",         "type": "timestamp",   "notNull": true }
+  ]
+}

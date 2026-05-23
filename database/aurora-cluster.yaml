@@ -1,0 +1,160 @@
+# Aurora Serverless v2 Cluster — SAM/CloudFormation resources
+#
+# These resources are included in template.yaml and gated on CreateDbCluster=true.
+# The amaradata Aurora cluster was provisioned once with CreateDbCluster=true,
+# then all subsequent deploys use CreateDbCluster=false and point to the shared endpoint.
+#
+# To provision a new cluster:
+#   sam deploy --stack-name <tenant>-prod \
+#     --parameter-overrides Tenant=<tenant> Env=prod CreateDbCluster=true \
+#       DbName=<db> VpcId=vpc-f45ce29c VpcSubnetIds="subnet-565fe13e,subnet-7349a73f"
+#
+# Pre-requisites (Secrets Manager, created once):
+#   aws secretsmanager put-secret-value --secret-id /<tenant>/<env>/db-user     --secret-string "..."
+#   aws secretsmanager put-secret-value --secret-id /<tenant>/<env>/db-password --secret-string "..."
+#
+# After cluster is up, store the writer endpoint:
+#   aws secretsmanager put-secret-value --secret-id /<tenant>/<env>/db-host --secret-string "<Endpoint.Address>"
+# ──────────────────────────────────────────────────────────────────────────────
+
+Parameters:
+  Tenant:
+    Type: String
+    Description: >
+      Tenant identifier — short, lowercase, no spaces (e.g. rohas, acme).
+      Drives resource names, secret/SSM paths: /<tenant>/<env>/...
+
+  Env:
+    Type: String
+    Default: prod
+    AllowedValues: [prod, qa, staging, dev]
+
+  CreateDbCluster:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: >
+      true  — provision a new Aurora Serverless v2 cluster.
+      false — skip all DB resources; share an existing cluster.
+              Pre-create /<tenant>/<env>/db-host in Secrets Manager first.
+
+  DbName:
+    Type: String
+    Description: Name of the tenant PostgreSQL database on the cluster
+
+  ProjectDatabases:
+    Type: String
+    Default: ''
+    Description: Comma-separated project databases to create (e.g. amaracasa,towertwo)
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: >
+      VPC for Aurora.
+      Find subnets: aws ec2 describe-subnets --region ap-south-1
+        --filters "Name=defaultForAz,Values=true"
+        --query "Subnets[*].[SubnetId,AvailabilityZone]" --output table
+
+  VpcSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Two subnets in different AZs from the same VPC
+
+Conditions:
+  ShouldCreateDb: !Equals [!Ref CreateDbCluster, 'true']
+
+Resources:
+
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: ShouldCreateDb
+    Properties:
+      GroupDescription: !Sub '${Tenant}-${Env} Aurora PostgreSQL'
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: 0.0.0.0/0   # restrict to office IP after go-live
+      Tags:
+        - { Key: tenant,    Value: !Ref Tenant }
+        - { Key: component, Value: shared }
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Condition: ShouldCreateDb
+    Properties:
+      DBSubnetGroupDescription: !Sub '${Tenant}-${Env} Aurora subnet group'
+      SubnetIds: !Ref VpcSubnetIds
+      Tags:
+        - { Key: tenant,    Value: !Ref Tenant }
+        - { Key: component, Value: shared }
+
+  DBCluster:
+    Type: AWS::RDS::DBCluster
+    Condition: ShouldCreateDb
+    DeletionPolicy: Snapshot
+    Properties:
+      DBClusterIdentifier: !Sub '${Tenant}-${Env}'
+      Engine: aurora-postgresql
+      EngineVersion: '16.4'
+      DatabaseName: !Ref DbName
+      MasterUsername:     !Sub '{{resolve:secretsmanager:/${Tenant}/${Env}/db-user}}'
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:/${Tenant}/${Env}/db-password}}'
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VpcSecurityGroupIds:
+        - !GetAtt DBSecurityGroup.GroupId
+      ServerlessV2ScalingConfiguration:
+        MinCapacity: 0
+        MaxCapacity: 4
+      StorageEncrypted: true
+      BackupRetentionPeriod: 7
+      PreferredBackupWindow: '18:00-19:00'
+      DeletionProtection: true
+      Tags:
+        - { Key: tenant,    Value: !Ref Tenant }
+        - { Key: component, Value: shared }
+
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    Condition: ShouldCreateDb
+    Properties:
+      DBClusterIdentifier: !Ref DBCluster
+      DBInstanceClass: db.serverless
+      Engine: aurora-postgresql
+      PubliclyAccessible: true
+
+  # Custom resource — runs after cluster is ready; creates project databases.
+  # Re-run by bumping ResourceVersion or changing ProjectDatabases.
+  DBInitFn:
+    Type: AWS::Serverless::Function
+    Condition: ShouldCreateDb
+    DependsOn: DBInstance
+    Properties:
+      FunctionName: !Sub '${Tenant}-${Env}-db-init'
+      CodeUri: .
+      Handler: backend/lambda/db-init.handler
+      Description: CloudFormation custom resource — creates project databases on the Aurora cluster
+      Timeout: 120
+      Tags:
+        tenant:    !Ref Tenant
+        component: shared
+
+  DBInitResource:
+    Type: AWS::CloudFormation::CustomResource
+    Condition: ShouldCreateDb
+    DependsOn: DBInitFn
+    Properties:
+      ServiceToken: !GetAtt DBInitFn.Arn
+      ProjectDatabases: !Ref ProjectDatabases
+      ResourceVersion: '2'   # bump to force re-run without changing ProjectDatabases
+
+Outputs:
+  DBClusterEndpoint:
+    Condition: ShouldCreateDb
+    Description: Aurora writer endpoint — store as /<tenant>/<env>/db-host in Secrets Manager
+    Value: !GetAtt DBCluster.Endpoint.Address
+
+  ProjectDatabases:
+    Condition: ShouldCreateDb
+    Description: Project databases provisioned on the cluster
+    Value: !Ref ProjectDatabases

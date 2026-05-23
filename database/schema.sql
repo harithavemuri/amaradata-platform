@@ -7,7 +7,9 @@ CREATE TABLE IF NOT EXISTS amr_users (
     email           VARCHAR(255) UNIQUE NOT NULL,
     name            VARCHAR(255) NOT NULL,
     role            VARCHAR(50)  NOT NULL DEFAULT 'staff', -- admin | staff | billing
-    password_hash   TEXT         NOT NULL,
+    password_hash   TEXT         NOT NULL DEFAULT '',
+    google_id       VARCHAR(255),
+    picture         TEXT,
     is_active       BOOLEAN      NOT NULL DEFAULT true,
     last_login_at   TIMESTAMP,
     created_at      TIMESTAMP    NOT NULL DEFAULT NOW(),
@@ -32,9 +34,11 @@ CREATE TABLE IF NOT EXISTS tenants (
     tenant_db_port        INTEGER      DEFAULT 5432,
     tenant_db_name        VARCHAR(100),
     tenant_db_user        VARCHAR(100),
-    tenant_db_secret_arn  VARCHAR(500),                  -- AWS Secrets Manager ARN for DB password
+    tenant_db_secret_arn  VARCHAR(500),                  -- AWS Secrets Manager ARN for DB password (production)
+    tenant_db_password    TEXT,                          -- DB password for local dev only; use Secrets Manager in production
     onboarded_at          DATE,
     notes                 TEXT,
+    site_url              VARCHAR(500),                          -- tenant's application URL (hosted/managed by AmaraData)
     created_at            TIMESTAMP    NOT NULL DEFAULT NOW(),
     updated_at            TIMESTAMP    NOT NULL DEFAULT NOW()
 );
@@ -155,6 +159,20 @@ CREATE TABLE IF NOT EXISTS payments (
     created_at       TIMESTAMP     NOT NULL DEFAULT NOW(),
     -- Prevent duplicate payment recording for the same bank reference per tenant
     UNIQUE (tenant_id, reference_number)
+);
+
+-- Contact form submissions
+CREATE TABLE IF NOT EXISTS contact_submissions (
+    id              SERIAL PRIMARY KEY,
+    ref_number      VARCHAR(30)  UNIQUE NOT NULL,
+    name            VARCHAR(255) NOT NULL,
+    email           VARCHAR(255) NOT NULL,
+    phone           VARCHAR(50),
+    company         VARCHAR(255),
+    message         TEXT         NOT NULL,
+    status          VARCHAR(50)  NOT NULL DEFAULT 'new', -- new | contacted | resolved
+    submitted_at    TIMESTAMP    NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMP    NOT NULL DEFAULT NOW()
 );
 
 -- Indexes

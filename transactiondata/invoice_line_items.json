@@ -1,0 +1,123 @@
+[
+  {
+    "id": 1,
+    "invoice_id": 1,
+    "billing_type": "sales_pct",
+    "description": "Sales Commission — January 2026 (3 transactions, 1% of ₹2,47,50,000)",
+    "quantity": 1,
+    "unit_price": 247500.00,
+    "amount": 247500.00,
+    "sort_order": 1,
+    "created_at": "2026-02-01T09:00:00.000Z"
+  },
+  {
+    "id": 2,
+    "invoice_id": 1,
+    "billing_type": "rental_pct",
+    "description": "Rental Income Commission — January 2026 (8 units, 2% of ₹1,92,000)",
+    "quantity": 1,
+    "unit_price": 3840.00,
+    "amount": 3840.00,
+    "sort_order": 2,
+    "created_at": "2026-02-01T09:00:00.000Z"
+  },
+  {
+    "id": 3,
+    "invoice_id": 2,
+    "billing_type": "sales_pct",
+    "description": "Sales Commission — February 2026 (2 transactions, 1% of ₹1,65,00,000)",
+    "quantity": 1,
+    "unit_price": 165000.00,
+    "amount": 165000.00,
+    "sort_order": 1,
+    "created_at": "2026-03-01T09:00:00.000Z"
+  },
+  {
+    "id": 4,
+    "invoice_id": 2,
+    "billing_type": "rental_pct",
+    "description": "Rental Income Commission — February 2026 (9 units, 2% of ₹2,16,000)",
+    "quantity": 1,
+    "unit_price": 4320.00,
+    "amount": 4320.00,
+    "sort_order": 2,
+    "created_at": "2026-03-01T09:00:00.000Z"
+  },
+  {
+    "id": 5,
+    "invoice_id": 3,
+    "billing_type": "sales_pct",
+    "description": "Sales Commission — March 2026 (4 transactions, 1% of ₹3,22,00,000)",
+    "quantity": 1,
+    "unit_price": 322000.00,
+    "amount": 322000.00,
+    "sort_order": 1,
+    "created_at": "2026-04-01T09:00:00.000Z"
+  },
+  {
+    "id": 6,
+    "invoice_id": 3,
+    "billing_type": "rental_pct",
+    "description": "Rental Income Commission — March 2026 (10 units, 2% of ₹2,40,000)",
+    "quantity": 1,
+    "unit_price": 4800.00,
+    "amount": 4800.00,
+    "sort_order": 2,
+    "created_at": "2026-04-01T09:00:00.000Z"
+  },
+  {
+    "id": 7,
+    "invoice_id": 3,
+    "billing_type": "hourly",
+    "description": "Enhancement: Dashboard Analytics Upgrade (12 hrs @ ₹2,000/hr)",
+    "quantity": 12,
+    "unit_price": 2000.00,
+    "amount": 24000.00,
+    "sort_order": 3,
+    "created_at": "2026-04-01T09:00:00.000Z"
+  },
+  {
+    "id": 8,
+    "invoice_id": 4,
+    "billing_type": "sales_pct",
+    "description": "Sales Commission — April 2026 (3 transactions, 1% of ₹2,56,00,000)",
+    "quantity": 1,
+    "unit_price": 256000.00,
+    "amount": 256000.00,
+    "sort_order": 1,
+    "created_at": "2026-05-01T09:00:00.000Z"
+  },
+  {
+    "id": 9,
+    "invoice_id": 4,
+    "billing_type": "rental_pct",
+    "description": "Rental Income Commission — April 2026 (10 units, 2% of ₹2,40,000)",
+    "quantity": 1,
+    "unit_price": 4800.00,
+    "amount": 4800.00,
+    "sort_order": 2,
+    "created_at": "2026-05-01T09:00:00.000Z"
+  },
+  {
+    "id": 10,
+    "invoice_id": 5,
+    "billing_type": "sales_pct",
+    "description": "Sales Commission — May 2026 (5 transactions, 1% of ₹4,18,00,000)",
+    "quantity": 1,
+    "unit_price": 418000.00,
+    "amount": 418000.00,
+    "sort_order": 1,
+    "created_at": "2026-05-21T09:00:00.000Z"
+  },
+  {
+    "id": 11,
+    "invoice_id": 5,
+    "billing_type": "rental_pct",
+    "description": "Rental Income Commission — May 2026 (11 units, 2% of ₹2,64,000)",
+    "quantity": 1,
+    "unit_price": 5280.00,
+    "amount": 5280.00,
+    "sort_order": 2,
+    "created_at": "2026-05-21T09:00:00.000Z"
+  }
+]

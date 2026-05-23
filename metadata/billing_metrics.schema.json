@@ -1,0 +1,17 @@
+{
+  "table": "billing_metrics",
+  "columns": [
+    { "name": "id",                "type": "serial",       "primaryKey": true },
+    { "name": "tenant_id",         "type": "integer",      "notNull": true, "references": "tenants(id)" },
+    { "name": "subscription_id",   "type": "integer",      "references": "tenant_subscriptions(id)" },
+    { "name": "period_year",       "type": "integer",      "notNull": true },
+    { "name": "period_month",      "type": "integer",      "notNull": true },
+    { "name": "sales_count",       "type": "integer",      "notNull": true, "default": 0 },
+    { "name": "sales_value",       "type": "numeric(15,2)","notNull": true, "default": 0 },
+    { "name": "rental_units",      "type": "integer",      "notNull": true, "default": 0 },
+    { "name": "rental_income",     "type": "numeric(15,2)","notNull": true, "default": 0 },
+    { "name": "active_properties", "type": "integer",      "notNull": true, "default": 0 },
+    { "name": "collected_at",      "type": "timestamp",    "notNull": true },
+    { "name": "created_at",        "type": "timestamp",    "notNull": true }
+  ]
+}

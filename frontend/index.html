@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <title>AmaraData — Property Sales & Rental Management Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            overflow-x: hidden;
+        }
+
+        /* ── Header ─────────────────────────────────────────────────── */
+        header {
+            background: rgba(255,255,255,0.97);
+            backdrop-filter: blur(10px);
+            padding: 0 2rem;
+            height: 68px;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 1px solid #e2e8f0;
+            box-shadow: 0 2px 12px rgba(0,0,0,.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-link { text-decoration: none; display: flex; align-items: center; gap: .75rem; }
+
+        .logo-icon {
+            width: 38px; height: 38px; border-radius: 8px;
+            background: linear-gradient(135deg, #0D9488, #1E3A5F);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; padding: 4px;
+        }
+        .logo-icon svg { width: 100%; height: 100%; }
+
+        .logo-wordmark { display: flex; flex-direction: column; }
+        .logo-name {
+            font-size: 1.25rem; font-weight: 800;
+            background: linear-gradient(90deg, #0D9488, #1E3A5F);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text; letter-spacing: .5px; line-height: 1;
+        }
+        .logo-tagline {
+            font-size: .7rem; color: #94a3b8; font-weight: 500;
+            letter-spacing: .5px; margin-top: 2px;
+        }
+
+        .nav-links {
+            display: flex; gap: 2rem; list-style: none; align-items: center;
+        }
+        .nav-links a {
+            color: #475569; text-decoration: none; font-size: .92rem;
+            font-weight: 500; transition: color .2s;
+        }
+        .nav-links a:hover { color: #0D9488; }
+
+        .nav-cta {
+            display: flex; align-items: center; gap: .75rem;
+        }
+        .btn-login {
+            color: #0D9488; font-weight: 600; font-size: .92rem;
+            text-decoration: none; padding: .5rem 1rem;
+            border: 1.5px solid #0D9488; border-radius: 8px;
+            transition: all .2s;
+        }
+        .btn-login:hover { background: #0D9488; color: #fff; }
+
+        .btn-demo {
+            background: linear-gradient(135deg, #0D9488, #1E3A5F);
+            color: #fff; font-weight: 600; font-size: .92rem;
+            text-decoration: none; padding: .5rem 1.25rem;
+            border-radius: 8px; transition: all .2s;
+            box-shadow: 0 2px 8px rgba(13,148,136,.3);
+        }
+        .btn-demo:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(13,148,136,.4); }
+
+        /* ── Hero ────────────────────────────────────────────────────── */
+        .hero {
+            margin-top: 68px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ── Hero Slider ─────────────────────────────────────────────── */
+        .hero-slider {
+            position: relative;
+            width: 100%;
+            height: 560px;
+            overflow: hidden;
+        }
+        .hero-track {
+            display: flex;
+            height: 100%;
+            transition: transform .7s cubic-bezier(.4,0,.2,1);
+        }
+        .hero-slide {
+            min-width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero-slide img {
+            width: 100%; height: 100%; object-fit: cover; display: block;
+        }
+        .hero-slide-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(to bottom,
+                rgba(10,22,40,.25) 0%,
+                rgba(10,22,40,.15) 40%,
+                rgba(10,22,40,.70) 100%);
+        }
+        .hero-slide-label {
+            position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
+            text-align: center; color: #fff; pointer-events: none;
+        }
+        .hero-slide-label h2 {
+            font-size: 1.6rem; font-weight: 700; letter-spacing: .3px;
+            text-shadow: 0 2px 12px rgba(0,0,0,.5);
+        }
+        .hero-slide-label p {
+            font-size: .95rem; color: rgba(255,255,255,.75); margin-top: .3rem;
+            text-shadow: 0 1px 6px rgba(0,0,0,.5);
+        }
+        .hero-tagline {
+            position: absolute; top: 0; left: 0; right: 0;
+            z-index: 10; text-align: center; padding: 1.1rem 2rem;
+            background: linear-gradient(to bottom, rgba(10,22,40,.65) 0%, transparent 100%);
+            pointer-events: none;
+        }
+        .hero-tagline span {
+            font-size: 1rem; font-weight: 600; color: #fff;
+            letter-spacing: .4px;
+            text-shadow: 0 1px 8px rgba(0,0,0,.6);
+        }
+        .hero-tagline .ht-dot {
+            display: inline-block; width: 5px; height: 5px; border-radius: 50%;
+            background: #0D9488; margin: 0 .6rem; vertical-align: middle;
+        }
+        .hero-slider-dots {
+            position: absolute; bottom: 1.5rem; right: 2rem;
+            display: flex; gap: .5rem; z-index: 10;
+        }
+        .hero-slider-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: rgba(255,255,255,.35); cursor: pointer; transition: all .3s;
+            border: none; padding: 0;
+        }
+        .hero-slider-dot.active {
+            background: #0D9488; width: 22px; border-radius: 4px;
+            box-shadow: 0 0 8px rgba(13,148,136,.8);
+        }
+        .hero-arrow {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            width: 40px; height: 40px; border-radius: 50%;
+            background: rgba(255,255,255,.12); backdrop-filter: blur(6px);
+            border: 1px solid rgba(255,255,255,.2);
+            color: #fff; font-size: 1.1rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all .2s; z-index: 10;
+        }
+        .hero-arrow:hover { background: rgba(13,148,136,.5); border-color: #0D9488; }
+        .hero-arrow-prev { left: 1.25rem; }
+        .hero-arrow-next { right: 1.25rem; }
+
+        /* ── Hero CTA bar (below slider) ─────────────────────────────── */
+        .hero-cta-bar {
+            background: linear-gradient(135deg, #fff 0%, #E8F5F4 100%);
+            padding: 1.75rem 2rem;
+            display: flex; align-items: center; justify-content: center; gap: 1.25rem;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: .5rem;
+            background: rgba(13,148,136,.08); border: 1px solid rgba(13,148,136,.2);
+            color: #0D9488; font-size: .82rem; font-weight: 600;
+            padding: .35rem .9rem; border-radius: 999px;
+        }
+        .hero-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: #0D9488; }
+
+        .hero-actions {
+            display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;
+        }
+        .hero-btn-primary {
+            display: inline-flex; align-items: center; gap: .5rem;
+            padding: .75rem 1.75rem; border-radius: 10px;
+            background: linear-gradient(135deg, #0D9488, #1E3A5F);
+            color: #fff; font-weight: 700; font-size: .95rem;
+            text-decoration: none; transition: all .2s;
+            box-shadow: 0 4px 16px rgba(13,148,136,.35);
+        }
+        .hero-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(13,148,136,.45); }
+        .hero-btn-secondary {
+            display: inline-flex; align-items: center; gap: .5rem;
+            padding: .75rem 1.75rem; border-radius: 10px;
+            background: #fff; color: #334155;
+            border: 1.5px solid #cbd5e1; font-weight: 600; font-size: .95rem;
+            text-decoration: none; transition: all .2s;
+        }
+        .hero-btn-secondary:hover { border-color: #0D9488; color: #0D9488; transform: translateY(-2px); }
+
+        /* ── Features bar ────────────────────────────────────────────── */
+        .stats-bar {
+            background: #fff;
+            border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;
+            padding: 1.75rem 2rem;
+            display: flex; justify-content: center; gap: 3rem; flex-wrap: wrap;
+        }
+        .stat-item { text-align: center; }
+        .stat-icon {
+            width: 48px; height: 48px; border-radius: 12px;
+            background: linear-gradient(135deg, rgba(13,148,136,.1), rgba(30,58,95,.08));
+            border: 1px solid rgba(13,148,136,.15);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto .5rem;
+        }
+        .stat-label { font-size: .82rem; color: #334155; font-weight: 600; margin-top: .25rem; }
+
+        /* ── Gallery ─────────────────────────────────────────────────── */
+        .gallery-section {
+            padding: 3rem 0 2.5rem;
+            background: #112240;
+            position: relative; overflow: hidden;
+            scroll-margin-top: 68px;
+        }
+        .gallery-section::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, #0D9488, #1E3A5F, #0D9488);
+        }
+
+        .gallery-heading {
+            text-align: center; margin-bottom: 1.5rem; padding: 0 1rem;
+        }
+        .gallery-heading .eyebrow {
+            font-size: .8rem; font-weight: 700; letter-spacing: 2px;
+            color: #0D9488; text-transform: uppercase; margin-bottom: .75rem;
+        }
+        .gallery-heading h2 {
+            font-size: 2.4rem; font-weight: 800; color: #f1f5f9; line-height: 1.2;
+        }
+        .gallery-heading h2 .grad {
+            background: linear-gradient(90deg, #0D9488, #1E3A5F);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .gallery-heading p { font-size: 1rem; color: #64748b; margin-top: .75rem; }
+
+        .gallery-wrapper {
+            position: relative; height: 380px; overflow: hidden;
+            max-width: 1280px; margin: 0 auto;
+            border-radius: 12px;
+        }
+        .gallery-track {
+            display: flex; height: 100%;
+            transition: transform .6s cubic-bezier(.4,0,.2,1);
+        }
+        .gallery-item {
+            min-width: 100%; height: 100%;
+            position: relative; overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .gallery-item img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        .gallery-overlay {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: linear-gradient(to top, rgba(15,23,42,.85) 0%, transparent 100%);
+            padding: 2rem 3rem;
+        }
+        .gallery-overlay h3 { font-size: 1.4rem; color: #fff; font-weight: 700; }
+        .gallery-overlay p  { color: #94a3b8; font-size: .95rem; margin-top: .3rem; }
+
+        .gallery-controls {
+            position: absolute; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+            display: flex; gap: .6rem; z-index: 10;
+        }
+        .gallery-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: rgba(255,255,255,.3); cursor: pointer; transition: all .3s;
+        }
+        .gallery-dot.active { background: #0D9488; box-shadow: 0 0 8px rgba(13,148,136,.8); width: 24px; border-radius: 4px; }
+
+        /* ── Features ────────────────────────────────────────────────── */
+        .features-section {
+            padding: 5rem 2rem;
+            background: #fff;
+            scroll-margin-top: 68px;
+        }
+        .section-heading {
+            text-align: center; max-width: 600px; margin: 0 auto 4rem;
+        }
+        .section-heading .eyebrow {
+            font-size: .8rem; font-weight: 700; letter-spacing: 2px;
+            color: #0D9488; text-transform: uppercase; margin-bottom: .75rem;
+        }
+        .section-heading h2 {
+            font-size: 2.2rem; font-weight: 800; color: #112240; line-height: 1.25;
+        }
+        .section-heading h2 .grad {
+            background: linear-gradient(90deg, #0D9488, #1E3A5F);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .section-heading p { font-size: 1rem; color: #64748b; margin-top: .75rem; line-height: 1.6; }
+
+        .features-grid {
+            max-width: 1160px; margin: 0 auto;
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;
+        }
+        .feature-card {
+            background: #f8fafc; border: 1px solid #e2e8f0;
+            border-radius: 14px; padding: 2rem;
+            transition: all .2s; position: relative; overflow: hidden;
+        }
+        .feature-card:hover {
+            border-color: #5EEAD4; box-shadow: 0 8px 32px rgba(13,148,136,.12);
+            transform: translateY(-2px);
+        }
+        .feature-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, #0D9488, #1E3A5F);
+            opacity: 0; transition: opacity .2s;
+        }
+        .feature-card:hover::before { opacity: 1; }
+
+        .feature-icon {
+            width: 48px; height: 48px; border-radius: 12px;
+            background: linear-gradient(135deg, rgba(13,148,136,.12), rgba(13,148,136,.12));
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 1.25rem;
+        }
+        .feature-icon svg { width: 24px; height: 24px; }
+        .feature-card h3 { font-size: 1.05rem; font-weight: 700; color: #112240; margin-bottom: .5rem; }
+        .feature-card p  { font-size: .9rem; color: #64748b; line-height: 1.6; }
+
+        /* ── How it works ────────────────────────────────────────────── */
+        .how-section {
+            padding: 5rem 2rem;
+            background: linear-gradient(160deg, #E8F5F4, #D0EBE9);
+            scroll-margin-top: 68px;
+        }
+        .steps-grid {
+            max-width: 960px; margin: 0 auto;
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem;
+            position: relative;
+        }
+        .steps-grid::before {
+            content: '';
+            position: absolute; top: 28px; left: 16.6%; right: 16.6%;
+            height: 2px; background: linear-gradient(90deg, #0D9488, #1E3A5F);
+        }
+        .step-card { text-align: center; padding: 1.5rem; }
+        .step-number {
+            width: 56px; height: 56px; border-radius: 50%;
+            background: linear-gradient(135deg, #0D9488, #1E3A5F);
+            color: #fff; font-size: 1.2rem; font-weight: 800;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 1.25rem; position: relative; z-index: 1;
+            box-shadow: 0 4px 16px rgba(13,148,136,.35);
+        }
+        .step-card h3 { font-size: 1.05rem; font-weight: 700; color: #112240; margin-bottom: .5rem; }
+        .step-card p  { font-size: .9rem; color: #64748b; line-height: 1.6; }
+
+        /* ── Contact ─────────────────────────────────────────────────── */
+        .contact-section {
+            padding: 5rem 2rem; text-align: center;
+            background: #fff;
+            scroll-margin-top: 68px;
+        }
+        .contact-section h2 {
+            font-size: 2.4rem; font-weight: 800; color: #112240; margin-bottom: .75rem;
+        }
+        .contact-section h2 .grad {
+            background: linear-gradient(90deg, #0D9488, #1E3A5F);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .contact-section > p { color: #64748b; font-size: 1rem; margin-bottom: 3rem; }
+
+        .contact-info {
+            display: flex; justify-content: center; gap: 3rem;
+            flex-wrap: wrap; margin-bottom: 2.5rem;
+        }
+        .contact-item {
+            background: #f8fafc; border: 1px solid #e2e8f0;
+            border-radius: 12px; padding: 1.5rem 2rem; text-align: center;
+            min-width: 180px; transition: all .2s;
+        }
+        .contact-item:hover { border-color: #5EEAD4; transform: translateY(-2px); }
+        .contact-item .contact-icon { font-size: 1.6rem; margin-bottom: .5rem; }
+        .contact-item h3 { color: #0D9488; font-size: .85rem; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; margin-bottom: .4rem; }
+        .contact-item p  { color: #334155; font-size: .95rem; font-weight: 500; }
+
+        .contact-form-wrap {
+            max-width: 560px; margin: 2.5rem auto 0; text-align: left;
+        }
+        .contact-form-wrap h3 { font-size: 1.2rem; font-weight: 700; color: #112240; margin-bottom: 1.25rem; text-align: center; }
+        .cf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+        .cf-row.full { grid-template-columns: 1fr; }
+        .cf-row label { display: block; font-size: .8rem; font-weight: 600; color: #374151; margin-bottom: .3rem; }
+        .cf-row input, .cf-row textarea {
+            width: 100%; padding: .65rem .9rem; border: 1px solid #d1d5db;
+            border-radius: 8px; font-size: .95rem; font-family: inherit;
+            transition: border-color .2s, box-shadow .2s;
+            box-sizing: border-box;
+        }
+        .cf-row input:focus, .cf-row textarea:focus {
+            outline: none; border-color: #0D9488; box-shadow: 0 0 0 3px rgba(13,148,136,.12);
+        }
+        .cf-row textarea { resize: vertical; min-height: 100px; }
+        .cf-submit { width: 100%; padding: .85rem; background: #0D9488; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: .5rem; transition: background .2s; }
+        .cf-submit:hover { background: #0f766e; }
+        .cf-submit:disabled { background: #94a3b8; cursor: not-allowed; }
+        .cf-error { color: #dc2626; font-size: .85rem; margin-top: .5rem; text-align: center; }
+        .cf-success { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 1.5rem; text-align: center; margin-top: 1rem; }
+        .cf-success .ref { font-size: 1.4rem; font-weight: 800; color: #0D9488; letter-spacing: 1px; margin: .5rem 0; }
+        .cf-success p { color: #374151; font-size: .95rem; }
+        @media (max-width: 600px) { .cf-row { grid-template-columns: 1fr; } }
+
+        .cta-button {
+            display: inline-flex; align-items: center; gap: .5rem;
+            padding: .9rem 2.25rem; border-radius: 10px;
+            background: linear-gradient(135deg, #0D9488, #1E3A5F);
+            color: #fff; font-weight: 700; font-size: 1rem;
+            text-decoration: none; transition: all .2s;
+            box-shadow: 0 4px 16px rgba(13,148,136,.35);
+        }
+        .cta-button:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(13,148,136,.45); }
+
+        /* ── Footer ──────────────────────────────────────────────────── */
+        footer {
+            background: #112240;
+            padding: 2.5rem 2rem;
+            border-top: 1px solid rgba(13,148,136,.3);
+        }
+        .footer-inner {
+            max-width: 1160px; margin: 0 auto;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;
+        }
+        .footer-brand { display: flex; align-items: center; gap: .75rem; }
+        .footer-brand .logo-name-sm {
+            font-size: 1.1rem; font-weight: 700;
+            background: linear-gradient(90deg, #0D9488, #1E3A5F);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .footer-links { display: flex; gap: 2rem; }
+        .footer-links a { color: #64748b; text-decoration: none; font-size: .88rem; transition: color .2s; }
+        .footer-links a:hover { color: #0D9488; }
+        .footer-copy { color: #475569; font-size: .82rem; }
+
+        /* ── Responsive ──────────────────────────────────────────────── */
+        @media (max-width: 768px) {
+            .hero-slider  { height: 320px; }
+            .hero-slide-label h2 { font-size: 1.1rem; }
+            .hero-slide-label p  { font-size: .8rem; }
+            .hero-cta-bar { flex-direction: column; gap: .75rem; text-align: center; }
+            .features-grid, .steps-grid { grid-template-columns: 1fr; }
+            .steps-grid::before { display: none; }
+            .gallery-wrapper { height: 240px; }
+            .stats-bar { gap: 2rem; }
+            .nav-links li:not(.nav-login) { display: none; }
+            .footer-inner { flex-direction: column; text-align: center; }
+            .footer-links { flex-wrap: wrap; justify-content: center; }
+        }
+
+        /* ── Animations ──────────────────────────────────────────────── */
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+        .fade-up { animation: fadeUp .7s ease-out both; }
+        .delay-1 { animation-delay: .1s; }
+        .delay-2 { animation-delay: .2s; }
+        .delay-3 { animation-delay: .3s; }
+    </style>
+</head>
+<body>
+
+<!-- ── Header ───────────────────────────────────────────────────────── -->
+<header>
+    <a href="/" class="logo-link">
+        <div class="logo-icon">
+            <svg viewBox="0 0 500 500" width="100%" height="100%">
+                <path d="M250 50L50 400H150L180 340H320L350 400H450L250 50Z" fill="white"/>
+                <circle cx="215" cy="278" r="30" fill="rgba(13,148,136,0.85)"/>
+                <circle cx="285" cy="278" r="30" fill="rgba(13,148,136,0.85)"/>
+            </svg>
+        </div>
+        <div class="logo-wordmark">
+            <span class="logo-name">AmaraData</span>
+            <span class="logo-tagline">Property Management Platform</span>
+        </div>
+    </a>
+
+    <nav>
+        <ul class="nav-links">
+            <li><a href="#features">Features</a></li>
+            <li><a href="#how">How It Works</a></li>
+            <li><a href="#gallery">Platform</a></li>
+            <li><a href="#contact">Contact</a></li>
+            <li class="nav-login" id="authLink"><a href="/login" class="btn-login">Login</a></li>
+        </ul>
+    </nav>
+
+    <div class="nav-cta" id="navCta">
+        <a href="#contact" class="btn-demo">Book a Demo</a>
+    </div>
+</header>
+
+<!-- ── Hero ─────────────────────────────────────────────────────────── -->
+<section class="hero">
+    <!-- Property image slider -->
+    <div class="hero-slider" id="heroSlider">
+        <div class="hero-track" id="heroTrack">
+            <div class="hero-slide">
+                <img src="images/hero_commercial.svg" alt="Commercial Properties">
+                <div class="hero-slide-overlay"></div>
+                <div class="hero-slide-label">
+                    <h2>Commercial Properties</h2>
+                    <p>Offices, retail spaces &amp; commercial complexes — managed end to end</p>
+                </div>
+            </div>
+            <div class="hero-slide">
+                <img src="images/hero_apartment.svg" alt="Apartment Complexes">
+                <div class="hero-slide-overlay"></div>
+                <div class="hero-slide-label">
+                    <h2>Apartment Complexes</h2>
+                    <p>Multi-unit residential blocks with rental &amp; sales pipeline tracking</p>
+                </div>
+            </div>
+            <div class="hero-slide">
+                <img src="images/hero_villa.svg" alt="Premium Villas">
+                <div class="hero-slide-overlay"></div>
+                <div class="hero-slide-label">
+                    <h2>Premium Villas</h2>
+                    <p>Luxury independent homes with dynamic pricing &amp; tax-compliant billing</p>
+                </div>
+            </div>
+        </div>
+        <div class="hero-tagline">
+            <span>Close deals</span>
+            <span class="ht-dot"></span>
+            <span>Collect rent</span>
+            <span class="ht-dot"></span>
+            <span>Run your business</span>
+        </div>
+        <button class="hero-arrow hero-arrow-prev" id="heroPrev" aria-label="Previous">&#8592;</button>
+        <button class="hero-arrow hero-arrow-next" id="heroNext" aria-label="Next">&#8594;</button>
+        <div class="hero-slider-dots" id="heroSliderDots">
+            <button class="hero-slider-dot active" data-slide="0"></button>
+            <button class="hero-slider-dot" data-slide="1"></button>
+            <button class="hero-slider-dot" data-slide="2"></button>
+        </div>
+    </div>
+
+    <!-- CTA bar -->
+    <div class="hero-cta-bar">
+        <div class="hero-actions fade-up">
+            <a href="#contact" class="hero-btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.46 12 19.79 19.79 0 01.39 3.4 2 2 0 012.38 1h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.91 8.09a16 16 0 006 6l1.45-1.45a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 14.92z"/>
+                </svg>
+                Book a Demo
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- ── Features Bar ───────────────────────────────────────────────────── -->
+<div class="stats-bar">
+    <div class="stat-item">
+        <div class="stat-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <div class="stat-label">Sales Pipeline</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </div>
+        <div class="stat-label">Rental Management</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        </div>
+        <div class="stat-label">Multi-Project Inventory</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <div class="stat-label">Tax-Compliant Invoices</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        </div>
+        <div class="stat-label">Payment Tracking</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        </div>
+        <div class="stat-label">Reports &amp; Analytics</div>
+    </div>
+</div>
+
+<!-- ── Platform Gallery ───────────────────────────────────────────────── -->
+<section class="gallery-section" id="gallery">
+    <div class="gallery-heading">
+        <div class="eyebrow">The Platform</div>
+        <h2>Every tool your team needs, <span class="grad">in one place</span></h2>
+        <p>Built for real estate operations teams — from billing managers to property analysts.</p>
+    </div>
+
+    <div class="gallery-wrapper">
+        <div class="gallery-track" id="galleryTrack"></div>
+        <div class="gallery-controls" id="galleryControls"></div>
+    </div>
+</section>
+
+<!-- ── Features ──────────────────────────────────────────────────────── -->
+<section class="features-section" id="features">
+    <div class="section-heading">
+        <div class="eyebrow">Features</div>
+        <h2>Everything your team needs to run a <span class="grad">property business</span></h2>
+        <p>AmaraData replaces spreadsheets, chat threads, and fragmented tools with a single platform built for modern real estate teams.</p>
+    </div>
+
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+            </div>
+            <h3>Property Sales Pipeline</h3>
+            <p>Track every lead from first inquiry to booking. Assign sales reps, update status (new → contacted → qualified → booked), and get full pipeline visibility across all projects.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+            </div>
+            <h3>Rental Management</h3>
+            <p>Handle the full rental lifecycle — applications, agreements, and rent collection. Manage tenant and owner profiles, track maintenance requests, and coordinate vendors in one place.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+                </svg>
+            </div>
+            <h3>Dynamic Pricing Engine</h3>
+            <p>Calculate sale prices automatically — floor-rise charges, corner and facing premiums, club membership, and applicable taxes. Generate instant quotes for any unit in any project.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+                </svg>
+            </div>
+            <h3>Payment Schedules &amp; Tracking</h3>
+            <p>Create milestone-based installment plans per buyer. Track payment status in real time, monitor collection aging, and maintain a complete payment history from booking to registration.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+                </svg>
+            </div>
+            <h3>Multi-Project Inventory</h3>
+            <p>Manage multiple projects with independent building, tower, and unit structures. Track floor plans, unit types, dimensions, parking allocations, and live availability — all in one view.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+                </svg>
+            </div>
+            <h3>Reports &amp; Analytics</h3>
+            <p>Sales performance dashboards, payment collection aging, and occupancy reports — filterable by project, date range, or sales rep. Export to PDF or spreadsheet with one click.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ── How It Works ───────────────────────────────────────────────────── -->
+<section class="how-section" id="how">
+    <div class="section-heading">
+        <div class="eyebrow">How It Works</div>
+        <h2>Up and running in <span class="grad">three steps</span></h2>
+        <p>Get your entire real estate operation organised — projects, sales, and rentals — in a single afternoon.</p>
+    </div>
+
+    <div class="steps-grid">
+        <div class="step-card">
+            <div class="step-number">1</div>
+            <h3>Set Up Your Projects</h3>
+            <p>Add your projects, buildings, and unit inventory. Configure pricing rules — floor rise, corner premiums, local taxes — once, and they apply automatically everywhere.</p>
+        </div>
+        <div class="step-card">
+            <div class="step-number">2</div>
+            <h3>Manage Sales &amp; Rentals</h3>
+            <p>Track leads through the sales pipeline, generate price quotes, execute rental agreements, collect payments, and handle maintenance — all from one dashboard.</p>
+        </div>
+        <div class="step-card">
+            <div class="step-number">3</div>
+            <h3>Invoice &amp; Report</h3>
+            <p>Generate tax-compliant invoices with one click. Get instant reports on sales performance, payment aging, and occupancy across every project.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ── Contact ────────────────────────────────────────────────────────── -->
+<section class="contact-section" id="contact">
+    <h2>Ready to <span class="grad">Get Started?</span></h2>
+    <p>Book a demo and see how AmaraData can simplify your billing operations.</p>
+
+    <div class="contact-info">
+        <div class="contact-item">
+            <div class="contact-icon">📞</div>
+            <h3>Phone</h3>
+            <p data-cfg="phone">+91-90328-31122</p>
+        </div>
+        <div class="contact-item">
+            <div class="contact-icon">✉️</div>
+            <h3>Email</h3>
+            <p data-cfg="email">info@amaradata.com</p>
+        </div>
+        <div class="contact-item">
+            <div class="contact-icon">📍</div>
+            <h3>Office</h3>
+            <p data-cfg="address">USA</p>
+        </div>
+    </div>
+
+    <div class="contact-form-wrap">
+        <h3>Send us a message</h3>
+        <div id="cf-form">
+            <div class="cf-row">
+                <div><label>Name *</label><input id="cf-name" placeholder="Your name"></div>
+                <div><label>Email *</label><input id="cf-email" type="email" placeholder="you@example.com"></div>
+            </div>
+            <div class="cf-row">
+                <div><label>Phone</label><input id="cf-phone" placeholder="+1 555 000 0000"></div>
+                <div><label>Company</label><input id="cf-company" placeholder="Your company"></div>
+            </div>
+            <div class="cf-row full">
+                <div><label>Message *</label><textarea id="cf-message" placeholder="Tell us what you're looking for…"></textarea></div>
+            </div>
+            <button class="cf-submit" id="cf-submit" onclick="submitContact()">Send Message</button>
+            <div class="cf-error" id="cf-error"></div>
+        </div>
+        <div class="cf-success" id="cf-success" style="display:none">
+            <div style="font-size:1.8rem">✅</div>
+            <div class="ref" id="cf-ref"></div>
+            <p>Your message has been received. We'll be in touch shortly.<br>Please keep your reference number for follow-up.</p>
+        </div>
+    </div>
+</section>
+
+<script>
+async function submitContact() {
+    const name    = document.getElementById('cf-name').value.trim();
+    const email   = document.getElementById('cf-email').value.trim();
+    const phone   = document.getElementById('cf-phone').value.trim();
+    const company = document.getElementById('cf-company').value.trim();
+    const message = document.getElementById('cf-message').value.trim();
+    const errEl   = document.getElementById('cf-error');
+    const btn     = document.getElementById('cf-submit');
+    errEl.textContent = '';
+    if (!name || !email || !message) { errEl.textContent = 'Please fill in name, email and message.'; return; }
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try {
+        const res  = await fetch('/api/contact', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, phone, company, message }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Submission failed');
+        document.getElementById('cf-form').style.display    = 'none';
+        document.getElementById('cf-success').style.display = 'block';
+        document.getElementById('cf-ref').textContent       = data.ref_number;
+    } catch (e) {
+        errEl.textContent = e.message;
+        btn.disabled = false; btn.textContent = 'Send Message';
+    }
+}
+</script>
+
+<!-- ── Footer ────────────────────────────────────────────────────────── -->
+<footer>
+    <div class="footer-inner">
+        <div class="footer-brand">
+            <div class="logo-icon" style="width:30px;height:30px;border-radius:6px">
+                <svg viewBox="0 0 500 500" width="100%" height="100%">
+                    <path d="M250 50L50 400H150L180 340H320L350 400H450L250 50Z" fill="white"/>
+                    <circle cx="215" cy="278" r="30" fill="rgba(13,148,136,0.85)"/>
+                    <circle cx="285" cy="278" r="30" fill="rgba(13,148,136,0.85)"/>
+                </svg>
+            </div>
+            <span class="logo-name-sm">AmaraData</span>
+        </div>
+        <nav class="footer-links">
+            <a href="#features">Features</a>
+            <a href="#how">How It Works</a>
+            <a href="#gallery">Platform</a>
+            <a href="#contact">Contact</a>
+            <a href="/login">Login</a>
+        </nav>
+        <p class="footer-copy">&copy; <span data-cfg="year">2026</span> AmaraData. All rights reserved.</p>
+    </div>
+</footer>
+
+<script>
+    const DEFAULT_SLIDES = [
+        { src: 'images/gallery_precision.svg',  alt: 'Precision Analytics',    title: 'Precision Analytics',          desc: 'Accurate property valuations and market trend analysis' },
+        { src: 'images/gallery_leads.svg',      alt: 'Sales Pipeline',         title: 'Optimised Sales Pipeline',     desc: 'Manage leads, track progress, and close deals efficiently' },
+        { src: 'images/gallery_inventory.svg',  alt: 'Property Inventory',     title: 'Multi-Project Data Isolation', desc: 'Secure, organised data management for all your projects' },
+        { src: 'images/slide-dashboard.svg',    alt: 'AmaraData Dashboard',    title: 'Unified Dashboard',            desc: 'All your KPIs, recent invoices, and monthly revenue — at a glance' },
+    ];
+
+    function renderGallery(slides) {
+        const track    = document.getElementById('galleryTrack');
+        const controls = document.getElementById('galleryControls');
+        track.innerHTML = slides.map(s => `
+            <div class="gallery-item">
+                <img src="${s.src}" alt="${s.alt}">
+                <div class="gallery-overlay">
+                    <h3>${s.title}</h3>
+                    <p>${s.desc}</p>
+                </div>
+            </div>`).join('');
+        controls.innerHTML = slides.map((_, i) =>
+            `<div class="gallery-dot${i === 0 ? ' active' : ''}" data-slide="${i}"></div>`
+        ).join('');
+    }
+
+    class AutoScrollGallery {
+        constructor() {
+            this.current = 0;
+            this.track   = document.getElementById('galleryTrack');
+            this.total   = this.track ? this.track.querySelectorAll('.gallery-item').length : 0;
+            this.timer   = null;
+            this.delay   = 4000;
+            if (this.total > 0) this.init();
+        }
+        init() {
+            this.start();
+            document.querySelectorAll('.gallery-dot').forEach((dot, i) => {
+                dot.addEventListener('click', () => { this.go(i); this.reset(); });
+            });
+            this.track.addEventListener('mouseenter', () => this.pause());
+            this.track.addEventListener('mouseleave', () => this.start());
+            this._addTouch();
+        }
+        go(idx) {
+            this.current = idx;
+            this.track.style.transform = `translateX(${-idx * 100}%)`;
+            document.querySelectorAll('.gallery-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+        }
+        next()  { this.go((this.current + 1) % this.total); }
+        start() { this.timer = setInterval(() => this.next(), this.delay); }
+        pause() { clearInterval(this.timer); this.timer = null; }
+        reset() { this.pause(); this.start(); }
+        _addTouch() {
+            let sx = 0, cx = 0, drag = false;
+            this.track.addEventListener('touchstart', e => { sx = e.touches[0].clientX; drag = true; this.pause(); });
+            this.track.addEventListener('touchmove',  e => { if (drag) cx = e.touches[0].clientX; });
+            this.track.addEventListener('touchend',   () => {
+                if (!drag) return;
+                const diff = sx - cx;
+                if (Math.abs(diff) > 50) diff > 0 ? this.next() : this.go((this.current - 1 + this.total) % this.total);
+                drag = false; this.start();
+            });
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Load gallery + contact info from site-config (env vars, no secrets)
+        fetch('/api/site-config')
+            .then(r => r.json())
+            .then(cfg => {
+                renderGallery(cfg.galleryImages || DEFAULT_SLIDES);
+                // Update contact section from env vars
+                if (cfg.contactPhone)   document.querySelectorAll('[data-cfg="phone"]').forEach(el => el.textContent = cfg.contactPhone);
+                if (cfg.contactEmail)   document.querySelectorAll('[data-cfg="email"]').forEach(el => { el.textContent = cfg.contactEmail; if (el.tagName==='A') el.href = 'mailto:'+cfg.contactEmail; });
+                if (cfg.contactAddress) document.querySelectorAll('[data-cfg="address"]').forEach(el => el.textContent = cfg.contactAddress);
+                if (cfg.copyrightYear)  document.querySelectorAll('[data-cfg="year"]').forEach(el => el.textContent = cfg.copyrightYear);
+            })
+            .catch(() => { renderGallery(DEFAULT_SLIDES); })
+            .finally(() => { new AutoScrollGallery(); });
+
+
+        // Auth state → update nav
+        const staff   = (() => { try { return JSON.parse(localStorage.getItem('amrd_staff') || 'null'); } catch { return null; } })();
+        const token   = localStorage.getItem('amrd_token');
+        const authEl  = document.getElementById('authLink');
+        const ctaEl   = document.getElementById('navCta');
+
+        if (staff && token) {
+            authEl.innerHTML = `
+                <div style="position:relative" id="userMenuWrap">
+                    <button onclick="toggleMenu()" style="display:flex;align-items:center;gap:.5rem;background:none;border:1px solid #e2e8f0;border-radius:8px;padding:.45rem .9rem;cursor:pointer;font-size:.88rem;font-weight:600;color:#334155">
+                        ${staff.name || staff.email}
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" id="menuArrow">
+                            <path d="M2 4L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <div id="userDropdown" style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:160px;padding:.4rem 0;z-index:100">
+                        <a href="/dashboard" style="display:block;padding:.6rem 1rem;font-size:.88rem;color:#0D9488;font-weight:600;text-decoration:none">Dashboard →</a>
+                        <hr style="border:none;border-top:1px solid #f1f5f9;margin:.3rem 0">
+                        <a href="#" onclick="doLogout()" style="display:block;padding:.6rem 1rem;font-size:.88rem;color:#dc2626;text-decoration:none">Sign Out</a>
+                    </div>
+                </div>`;
+            ctaEl.style.display = 'none';
+        }
+
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(a => {
+            a.addEventListener('click', e => {
+                const t = document.querySelector(a.getAttribute('href'));
+                if (t) { e.preventDefault(); t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+            });
+        });
+
+        // Intersection observer fade-up
+        const io = new IntersectionObserver(entries => {
+            entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('fade-up'); });
+        }, { threshold: .1, rootMargin: '0px 0px -40px 0px' });
+        document.querySelectorAll('.feature-card, .step-card, .contact-item, .stat-item').forEach(el => io.observe(el));
+    });
+
+    function toggleMenu() {
+        const d = document.getElementById('userDropdown');
+        d.style.display = d.style.display === 'none' ? 'block' : 'none';
+    }
+    document.addEventListener('click', e => {
+        const wrap = document.getElementById('userMenuWrap');
+        if (wrap && !wrap.contains(e.target)) {
+            const d = document.getElementById('userDropdown');
+            if (d) d.style.display = 'none';
+        }
+    });
+    function doLogout() {
+        localStorage.removeItem('amrd_token');
+        localStorage.removeItem('amrd_refresh_token');
+        localStorage.removeItem('amrd_staff');
+        location.reload();
+    }
+
+    // ── Hero property slider ─────────────────────────────────────────────
+    (function () {
+        const track  = document.getElementById('heroTrack');
+        const dots   = document.querySelectorAll('.hero-slider-dot');
+        const total  = 3;
+        let cur = 0, timer = null;
+
+        function go(idx) {
+            cur = (idx + total) % total;
+            track.style.transform = `translateX(${-cur * 100}%)`;
+            dots.forEach((d, i) => d.classList.toggle('active', i === cur));
+        }
+
+        function start() { timer = setInterval(() => go(cur + 1), 5000); }
+        function stop()  { clearInterval(timer); }
+
+        document.getElementById('heroPrev').addEventListener('click', () => { go(cur - 1); stop(); start(); });
+        document.getElementById('heroNext').addEventListener('click', () => { go(cur + 1); stop(); start(); });
+        dots.forEach(d => d.addEventListener('click', () => { go(+d.dataset.slide); stop(); start(); }));
+
+        const slider = document.getElementById('heroSlider');
+        slider.addEventListener('mouseenter', stop);
+        slider.addEventListener('mouseleave', start);
+
+        let tx = 0;
+        slider.addEventListener('touchstart', e => { tx = e.touches[0].clientX; stop(); });
+        slider.addEventListener('touchend',   e => {
+            const diff = tx - e.changedTouches[0].clientX;
+            if (Math.abs(diff) > 40) go(diff > 0 ? cur + 1 : cur - 1);
+            start();
+        });
+
+        start();
+    })();
+</script>
+</body>
+</html>

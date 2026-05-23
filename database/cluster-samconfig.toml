@@ -1,0 +1,50 @@
+# Cluster deployment parameters — reference for the shared Aurora cluster
+# Both rohas-group and amaradata-platform share this cluster (provisioned externally).
+#
+# Shared cluster values (ap-south-1):
+#   VPC:     vpc-f45ce29c
+#   Subnets: subnet-565fe13e (ap-south-1a), subnet-7349a73f (ap-south-1b)
+#
+# The Aurora cluster was created once with CreateDbCluster=true.
+# All subsequent deploys use CreateDbCluster=false.
+
+# ── amaradata-platform ────────────────────────────────────────────────────────
+[amaradata.prod.parameters]
+stack_name        = "amaradata-prod"
+region            = "ap-south-1"
+s3_prefix         = "amaradata-platform"
+CreateDbCluster   = "false"
+DbName            = "amaradata_platform"
+VpcId             = "vpc-f45ce29c"
+VpcSubnetIds      = "subnet-565fe13e,subnet-7349a73f"
+FrontendUrl       = "https://amaradata.com"
+AcmCertificateArn = "arn:aws:acm:us-east-1:797666412164:certificate/7c3cb474-3b95-48b6-83b7-d2f4cb5e6b3c"
+
+[amaradata.staging.parameters]
+stack_name      = "amaradata-staging"
+region          = "ap-south-1"
+s3_prefix       = "amaradata-platform-staging"
+CreateDbCluster = "false"
+DbName          = "amaradata_platform"
+VpcId           = "vpc-f45ce29c"
+VpcSubnetIds    = "subnet-565fe13e,subnet-7349a73f"
+
+# ── rohas-group ───────────────────────────────────────────────────────────────
+[rohas.prod.parameters]
+stack_name      = "rohas-prod"
+region          = "ap-south-1"
+s3_prefix       = "rohas-sam"
+CreateDbCluster = "false"
+DbName          = "amaracasa"
+VpcId           = "vpc-f45ce29c"
+VpcSubnetIds    = "subnet-565fe13e,subnet-7349a73f"
+FrontendUrl     = "https://d3u4zlri3r48dr.cloudfront.net"
+
+[rohas.staging.parameters]
+stack_name      = "rohas-staging"
+region          = "ap-south-1"
+s3_prefix       = "rohas-sam"
+CreateDbCluster = "false"
+DbName          = "amaracasa"
+VpcId           = "vpc-f45ce29c"
+VpcSubnetIds    = "subnet-565fe13e,subnet-7349a73f"

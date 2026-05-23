@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
   <title>Invoices — AmaraData Platform</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="/js/platform.js"></script>
@@ -12,12 +13,14 @@
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
         const root = window.__amrd.renderSidebar('Invoices');
-        const fmt  = v => '₹' + Number(v).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+        const fmt  = (v, currency) => new Intl.NumberFormat(undefined, currency ? { style: 'currency', currency, maximumFractionDigits: 0 } : { maximumFractionDigits: 0 }).format(Number(v));
 
         async function load(filter = '') {
-            const url = filter ? `/api/invoices?status=${filter}` : '/api/invoices';
-            const r = await window.__amrd.apiFetch(url);
-            const invoices = r?.data || [];
+            const gql = await window.__amrd.gqlFetch(
+                `query($status: String) { invoices(status: $status) { id invoice_number tenant_name period_year period_month total_amount due_date status } }`,
+                { status: filter || null }
+            );
+            const invoices = gql?.invoices || [];
 
             root.innerHTML = `
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;align-items:center">
@@ -37,7 +40,7 @@
                                 <td><strong>${i.invoice_number}</strong></td>
                                 <td>${i.tenant_name}</td>
                                 <td>${i.period_year ? `${i.period_year}-${String(i.period_month).padStart(2,'0')}` : '—'}</td>
-                                <td>${fmt(i.total_amount)}</td>
+                                <td>${fmt(i.total_amount, i.currency_code)}</td>
                                 <td>${i.due_date?.slice(0,10) || '—'}</td>
                                 <td><span class="amrd-badge amrd-badge-${i.status}">${i.status}</span></td>
                                 <td style="display:flex;gap:6px">
@@ -52,8 +55,8 @@
         }
 
         async function openForm() {
-            const tenantsR = await window.__amrd.apiFetch('/api/tenants');
-            const tenants  = tenantsR?.data || [];
+            const gql     = await window.__amrd.gqlFetch(`{ tenants { id name } }`);
+            const tenants = gql?.tenants || [];
             const today    = new Date().toISOString().slice(0,10);
             const due      = new Date(Date.now() + 15*86400000).toISOString().slice(0,10);
             const slot     = document.getElementById('form-slot');

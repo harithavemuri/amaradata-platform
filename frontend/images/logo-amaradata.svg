@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 610 170" font-family="'Segoe UI', Arial, sans-serif">
+  <defs>
+    <!-- Indigo → Sky gradient for A letters -->
+    <linearGradient id="ag" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E3A5F"/>
+      <stop offset="100%" stop-color="#0D9488"/>
+    </linearGradient>
+    <!-- Spiral path: bright outer → faint inner -->
+    <linearGradient id="sg" x1="100%" y1="100%" x2="20%" y2="20%">
+      <stop offset="0%" stop-color="#1E3A5F" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#0D9488" stop-opacity="0.1"/>
+    </linearGradient>
+    <!-- Strong glow (outermost A) -->
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <!-- Soft glow (middle A's) -->
+    <filter id="sglow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- ── SPIRAL ICON (center 88,85) ── -->
+
+  <!-- Background depth rings -->
+  <circle cx="88" cy="85" r="70" fill="none" stroke="#1E3A5F" stroke-width="0.4" opacity="0.12"/>
+  <circle cx="88" cy="85" r="46" fill="none" stroke="#1E3A5F" stroke-width="0.4" opacity="0.09"/>
+  <circle cx="88" cy="85" r="24" fill="none" stroke="#1E3A5F" stroke-width="0.4" opacity="0.06"/>
+
+  <!--
+    Archimedean spiral, clockwise, contracting by 12px per quarter-turn.
+    Radii:  r=65 (right) → 53 (bottom) → 41 (left) → 29 (top) → 17 (inner-right)
+    Points: (153,85) → (88,138) → (47,85) → (88,56) → (105,85)
+  -->
+  <path d="M 153,85
+           C 153,121 117,138 88,138
+           C 59,138  47,118  47,85
+           C 47,64   69,56   88,56
+           C 101,56  105,73  105,85"
+        fill="none" stroke="url(#sg)" stroke-width="2" stroke-linecap="round" opacity="0.75"/>
+
+  <!-- A5 – inner (r≈17, faintest) -->
+  <text x="105" y="89" font-size="12" font-weight="800" fill="url(#ag)"
+        text-anchor="middle" opacity="0.38">A</text>
+
+  <!-- A4 – top (r≈29) -->
+  <text x="88" y="62" font-size="18" font-weight="800" fill="url(#ag)"
+        text-anchor="middle" opacity="0.55" filter="url(#sglow)">A</text>
+
+  <!-- A3 – left (r≈41) -->
+  <text x="47" y="94" font-size="25" font-weight="800" fill="url(#ag)"
+        text-anchor="middle" opacity="0.70" filter="url(#sglow)">A</text>
+
+  <!-- A2 – bottom (r≈53) -->
+  <text x="88" y="149" font-size="33" font-weight="800" fill="url(#ag)"
+        text-anchor="middle" opacity="0.85" filter="url(#sglow)">A</text>
+
+  <!-- A1 – outer right (r≈65, brightest + glow) -->
+  <text x="153" y="100" font-size="44" font-weight="800" fill="url(#ag)"
+        text-anchor="middle" filter="url(#glow)">A</text>
+
+  <!-- ── DIVIDER ── -->
+  <line x1="177" y1="24" x2="177" y2="148" stroke="#cbd5e1" stroke-width="1" opacity="0.7"/>
+
+  <!-- ── WORDMARK ──
+       A·M·A·R·A·D·A·T·A   (A's = gradient, M/R/D/T = dark)
+       font-size 48, 44px spacing, centers at: 207 251 295 339 383 427 471 515 559
+  -->
+  <text x="207" y="107" font-size="48" font-weight="800" fill="url(#ag)" text-anchor="middle">A</text>
+  <text x="251" y="107" font-size="48" font-weight="800" fill="#1e293b" text-anchor="middle">M</text>
+  <text x="295" y="107" font-size="48" font-weight="800" fill="url(#ag)" text-anchor="middle">A</text>
+  <text x="339" y="107" font-size="48" font-weight="800" fill="#1e293b" text-anchor="middle">R</text>
+  <text x="383" y="107" font-size="48" font-weight="800" fill="url(#ag)" text-anchor="middle">A</text>
+  <text x="427" y="107" font-size="48" font-weight="800" fill="#1e293b" text-anchor="middle">D</text>
+  <text x="471" y="107" font-size="48" font-weight="800" fill="url(#ag)" text-anchor="middle">A</text>
+  <text x="515" y="107" font-size="48" font-weight="800" fill="#1e293b" text-anchor="middle">T</text>
+  <text x="559" y="107" font-size="48" font-weight="800" fill="url(#ag)" text-anchor="middle">A</text>
+
+  <!-- Tagline -->
+  <text x="383" y="130" font-size="10" fill="#94a3b8" text-anchor="middle"
+        letter-spacing="3.5" font-weight="600">REAL ESTATE PLATFORM</text>
+</svg>

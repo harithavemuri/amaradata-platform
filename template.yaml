@@ -1,0 +1,428 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AmaraData Platform — tenant billing & management
+
+# ─── Pre-deploy checklist ──────────────────────────────────────────────────────
+#
+# Secrets Manager  (actual credentials — 4 values)
+#   aws secretsmanager put-secret-value \
+#     --secret-id /amaradata/prod/jwt-secret          --secret-string "<random 64-char string>"
+#   aws secretsmanager put-secret-value \
+#     --secret-id /amaradata/prod/google-client-secret --secret-string "<from GCP Console>"
+#   aws secretsmanager put-secret-value \
+#     --secret-id /amaradata/prod/db-write-password   --secret-string "<password>"
+#   aws secretsmanager put-secret-value \
+#     --secret-id /amaradata/prod/db-read-password    --secret-string "<password>"
+#
+# SSM Parameter Store  (config — not credentials)
+#   aws ssm put-parameter --name /amaradata/prod/google-client-id  --type String --value "<from GCP Console>"
+#   aws ssm put-parameter --name /amaradata/prod/google-redirect-uri --type String --value "https://amaradata.com/api/auth/google/callback"
+#   aws ssm put-parameter --name /amaradata/prod/db-host           --type String --value "<amaradata cluster writer endpoint>"
+#   aws ssm put-parameter --name /amaradata/prod/db-write-user     --type String --value "<username>"
+#   aws ssm put-parameter --name /amaradata/prod/db-read-user      --type String --value "<username>"
+#
+# Shared Aurora cluster (CreateDbCluster=false, default)
+#   1. CREATE DATABASE amaradata_platform  on the amaradata cluster
+#   2. Run database/schema.sql against amaradata_platform
+#   3. Set /amaradata/prod/db-host to the amaradata cluster writer endpoint
+
+Parameters:
+  Tenant:
+    Type: String
+    Default: amaradata
+
+  Env:
+    Type: String
+    Default: prod
+    AllowedValues: [prod, staging, qa, dev]
+
+  FrontendUrl:
+    Type: String
+    Default: https://amaradata.com
+    Description: Production URL (used for CORS and OAuth redirect URI)
+
+  AcmCertificateArn:
+    Type: String
+    Default: ''
+    Description: >
+      ACM certificate ARN in us-east-1 for the CloudFront custom domain (amaradata.com).
+      Leave empty to fall back to the default *.cloudfront.net certificate.
+
+  CreateDbCluster:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: >
+      false — share the amaradata Aurora cluster (default).
+      true  — provision a dedicated Aurora Serverless v2 cluster.
+
+  DbName:
+    Type: String
+    Default: amaradata_platform
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC for Aurora (same as rohas-group)
+
+  VpcSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Two subnets in different AZs (same as rohas-group)
+
+  # ── Cost allocation tags ──────────────────────────────────────────────────────
+  TagApplication:
+    Type: String
+    Default: tenant-billing
+  TagProject:
+    Type: String
+    Default: amaradata
+
+Conditions:
+  ShouldCreateDb:  !Equals [!Ref CreateDbCluster, 'true']
+  HasCustomDomain: !Not [!Equals [!Ref AcmCertificateArn, '']]
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Architectures: [arm64]
+    MemorySize: 512
+    Timeout: 29
+    LoggingConfig:
+      LogFormat: JSON
+    Tags:
+      tenant:      !Ref Tenant
+      application: !Ref TagApplication
+      project:     !Ref TagProject
+      component:   shared
+    Environment:
+      Variables:
+        # Structural config — plain values
+        NODE_ENV:       !Ref Env
+        AMRD_DB_NAME:   !Ref DbName
+        AMRD_DB_PORT:   '5432'
+        FRONTEND_URL:   !Ref FrontendUrl
+
+        # Company & contact — customise per deployment
+        COMPANY_NAME:      '{{resolve:ssm:/amaradata/prod/company-name}}'
+        COMPANY_TAGLINE:   '{{resolve:ssm:/amaradata/prod/company-tagline}}'
+        CONTACT_EMAIL:     '{{resolve:ssm:/amaradata/prod/contact-email}}'
+        CONTACT_PHONE:     '{{resolve:ssm:/amaradata/prod/contact-phone}}'
+        CONTACT_ADDRESS:   '{{resolve:ssm:/amaradata/prod/contact-address}}'
+        SUPPORT_EMAIL:     '{{resolve:ssm:/amaradata/prod/support-email}}'
+        COPYRIGHT_YEAR:    '{{resolve:ssm:/amaradata/prod/copyright-year}}'
+
+        # SSM Parameter Store — config, not credentials
+        GOOGLE_CLIENT_ID:    !Sub '{{resolve:ssm:/${Tenant}/${Env}/google-client-id}}'
+        GOOGLE_REDIRECT_URI: !Sub '{{resolve:ssm:/${Tenant}/${Env}/google-redirect-uri}}'
+        AMRD_DB_HOST:        !Sub '{{resolve:ssm:/${Tenant}/${Env}/db-host}}'
+        AMRD_DB_WRITE_USER:  !Sub '{{resolve:ssm:/${Tenant}/${Env}/db-write-user}}'
+        AMRD_DB_READ_USER:   !Sub '{{resolve:ssm:/${Tenant}/${Env}/db-read-user}}'
+
+        # Secrets Manager — actual credentials
+        AMRD_JWT_SECRET:        !Sub '{{resolve:secretsmanager:/${Tenant}/${Env}/jwt-secret}}'
+        GOOGLE_CLIENT_SECRET:   !Sub '{{resolve:secretsmanager:/${Tenant}/${Env}/google-client-secret}}'
+        AMRD_DB_WRITE_PASSWORD: !Sub '{{resolve:secretsmanager:/${Tenant}/${Env}/db-write-password}}'
+        AMRD_DB_READ_PASSWORD:  !Sub '{{resolve:secretsmanager:/${Tenant}/${Env}/db-read-password}}'
+        ORIGIN_SECRET:          !Sub '{{resolve:secretsmanager:/${Tenant}/${Env}/origin-secret}}'
+
+Resources:
+
+  # ── CloudWatch Log Group — one consolidated group per application ─────────────
+  AppLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '${Tenant}-${Env}'
+      RetentionInDays: 7
+      Tags:
+        - { Key: tenant,      Value: !Ref Tenant }
+        - { Key: application, Value: !Ref TagApplication }
+        - { Key: project,     Value: !Ref TagProject }
+        - { Key: component,   Value: shared }
+
+  # ── HTTP API Gateway ──────────────────────────────────────────────────────────
+  AmrdApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref Env
+      CorsConfiguration:
+        AllowOrigins:
+          - !Ref FrontendUrl
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+          - Accept
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - OPTIONS
+        AllowCredentials: true
+        MaxAge: 600
+
+  # ── API Lambda — Express app (all routes) ─────────────────────────────────────
+  ApiFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Tenant}-${Env}-api'
+      Handler: backend/lambda/api.handler
+      CodeUri: .
+      MemorySize: 1024
+      Events:
+        ApiProxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AmrdApi
+            Path: /api/{proxy+}
+            Method: ANY
+        GraphQL:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AmrdApi
+            Path: /graphql
+            Method: ANY
+        Health:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AmrdApi
+            Path: /health
+            Method: GET
+
+  # ── CloudFront URL rewrite — extensionless paths → .html for S3 ───────────────
+  UrlRewriteFn:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub '${Tenant}-${Env}-url-rewrite'
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Rewrite extensionless paths to .html for S3 origin
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+          var uri = event.request.uri;
+          if (!uri.includes('.') && uri !== '/' &&
+              !uri.startsWith('/api/') && uri !== '/graphql' && uri !== '/health') {
+            event.request.uri = uri + '.html';
+          }
+          return event.request;
+        }
+
+  # ── S3 + CloudFront — frontend static files ───────────────────────────────────
+  OAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${Tenant}-${Env}-oac'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'amrd-platform-${Tenant}-${Env}-${AWS::AccountId}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - { Key: tenant,      Value: !Ref Tenant }
+        - { Key: application, Value: !Ref TagApplication }
+        - { Key: project,     Value: !Ref TagProject }
+        - { Key: component,   Value: shared }
+
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub '${FrontendBucket.Arn}/*'
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}'
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      Tags:
+        - { Key: tenant,      Value: !Ref Tenant }
+        - { Key: application, Value: !Ref TagApplication }
+        - { Key: project,     Value: !Ref TagProject }
+        - { Key: component,   Value: shared }
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+        HttpVersion: http2
+        PriceClass: PriceClass_100
+        Aliases: !If
+          - HasCustomDomain
+          - - !Select [1, !Split ['://', !Ref FrontendUrl]]
+            - !Sub
+              - 'www.${d}'
+              - d: !Select [1, !Split ['://', !Ref FrontendUrl]]
+          - !Ref AWS::NoValue
+        ViewerCertificate: !If
+          - HasCustomDomain
+          - AcmCertificateArn: !Ref AcmCertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt FrontendBucket.RegionalDomainName
+            S3OriginConfig: {}
+            OriginAccessControlId: !GetAtt OAC.Id
+          - Id: ApiOrigin
+            DomainName: !Sub '${AmrdApi}.execute-api.${AWS::Region}.amazonaws.com'
+            OriginPath: !Sub '/${Env}'
+            CustomOriginConfig:
+              HTTPSPort: 443
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols: [TLSv1.2]
+            OriginCustomHeaders:
+              - HeaderName: x-origin-secret
+                HeaderValue: !Sub '{{resolve:secretsmanager:/${Tenant}/${Env}/origin-secret}}'
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6   # CachingOptimized
+          AllowedMethods: [GET, HEAD]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt UrlRewriteFn.FunctionARN
+        CacheBehaviors:
+          - PathPattern: /api/*
+            TargetOriginId: ApiOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad           # CachingDisabled
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac    # AllViewerExceptHostHeader
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+          - PathPattern: /graphql
+            TargetOriginId: ApiOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+          - PathPattern: /health
+            TargetOriginId: ApiOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /login.html
+            ErrorCachingMinTTL: 0
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /login.html
+            ErrorCachingMinTTL: 0
+
+  # ── Aurora Serverless v2 — conditional on CreateDbCluster=true ────────────────
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: ShouldCreateDb
+    Properties:
+      GroupDescription: !Sub '${Tenant}-${Env} Aurora PostgreSQL'
+      VpcId: !Ref VpcId
+      SecurityGroupIngress: []   # No public access — Lambda uses general AWS IPs; add home IP manually for pgAdmin
+      Tags:
+        - { Key: tenant,      Value: !Ref Tenant }
+        - { Key: application, Value: !Ref TagApplication }
+        - { Key: project,     Value: !Ref TagProject }
+        - { Key: component,   Value: shared }
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Condition: ShouldCreateDb
+    Properties:
+      DBSubnetGroupDescription: !Sub '${Tenant}-${Env} Aurora subnet group'
+      SubnetIds: !Ref VpcSubnetIds
+      Tags:
+        - { Key: tenant,      Value: !Ref Tenant }
+        - { Key: application, Value: !Ref TagApplication }
+        - { Key: project,     Value: !Ref TagProject }
+        - { Key: component,   Value: shared }
+
+  DBCluster:
+    Type: AWS::RDS::DBCluster
+    Condition: ShouldCreateDb
+    DeletionPolicy: Snapshot
+    Properties:
+      DBClusterIdentifier: !Ref Tenant
+      Engine: aurora-postgresql
+      EngineVersion: '16.4'
+      DatabaseName: !Ref DbName
+      MasterUsername:     !Sub '{{resolve:ssm:/${Tenant}/${Env}/db-write-user}}'
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:/${Tenant}/${Env}/db-write-password}}'
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VpcSecurityGroupIds:
+        - !GetAtt DBSecurityGroup.GroupId
+      ServerlessV2ScalingConfiguration:
+        MinCapacity: 0
+        MaxCapacity: 4
+      StorageEncrypted: true
+      BackupRetentionPeriod: 7
+      DeletionProtection: true
+      Tags:
+        - { Key: tenant,      Value: !Ref Tenant }
+        - { Key: application, Value: !Ref TagApplication }
+        - { Key: project,     Value: !Ref TagProject }
+        - { Key: component,   Value: shared }
+
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    Condition: ShouldCreateDb
+    Properties:
+      DBClusterIdentifier: !Ref DBCluster
+      DBInstanceClass: db.serverless
+      Engine: aurora-postgresql
+      PubliclyAccessible: false
+
+  DBInitFn:
+    Type: AWS::Serverless::Function
+    Condition: ShouldCreateDb
+    DependsOn: DBInstance
+    Properties:
+      FunctionName: !Sub '${Tenant}-${Env}-db-init'
+      Handler: backend/lambda/db-init.handler
+      CodeUri: .
+      Timeout: 120
+
+  DBInitResource:
+    Type: AWS::CloudFormation::CustomResource
+    Condition: ShouldCreateDb
+    DependsOn: DBInitFn
+    Properties:
+      ServiceToken: !GetAtt DBInitFn.Arn
+      ResourceVersion: '1'
+
+Outputs:
+  AppUrl:
+    Description: CloudFront domain — point amaradata.com to this via Route 53 alias record; also ensure /amaradata/<env>/google-redirect-uri in SSM is set to https://amaradata.com/api/auth/google/callback
+    Value: !Sub 'https://${CloudFrontDistribution.DomainName}'
+  ApiGatewayUrl:
+    Description: Raw API Gateway URL (for debugging; use AppUrl in production)
+    Value: !Sub 'https://${AmrdApi}.execute-api.${AWS::Region}.amazonaws.com/${Env}'
+  FrontendBucketName:
+    Description: Upload frontend/ files here after sam deploy
+    Value: !Ref FrontendBucket
+  CloudFrontDistributionId:
+    Description: Needed for cache invalidation after frontend redeploy
+    Value: !Ref CloudFrontDistribution
+  DBClusterEndpoint:
+    Condition: ShouldCreateDb
+    Description: Aurora writer endpoint — store as /amaradata/<env>/db-host in SSM Parameter Store
+    Value: !GetAtt DBCluster.Endpoint.Address

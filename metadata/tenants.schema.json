@@ -1,0 +1,26 @@
+{
+  "table": "tenants",
+  "columns": [
+    { "name": "id",                   "type": "serial",       "primaryKey": true },
+    { "name": "name",                 "type": "varchar(255)", "notNull": true },
+    { "name": "slug",                 "type": "varchar(100)", "notNull": true, "unique": true },
+    { "name": "contact_name",         "type": "varchar(255)" },
+    { "name": "contact_email",        "type": "varchar(255)" },
+    { "name": "contact_phone",        "type": "varchar(50)" },
+    { "name": "billing_address",      "type": "text" },
+    { "name": "gstin",                "type": "varchar(20)" },
+    { "name": "pan",                  "type": "varchar(20)" },
+    { "name": "status",               "type": "varchar(50)",  "notNull": true, "default": "active" },
+    { "name": "tenant_db_host",       "type": "varchar(255)" },
+    { "name": "tenant_db_port",       "type": "integer",      "default": 5432 },
+    { "name": "tenant_db_name",       "type": "varchar(100)" },
+    { "name": "tenant_db_user",       "type": "varchar(100)" },
+    { "name": "tenant_db_secret_arn", "type": "varchar(500)" },
+    { "name": "tenant_db_password",   "type": "text" },
+    { "name": "onboarded_at",         "type": "date" },
+    { "name": "notes",                "type": "text" },
+    { "name": "site_url",             "type": "varchar(500)" },
+    { "name": "created_at",           "type": "timestamp",    "notNull": true },
+    { "name": "updated_at",           "type": "timestamp",    "notNull": true }
+  ]
+}

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Rounded-square badge — identical A mark, white on indigo -->
+  <rect width="32" height="32" rx="7" fill="#1E3A5F"/>
+  <path fill-rule="evenodd"
+        d="M16,3  L2,29  L8,29  L11,20 L21,20 L24,29 L30,29 Z
+           M16,7  L11,20 L21,20 Z"
+        fill="white"/>
+</svg>

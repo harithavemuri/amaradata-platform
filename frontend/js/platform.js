@@ -1,60 +1,124 @@
-/**
- * AmaraData Platform — shared client utility.
- * Handles auth, sidebar layout, and API calls.
- * Include in every platform page: <script src="/js/platform.js"></script>
- */
 (function () {
     const API = '';  // same-origin
 
     /* ── Auth helpers ──────────────────────────────────────────────── */
-    function getToken()    { return localStorage.getItem('amrd_token'); }
-    function getStaff()    { try { return JSON.parse(localStorage.getItem('amrd_staff') || 'null'); } catch { return null; } }
-    function isLoggedIn()  { return !!getToken(); }
+    function getToken()        { return localStorage.getItem('amrd_token'); }
+    function getRefreshToken() { return localStorage.getItem('amrd_refresh_token'); }
+    function getStaff()        { try { return JSON.parse(localStorage.getItem('amrd_staff') || 'null'); } catch { return null; } }
+    function isLoggedIn()      { return !!getToken(); }
+
+    function _clearSession() {
+        localStorage.removeItem('amrd_token');
+        localStorage.removeItem('amrd_refresh_token');
+        localStorage.removeItem('amrd_staff');
+    }
 
     function requireLogin() {
-        if (!isLoggedIn() && !location.pathname.endsWith('login.html')) {
-            location.href = '/login.html';
+        if (!isLoggedIn() && location.pathname !== '/login') {
+            location.href = '/login';
         }
     }
 
     function logout() {
-        localStorage.removeItem('amrd_token');
-        localStorage.removeItem('amrd_staff');
-        location.href = '/login.html';
+        fetch(`${API}/api/auth/logout`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json;v=1' },
+        }).catch(() => {});
+        _clearSession();
+        location.href = '/login';
     }
 
     async function login(email, password) {
         const res  = await fetch(`${API}/api/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json;v=1' },
+            body:    JSON.stringify({ email, password }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Login failed');
-        localStorage.setItem('amrd_token',  data.token);
-        localStorage.setItem('amrd_staff',  JSON.stringify(data.user));
+        localStorage.setItem('amrd_token',         data.token);
+        localStorage.setItem('amrd_refresh_token', data.refresh_token);
+        localStorage.setItem('amrd_staff',         JSON.stringify(data.user));
         return data.user;
     }
 
+    /* ── Token refresh ─────────────────────────────────────────────── */
+    let _refreshing = null;
+
+    async function _refreshToken() {
+        if (_refreshing) return _refreshing;
+        _refreshing = (async () => {
+            const refresh_token = getRefreshToken();
+            if (!refresh_token) throw new Error('No refresh token');
+            const res  = await fetch(`${API}/api/auth/refresh`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json;v=1' },
+                body:    JSON.stringify({ refresh_token }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error('Refresh failed');
+            localStorage.setItem('amrd_token',         data.token);
+            localStorage.setItem('amrd_refresh_token', data.refresh_token);
+        })().finally(() => { _refreshing = null; });
+        return _refreshing;
+    }
+
     /* ── API fetch helper ──────────────────────────────────────────── */
-    async function apiFetch(path, opts = {}) {
-        const headers = { 'Content-Type': 'application/json', ...opts.headers };
-        const token   = getToken();
+    async function apiFetch(path, opts = {}, _retry = true) {
+        const headers = {
+            'Content-Type':   'application/json',
+            'Accept':         'application/json;v=1',
+            ...opts.headers,
+        };
+        const token = getToken();
         if (token) headers['Authorization'] = `Bearer ${token}`;
         const res  = await fetch(`${API}${path}`, { ...opts, headers });
+        if (res.status === 401 && _retry) {
+            try {
+                await _refreshToken();
+                return apiFetch(path, opts, false);
+            } catch {
+                logout();
+                return;
+            }
+        }
         if (res.status === 401) { logout(); return; }
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || res.statusText);
         return data;
     }
 
+    /* ── GraphQL fetch helper ─────────────────────────────────────── */
+    async function gqlFetch(query, variables = {}) {
+        const data = await apiFetch('/graphql', {
+            method: 'POST',
+            body:   JSON.stringify({ query, variables }),
+        });
+        if (data?.errors?.length) throw new Error(data.errors[0].message);
+        return data?.data;
+    }
+
+    /* ── Session timeout (15 min inactivity) ──────────────────────── */
+    function _startSessionTimeout() {
+        const TIMEOUT = 15 * 60 * 1000;
+        let timer;
+        const reset = () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => logout(), TIMEOUT);
+        };
+        ['mousemove','keydown','click','scroll','touchstart'].forEach(
+            e => document.addEventListener(e, reset, { passive: true })
+        );
+        reset();
+    }
+
     /* ── Sidebar ───────────────────────────────────────────────────── */
     const NAV = [
-        { href: '/dashboard.html',    icon: 'home',    label: 'Dashboard' },
-        { href: '/tenants.html',      icon: 'tenants', label: 'Tenants' },
-        { href: '/invoices.html',     icon: 'invoice', label: 'Invoices' },
-        { href: '/enhancements.html', icon: 'enhance', label: 'Enhancements' },
-        { href: '/metrics.html',      icon: 'metrics', label: 'Billing Metrics' },
+        { href: '/dashboard',    icon: 'home',    label: 'Dashboard' },
+        { href: '/tenants',      icon: 'tenants', label: 'Tenants' },
+        { href: '/invoices',     icon: 'invoice', label: 'Invoices' },
+        { href: '/enhancements', icon: 'enhance', label: 'Enhancements' },
+        { href: '/metrics',      icon: 'metrics', label: 'Billing Metrics' },
     ];
 
     const ICONS = {
@@ -77,16 +141,19 @@
 *{box-sizing:border-box;}
 body{margin:0;font-family:'Inter',Arial,sans-serif;background:#f1f5f9;display:flex;min-height:100vh;flex-direction:column;}
 .amrd-wrap{display:flex;flex:1;min-height:0;}
-.amrd-sidebar{width:240px;flex-shrink:0;background:#0f172a;display:flex;flex-direction:column;
+.amrd-sidebar{width:240px;flex-shrink:0;background:#112240;display:flex;flex-direction:column;
  height:100vh;position:sticky;top:0;overflow-y:auto;}
-.amrd-logo{padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,.08);}
+.amrd-logo{padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;text-decoration:none;}
+.amrd-logo:hover{opacity:.85;}
+.amrd-logo-icon{width:32px;height:32px;flex-shrink:0;}
+.amrd-logo-text{display:flex;flex-direction:column;}
 .amrd-logo-title{color:#fff;font-size:18px;font-weight:700;letter-spacing:.5px;}
 .amrd-logo-sub{color:#64748b;font-size:11px;margin-top:2px;}
 .amrd-nav{flex:1;padding:12px 0;}
 .amrd-nav a{display:flex;align-items:center;padding:10px 18px;color:#94a3b8;text-decoration:none;
  font-size:13px;border-left:3px solid transparent;transition:all .15s;}
-.amrd-nav a:hover{background:rgba(255,255,255,.05);color:#e2e8f0;border-left-color:#6366f1;}
-.amrd-nav a.active{background:rgba(99,102,241,.15);color:#a5b4fc;border-left-color:#6366f1;font-weight:600;}
+.amrd-nav a:hover{background:rgba(255,255,255,.05);color:#e2e8f0;border-left-color:#0D9488;}
+.amrd-nav a.active{background:rgba(13,148,136,.15);color:#5EEAD4;border-left-color:#0D9488;font-weight:600;}
 .amrd-user{padding:14px 18px;border-top:1px solid rgba(255,255,255,.08);}
 .amrd-user-name{color:#e2e8f0;font-size:13px;font-weight:600;}
 .amrd-user-role{color:#64748b;font-size:11px;margin-top:2px;}
@@ -114,7 +181,7 @@ body{margin:0;font-family:'Inter',Arial,sans-serif;background:#f1f5f9;display:fl
 .amrd-badge-overdue{background:#fee2e2;color:#dc2626;}
 .amrd-badge-suspended,.amrd-badge-cancelled{background:#fee2e2;color:#dc2626;}
 .amrd-btn{padding:8px 16px;border-radius:7px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s;}
-.amrd-btn-primary{background:#6366f1;color:#fff;} .amrd-btn-primary:hover{background:#4f46e5;}
+.amrd-btn-primary{background:#0D9488;color:#fff;} .amrd-btn-primary:hover{background:#0B7A70;}
 .amrd-btn-sm{padding:5px 12px;font-size:12px;}
 .amrd-btn-ghost{background:#f1f5f9;color:#334155;} .amrd-btn-ghost:hover{background:#e2e8f0;}
 .amrd-stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:20px;}
@@ -127,7 +194,7 @@ body{margin:0;font-family:'Inter',Arial,sans-serif;background:#f1f5f9;display:fl
 label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:5px;}
 input,select,textarea{width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:7px;
  font-size:13px;color:#111827;background:#fff;font-family:inherit;}
-input:focus,select:focus,textarea:focus{outline:none;border-color:#6366f1;box-shadow:0 0 0 2px rgba(99,102,241,.15);}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#0D9488;box-shadow:0 0 0 2px rgba(13,148,136,.15);}
 @media print{.amrd-sidebar,.amrd-topbar{display:none!important;}.amrd-main{overflow:visible!important;}}`;
         document.head.appendChild(s);
     }
@@ -135,9 +202,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#6366f1;box-sh
     function renderSidebar(pageTitle) {
         _injectStyles();
         requireLogin();
+        _startSessionTimeout();
 
-        const staff = getStaff();
-        const activePath = location.pathname.replace(/\/+$/, '') || '/dashboard.html';
+        const staff      = getStaff();
+        const activePath = location.pathname.replace(/\/+$/, '') || '/dashboard';
 
         const navItems = NAV.map(n => {
             const active = activePath.endsWith(n.href.replace(/^\//, '')) ? ' active' : '';
@@ -147,10 +215,13 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#6366f1;box-sh
         const sidebar = document.createElement('aside');
         sidebar.className = 'amrd-sidebar';
         sidebar.innerHTML = `
-            <div class="amrd-logo">
-                <div class="amrd-logo-title">AmaraData</div>
-                <div class="amrd-logo-sub">Platform Console</div>
-            </div>
+            <a href="/" class="amrd-logo">
+                <img src="/images/logo.svg" alt="AmaraData" class="amrd-logo-icon"/>
+                <div class="amrd-logo-text">
+                    <div class="amrd-logo-title">AmaraData</div>
+                    <div class="amrd-logo-sub">Platform Console</div>
+                </div>
+            </a>
             <nav class="amrd-nav">${navItems}</nav>
             <div class="amrd-user">
                 <div class="amrd-user-name">${staff?.name || '—'}</div>
@@ -178,8 +249,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#6366f1;box-sh
         document.body.appendChild(wrap);
         document.body.style.margin = '0';
 
-        return content; // pages can append into this
+        return content;
     }
 
-    window.__amrd = { login, logout, apiFetch, getStaff, isLoggedIn, requireLogin, renderSidebar };
+    window.__amrd = { login, logout, apiFetch, gqlFetch, getStaff, isLoggedIn, requireLogin, renderSidebar };
 })();

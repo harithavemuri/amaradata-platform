@@ -1,0 +1,15 @@
+{
+  "table": "subscription_plans",
+  "columns": [
+    { "name": "id",              "type": "serial",      "primaryKey": true },
+    { "name": "name",            "type": "varchar(100)","notNull": true },
+    { "name": "description",     "type": "text" },
+    { "name": "sales_pct",       "type": "numeric(5,2)","notNull": true, "default": 0 },
+    { "name": "rental_pct",      "type": "numeric(5,2)","notNull": true, "default": 0 },
+    { "name": "hourly_rate",     "type": "numeric(10,2)","notNull": true, "default": 0 },
+    { "name": "min_monthly_fee", "type": "numeric(10,2)","notNull": true, "default": 0 },
+    { "name": "currency_code",   "type": "char(3)",     "notNull": true, "default": "INR" },
+    { "name": "is_active",       "type": "boolean",     "notNull": true, "default": true },
+    { "name": "created_at",      "type": "timestamp",   "notNull": true }
+  ]
+}

@@ -1,0 +1,20 @@
+SERVERLESS ONLY — no EC2, Docker, ECS, EKS, containers, or traditional servers.
+
+ALLOWED AWS SERVICES:
+  Lambda, API Gateway, Aurora Serverless v2, S3, CloudFront,
+  DynamoDB, Cognito, Step Functions, Secrets Manager, SSM Parameter Store
+
+FORBIDDEN:
+  EC2, ECS, EKS, Fargate, Elastic Beanstalk, Docker, containers of any kind,
+  self-managed web servers, VMs
+
+DEPLOYMENT:
+  AWS SAM (template.yaml) only.
+  One CloudFormation stack per environment: amaradata-prod, amaradata-staging.
+
+SCALING:
+  Lambda auto-scales. Pay-per-use. No pre-provisioned capacity.
+
+SECRETS:
+  All credentials in AWS Secrets Manager at /<tenant>/<env>/<name>.
+  Never hardcode credentials. Never commit .env files.

@@ -1,0 +1,14 @@
+{
+  "table": "invoice_line_items",
+  "columns": [
+    { "name": "id",           "type": "serial",       "primaryKey": true },
+    { "name": "invoice_id",   "type": "integer",      "notNull": true, "references": "invoices(id)" },
+    { "name": "billing_type", "type": "varchar(50)",  "notNull": true },
+    { "name": "description",  "type": "text",         "notNull": true },
+    { "name": "quantity",     "type": "numeric(10,2)","notNull": true, "default": 1 },
+    { "name": "unit_price",   "type": "numeric(12,2)","notNull": true, "default": 0 },
+    { "name": "amount",       "type": "numeric(12,2)","notNull": true, "default": 0 },
+    { "name": "sort_order",   "type": "integer",      "notNull": true, "default": 0 },
+    { "name": "created_at",   "type": "timestamp",    "notNull": true }
+  ]
+}
