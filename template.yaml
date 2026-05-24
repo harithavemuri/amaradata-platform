@@ -123,6 +123,8 @@ Globals:
         AMRD_DB_WRITE_PASSWORD: !Sub '{{resolve:secretsmanager:/${Tenant}/${Env}/db-write-password}}'
         AMRD_DB_READ_PASSWORD:  !Sub '{{resolve:secretsmanager:/${Tenant}/${Env}/db-read-password}}'
         ORIGIN_SECRET:          !Sub '{{resolve:secretsmanager:/${Tenant}/${Env}/origin-secret}}'
+        SSO_SECRET:             !Sub '{{resolve:secretsmanager:/shared/${Env}/sso-secret}}'
+        ROHAS_URL:              !Sub '{{resolve:ssm:/rohas/${Env}/frontend-url}}'
 
 Resources:
 

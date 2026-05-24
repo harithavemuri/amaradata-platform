@@ -89,4 +89,13 @@ describe('Auth routes — always return JSON, never HTML', () => {
         assertJson(res);
         expect([401, 403]).toContain(res.status);
     });
+
+    // ── SSO issuer ───────────────────────────────────────────────────────────
+    it('POST /api/auth/sso/issue without auth → 401 JSON', async () => {
+        const res = await request(app)
+            .post('/api/auth/sso/issue')
+            .send({ aud: 'rohas' });
+        assertJson(res);
+        expect(res.status).toBe(401);
+    });
 });

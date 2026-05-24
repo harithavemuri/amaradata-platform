@@ -1,7 +1,8 @@
 const router                              = require('express').Router();
 const bcrypt                              = require('bcryptjs');
+const crypto                              = require('crypto');
 const db                                  = require('../db');
-const { sign, signRefresh, verifyRefresh } = require('../middleware/auth');
+const { sign, signRefresh, verifyRefresh, requireAuth } = require('../middleware/auth');
 const GoogleOAuth                         = require('../auth/google-auth');
 
 // POST /api/auth/login
@@ -195,6 +196,29 @@ router.post('/google/exchange', async (req, res) => {
         console.error('Google exchange error:', e.message);
         res.status(500).json({ error: e.message });
     }
+});
+
+// POST /api/auth/sso/issue — issue a 60-second SSO token for tenant sites (requires auth)
+router.post('/sso/issue', requireAuth, (req, res) => {
+    const ssoSecret = process.env.SSO_SECRET;
+    if (!ssoSecret) return res.status(503).json({ error: 'SSO not configured' });
+
+    const { aud } = req.body;  // e.g. "rohas" — caller specifies target tenant
+    if (!aud) return res.status(400).json({ error: 'aud (target tenant) is required' });
+
+    const user     = req.staff;
+    const now      = Math.floor(Date.now() / 1000);
+    const payload  = { iss: 'amaradata', aud, sub: user.email, name: user.name, role: user.role, iat: now, exp: now + 60 };
+
+    const header   = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+    const body     = Buffer.from(JSON.stringify(payload)).toString('base64url');
+    const sig      = crypto.createHmac('sha256', ssoSecret).update(`${header}.${body}`).digest('base64url');
+    const ssoToken = `${header}.${body}.${sig}`;
+
+    const rohasUrl = process.env.ROHAS_URL || '';
+    const loginUrl = rohasUrl ? `${rohasUrl}/auth/sso?sso_token=${ssoToken}` : null;
+
+    res.json({ success: true, sso_token: ssoToken, login_url: loginUrl });
 });
 
 module.exports = router;
