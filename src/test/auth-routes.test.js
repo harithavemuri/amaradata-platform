@@ -98,4 +98,17 @@ describe('Auth routes — always return JSON, never HTML', () => {
         assertJson(res);
         expect(res.status).toBe(401);
     });
+
+    // ── Admin routes ─────────────────────────────────────────────────────────
+    it('GET /api/admin/users without auth → 401 JSON', async () => {
+        const res = await request(app).get('/api/admin/users');
+        assertJson(res);
+        expect(res.status).toBe(401);
+    });
+
+    it('GET /api/admin/user-groups without auth → 401 JSON', async () => {
+        const res = await request(app).get('/api/admin/user-groups');
+        assertJson(res);
+        expect(res.status).toBe(401);
+    });
 });

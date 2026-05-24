@@ -2,13 +2,27 @@
   {
     "id": 1,
     "created_at": "2026-05-21T18:44:48.534Z",
-    "updated_at": "2026-05-22T21:03:41.835Z",
+    "updated_at": "2026-05-24T12:35:16.079Z",
     "email": "harithavemuri@gmail.com",
     "name": "Haritha Vemuri",
-    "role": "staff",
+    "role": "site_admin",
+    "password_hash": "$2a$12$4sAXpj1VkA4ZU7zRvbF1rOQVCcZRHOwG59tseLnSUFOQRGPsg3wom",
     "google_id": "116652221844399706730",
     "picture": "https://lh3.googleusercontent.com/a/ACg8ocKno_sBgRDelPRcHXdySBu5BWy__trV8yeSXca5WQUHNG4uVAgI=s96-c",
     "is_active": true,
-    "last_login_at": "2026-05-22T21:03:41.834Z"
+    "last_login_at": "2026-05-24T12:35:16.079Z"
+  },
+  {
+    "id": 2,
+    "created_at": "2026-05-24T00:00:00.000Z",
+    "updated_at": "2026-05-24T00:00:00.000Z",
+    "email": "rajvemuri25@gmail.com",
+    "name": "Raj Vemuri",
+    "role": "sales_manager",
+    "password_hash": "$2a$12$gyxDD10LqNAzASCn31/4p.bVll4AijRNtxP2n.Cr0x5UqugSPZGzq",
+    "google_id": null,
+    "picture": null,
+    "is_active": true,
+    "last_login_at": null
   }
 ]

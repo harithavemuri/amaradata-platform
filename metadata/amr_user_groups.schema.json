@@ -1,0 +1,12 @@
+{
+  "table": "amr_user_groups",
+  "columns": [
+    { "name": "id",          "type": "serial",       "primaryKey": true },
+    { "name": "name",        "type": "varchar(100)", "notNull": true },
+    { "name": "description", "type": "text" },
+    { "name": "is_active",   "type": "boolean",      "notNull": true, "default": true },
+    { "name": "created_by",  "type": "integer",      "references": "amr_users.id" },
+    { "name": "created_at",  "type": "timestamp",    "notNull": true },
+    { "name": "updated_at",  "type": "timestamp",    "notNull": true }
+  ]
+}

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+  <title>Users — AmaraData Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="/js/platform.js"></script>
+</head>
+<body>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const root = window.__amrd.renderSidebar('Users');
+
+    const ROLES = ['site_admin', 'admin', 'sales_manager', 'billing', 'staff'];
+    let users = [];
+    let editId = null;
+
+    // ── modal ────────────────────────────────────────────────────────────────
+    function modal(show, user = {}) {
+        editId = user.id || null;
+        document.getElementById('modalTitle').textContent = editId ? 'Edit User' : 'Add User';
+        document.getElementById('fEmail').value     = user.email    || '';
+        document.getElementById('fEmail').disabled  = !!editId;
+        document.getElementById('fName').value      = user.name     || '';
+        document.getElementById('fRole').value      = user.role     || 'staff';
+        document.getElementById('fActive').checked  = user.is_active !== false;
+        document.getElementById('fPassword').value  = '';
+        document.getElementById('modalErr').textContent = '';
+        document.getElementById('userModal').style.display = show ? 'flex' : 'none';
+    }
+
+    async function saveUser() {
+        const email    = document.getElementById('fEmail').value.trim();
+        const name     = document.getElementById('fName').value.trim();
+        const role     = document.getElementById('fRole').value;
+        const is_active= document.getElementById('fActive').checked;
+        const password = document.getElementById('fPassword').value;
+        const errEl    = document.getElementById('modalErr');
+
+        if (!name || (!editId && !email)) { errEl.textContent = 'Name and email are required'; return; }
+
+        const body = editId ? { name, role, is_active } : { email, name, role };
+        if (password) body.password = password;
+
+        try {
+            const method = editId ? 'PUT' : 'POST';
+            const path   = editId ? `/api/admin/users/${editId}` : '/api/admin/users';
+            await window.__amrd.apiFetch(path, { method, body: JSON.stringify(body) });
+            modal(false);
+            loadUsers();
+        } catch (e) { errEl.textContent = e.message; }
+    }
+
+    async function deactivate(id, active) {
+        if (!confirm(active ? 'Deactivate this user?' : 'Reactivate this user?')) return;
+        try {
+            await window.__amrd.apiFetch(`/api/admin/users/${id}`, {
+                method: 'PUT', body: JSON.stringify({ is_active: !active }),
+            });
+            loadUsers();
+        } catch (e) { alert(e.message); }
+    }
+
+    async function loadUsers() {
+        root.innerHTML = '<p style="color:#94a3b8;padding:20px">Loading…</p>';
+        try {
+            const res = await window.__amrd.apiFetch('/api/admin/users');
+            users = res.data || [];
+            render();
+        } catch (e) {
+            root.innerHTML = `<p style="color:#dc2626;padding:20px">Failed to load users: ${e.message}</p>`;
+        }
+    }
+
+    function roleBadge(role) {
+        const colours = {
+            site_admin:    '#7c3aed;background:#ede9fe',
+            admin:         '#1d4ed8;background:#dbeafe',
+            sales_manager: '#0D9488;background:#ccfbf1',
+            billing:       '#d97706;background:#fef3c7',
+            staff:         '#64748b;background:#f1f5f9',
+        };
+        const c = colours[role] || '64748b;background:#f1f5f9';
+        return `<span class="amrd-badge" style="color:${c}">${role.replace('_', ' ')}</span>`;
+    }
+
+    function render() {
+        root.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <div>
+                <input id="search" type="text" placeholder="Search by name or email…"
+                    style="width:260px;padding:8px 12px;border:1px solid #d1d5db;border-radius:7px;font-size:13px;"
+                    oninput="filterUsers(this.value)">
+            </div>
+            <button class="amrd-btn amrd-btn-primary" onclick="openAdd()">+ Add User</button>
+        </div>
+
+        <div class="amrd-card" style="padding:0;overflow:hidden">
+            <table class="amrd-table" id="usersTable">
+                <thead><tr>
+                    <th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last Login</th><th>Actions</th>
+                </tr></thead>
+                <tbody id="usersTbody"></tbody>
+            </table>
+        </div>
+
+        <!-- Modal -->
+        <div id="userModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center;">
+            <div style="background:#fff;border-radius:12px;padding:28px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+                <h3 id="modalTitle" style="margin:0 0 20px;font-size:16px;color:#0f172a;"></h3>
+                <div id="modalErr" style="color:#dc2626;font-size:13px;margin-bottom:12px;"></div>
+                <div class="amrd-form-row">
+                    <div><label>Name *</label><input id="fName" type="text" placeholder="Full name"></div>
+                    <div><label>Role</label>
+                        <select id="fRole">${ROLES.map(r => `<option value="${r}">${r.replace('_',' ')}</option>`).join('')}</select>
+                    </div>
+                </div>
+                <div class="amrd-form-row full">
+                    <div><label>Email *</label><input id="fEmail" type="email" placeholder="user@amaradata.com"></div>
+                </div>
+                <div class="amrd-form-row full">
+                    <div><label>Password <span style="color:#94a3b8;font-weight:400">(leave blank to keep unchanged)</span></label>
+                        <input id="fPassword" type="password" placeholder="••••••••" autocomplete="new-password"></div>
+                </div>
+                <div style="margin-bottom:18px;display:flex;align-items:center;gap:8px;">
+                    <input id="fActive" type="checkbox" style="width:auto;margin:0">
+                    <label style="margin:0;font-weight:500;color:#374151;">Active</label>
+                </div>
+                <div style="display:flex;gap:10px;justify-content:flex-end;">
+                    <button class="amrd-btn amrd-btn-ghost" onclick="closeModal()">Cancel</button>
+                    <button class="amrd-btn amrd-btn-primary" onclick="saveUser()">Save</button>
+                </div>
+            </div>
+        </div>`;
+
+        window.openAdd    = () => modal(true);
+        window.openEdit   = (id) => modal(true, users.find(u => u.id == id));
+        window.closeModal = () => modal(false);
+        window.saveUser   = saveUser;
+        window.deactivate = deactivate;
+        window.filterUsers = (q) => {
+            const lq = q.toLowerCase();
+            document.querySelectorAll('#usersTbody tr').forEach(tr => {
+                tr.style.display = tr.dataset.search.includes(lq) ? '' : 'none';
+            });
+        };
+
+        renderRows(users);
+    }
+
+    function renderRows(rows) {
+        const fmt = (d) => d ? new Date(d).toLocaleDateString() : '—';
+        document.getElementById('usersTbody').innerHTML = rows.map(u => `
+            <tr data-search="${(u.name + u.email + u.role).toLowerCase()}">
+                <td style="font-weight:600">${u.name}</td>
+                <td style="color:#64748b">${u.email}</td>
+                <td>${roleBadge(u.role)}</td>
+                <td><span class="amrd-badge ${u.is_active ? 'amrd-badge-active' : 'amrd-badge-cancelled'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
+                <td style="color:#64748b;font-size:12px">${fmt(u.last_login_at)}</td>
+                <td>
+                    <button class="amrd-btn amrd-btn-sm amrd-btn-ghost" onclick="openEdit(${u.id})">Edit</button>
+                    <button class="amrd-btn amrd-btn-sm" style="background:${u.is_active?'#fee2e2':'#dcfce7'};color:${u.is_active?'#dc2626':'#15803d'};margin-left:6px"
+                        onclick="deactivate(${u.id},${u.is_active})">${u.is_active ? 'Deactivate' : 'Reactivate'}</button>
+                </td>
+            </tr>`).join('');
+    }
+
+    loadUsers();
+});
+</script>
+</body>
+</html>

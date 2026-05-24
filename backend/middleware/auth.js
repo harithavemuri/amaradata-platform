@@ -19,7 +19,16 @@ function requireAuth(req, res, next) {
 
 function requireAdmin(req, res, next) {
     requireAuth(req, res, () => {
-        if (req.staff.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+        if (!['admin', 'site_admin'].includes(req.staff.role))
+            return res.status(403).json({ error: 'Admin only' });
+        next();
+    });
+}
+
+function requireSiteAdmin(req, res, next) {
+    requireAuth(req, res, () => {
+        if (req.staff.role !== 'site_admin')
+            return res.status(403).json({ error: 'Site admin only' });
         next();
     });
 }
@@ -38,4 +47,4 @@ function verifyRefresh(token) {
     return payload;
 }
 
-module.exports = { requireAuth, requireAdmin, sign, signRefresh, verifyRefresh };
+module.exports = { requireAuth, requireAdmin, requireSiteAdmin, sign, signRefresh, verifyRefresh };

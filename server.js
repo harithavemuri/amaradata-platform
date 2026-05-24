@@ -36,6 +36,7 @@ app.use(express.static(path.join(__dirname, 'frontend'), { extensions: ['html'] 
 app.post('/graphql', requireAuth, graphqlHandler);
 
 app.use('/api/auth',          require('./backend/routes/auth'));
+app.use('/api/admin',         require('./backend/routes/admin'));
 app.use('/api/contact',       require('./backend/routes/contact'));
 app.use('/api/tenants',       requireAuth, require('./backend/routes/tenants'));
 app.use('/api/subscriptions', requireAuth, require('./backend/routes/subscriptions'));

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+  <title>User Groups — AmaraData Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="/js/platform.js"></script>
+</head>
+<body>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const root = window.__amrd.renderSidebar('User Groups');
+
+    let groups = [];
+    let allUsers = [];
+    let editId = null;
+    let viewGroupId = null;
+
+    // ── load ─────────────────────────────────────────────────────────────────
+    async function loadAll() {
+        root.innerHTML = '<p style="color:#94a3b8;padding:20px">Loading…</p>';
+        try {
+            const [gRes, uRes] = await Promise.all([
+                window.__amrd.apiFetch('/api/admin/user-groups'),
+                window.__amrd.apiFetch('/api/admin/users'),
+            ]);
+            groups   = gRes.data || [];
+            allUsers = uRes.data || [];
+            render();
+        } catch (e) {
+            root.innerHTML = `<p style="color:#dc2626;padding:20px">Failed to load: ${e.message}</p>`;
+        }
+    }
+
+    // ── group modal ───────────────────────────────────────────────────────────
+    function groupModal(show, g = {}) {
+        editId = g.id || null;
+        document.getElementById('gmTitle').textContent = editId ? 'Edit Group' : 'New Group';
+        document.getElementById('gmName').value = g.name || '';
+        document.getElementById('gmDesc').value = g.description || '';
+        document.getElementById('gmErr').textContent  = '';
+        document.getElementById('groupModal').style.display = show ? 'flex' : 'none';
+    }
+
+    async function saveGroup() {
+        const name = document.getElementById('gmName').value.trim();
+        const description = document.getElementById('gmDesc').value.trim();
+        const errEl = document.getElementById('gmErr');
+        if (!name) { errEl.textContent = 'Name is required'; return; }
+        try {
+            if (editId) {
+                await window.__amrd.apiFetch(`/api/admin/user-groups/${editId}`, { method:'PUT', body:JSON.stringify({name,description}) });
+            } else {
+                await window.__amrd.apiFetch('/api/admin/user-groups', { method:'POST', body:JSON.stringify({name,description}) });
+            }
+            groupModal(false);
+            loadAll();
+        } catch (e) { errEl.textContent = e.message; }
+    }
+
+    async function deleteGroup(id) {
+        if (!confirm('Delete this group and remove all members?')) return;
+        try {
+            await window.__amrd.apiFetch(`/api/admin/user-groups/${id}`, { method:'DELETE' });
+            loadAll();
+        } catch (e) { alert(e.message); }
+    }
+
+    // ── members panel ────────────────────────────────────────────────────────
+    function memberPanel(show, groupId) {
+        viewGroupId = groupId || null;
+        if (!show) { document.getElementById('memberPanel').style.display = 'none'; return; }
+        const g = groups.find(g => g.id == groupId);
+        document.getElementById('memberPanelTitle').textContent = g?.name || '';
+        document.getElementById('memberPanel').style.display = 'flex';
+        renderMembers(g);
+    }
+
+    function renderMembers(g) {
+        const members = g?.members || [];
+        const nonMembers = allUsers.filter(u => !members.some(m => m.id == u.id) && u.is_active);
+
+        document.getElementById('memberList').innerHTML = members.length
+            ? members.map(m => `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;">
+                    <div>
+                        <div style="font-weight:600;font-size:13px;color:#0f172a">${m.name}</div>
+                        <div style="font-size:11px;color:#64748b">${m.email} · ${m.role.replace('_',' ')}</div>
+                    </div>
+                    <button class="amrd-btn amrd-btn-sm" style="background:#fee2e2;color:#dc2626" onclick="removeMember(${g.id},${m.id})">Remove</button>
+                </div>`).join('')
+            : '<p style="color:#94a3b8;font-size:13px;margin:12px 0">No members yet.</p>';
+
+        document.getElementById('addMemberSelect').innerHTML =
+            `<option value="">— Add a user —</option>` +
+            nonMembers.map(u => `<option value="${u.id}">${u.name} (${u.email})</option>`).join('');
+    }
+
+    async function addMember() {
+        const userId = document.getElementById('addMemberSelect').value;
+        if (!userId || !viewGroupId) return;
+        try {
+            await window.__amrd.apiFetch(`/api/admin/user-groups/${viewGroupId}/members`, {
+                method:'POST', body:JSON.stringify({ user_id: parseInt(userId) }),
+            });
+            await loadAll();
+            memberPanel(true, viewGroupId);
+        } catch (e) { alert(e.message); }
+    }
+
+    async function removeMember(groupId, userId) {
+        try {
+            await window.__amrd.apiFetch(`/api/admin/user-groups/${groupId}/members/${userId}`, { method:'DELETE' });
+            await loadAll();
+            memberPanel(true, viewGroupId);
+        } catch (e) { alert(e.message); }
+    }
+
+    // ── render ────────────────────────────────────────────────────────────────
+    function render() {
+        root.innerHTML = `
+        <div style="display:flex;gap:20px">
+            <!-- Groups list -->
+            <div style="flex:1;min-width:0">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <span style="font-size:14px;color:#64748b">${groups.length} group${groups.length !== 1 ? 's' : ''}</span>
+                    <button class="amrd-btn amrd-btn-primary" onclick="openNewGroup()">+ New Group</button>
+                </div>
+
+                ${groups.length === 0
+                    ? '<div class="amrd-card"><p style="color:#94a3b8;text-align:center">No groups yet.</p></div>'
+                    : groups.map(g => `
+                    <div class="amrd-card" style="cursor:pointer;transition:box-shadow .15s;margin-bottom:12px"
+                         onclick="viewMembers(${g.id})">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                            <div>
+                                <div style="font-weight:700;font-size:14px;color:#0f172a;margin-bottom:4px">${g.name}</div>
+                                <div style="font-size:12px;color:#64748b">${g.description || '—'}</div>
+                                <div style="margin-top:8px">
+                                    <span class="amrd-badge" style="background:#dbeafe;color:#1d4ed8">${g.member_count || 0} member${(g.member_count||0)!==1?'s':''}</span>
+                                    ${g.is_active ? '' : '<span class="amrd-badge amrd-badge-cancelled" style="margin-left:6px">Inactive</span>'}
+                                </div>
+                            </div>
+                            <div onclick="event.stopPropagation()" style="display:flex;gap:6px">
+                                <button class="amrd-btn amrd-btn-sm amrd-btn-ghost" onclick="openEditGroup(${g.id})">Edit</button>
+                                <button class="amrd-btn amrd-btn-sm" style="background:#fee2e2;color:#dc2626" onclick="deleteGroup(${g.id})">Delete</button>
+                            </div>
+                        </div>
+                    </div>`).join('')
+                }
+            </div>
+
+            <!-- Members panel -->
+            <div id="memberPanel" style="display:none;flex-direction:column;width:320px;flex-shrink:0">
+                <div class="amrd-card" style="flex:1">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                        <h3 id="memberPanelTitle" style="margin:0;font-size:14px"></h3>
+                        <button class="amrd-btn amrd-btn-sm amrd-btn-ghost" onclick="closeMembers()">✕</button>
+                    </div>
+                    <div id="memberList"></div>
+                    <div style="margin-top:14px;padding-top:14px;border-top:1px solid #f1f5f9">
+                        <select id="addMemberSelect" style="margin-bottom:8px"></select>
+                        <button class="amrd-btn amrd-btn-primary amrd-btn-sm" style="width:100%" onclick="addMember()">Add Member</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Group Modal -->
+        <div id="groupModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center">
+            <div style="background:#fff;border-radius:12px;padding:28px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+                <h3 id="gmTitle" style="margin:0 0 20px;font-size:16px;color:#0f172a"></h3>
+                <div id="gmErr" style="color:#dc2626;font-size:13px;margin-bottom:10px"></div>
+                <div class="amrd-form-row full"><div>
+                    <label>Group Name *</label>
+                    <input id="gmName" type="text" placeholder="e.g. Sales Team IN">
+                </div></div>
+                <div class="amrd-form-row full"><div>
+                    <label>Description</label>
+                    <input id="gmDesc" type="text" placeholder="Optional description">
+                </div></div>
+                <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+                    <button class="amrd-btn amrd-btn-ghost" onclick="closeGroupModal()">Cancel</button>
+                    <button class="amrd-btn amrd-btn-primary" onclick="saveGroup()">Save</button>
+                </div>
+            </div>
+        </div>`;
+
+        window.openNewGroup   = () => groupModal(true);
+        window.openEditGroup  = (id) => groupModal(true, groups.find(g => g.id == id));
+        window.closeGroupModal= () => groupModal(false);
+        window.saveGroup      = saveGroup;
+        window.deleteGroup    = deleteGroup;
+        window.viewMembers    = (id) => { memberPanel(true, id); };
+        window.closeMembers   = () => memberPanel(false);
+        window.addMember      = addMember;
+        window.removeMember   = removeMember;
+
+        if (viewGroupId) memberPanel(true, viewGroupId);
+    }
+
+    loadAll();
+});
+</script>
+</body>
+</html>

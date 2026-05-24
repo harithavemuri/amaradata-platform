@@ -2,11 +2,12 @@
 -- Run against a dedicated PostgreSQL database: amaradata_platform
 
 -- Internal AmaraData staff users
+-- Roles: site_admin | admin | sales_manager | billing | staff
 CREATE TABLE IF NOT EXISTS amr_users (
     id              SERIAL PRIMARY KEY,
     email           VARCHAR(255) UNIQUE NOT NULL,
     name            VARCHAR(255) NOT NULL,
-    role            VARCHAR(50)  NOT NULL DEFAULT 'staff', -- admin | staff | billing
+    role            VARCHAR(50)  NOT NULL DEFAULT 'staff',
     password_hash   TEXT         NOT NULL DEFAULT '',
     google_id       VARCHAR(255),
     picture         TEXT,
@@ -15,6 +16,29 @@ CREATE TABLE IF NOT EXISTS amr_users (
     created_at      TIMESTAMP    NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMP    NOT NULL DEFAULT NOW()
 );
+
+-- Staff user groups (e.g. "Billing Team", "Sales IN")
+CREATE TABLE IF NOT EXISTS amr_user_groups (
+    id          SERIAL PRIMARY KEY,
+    name        VARCHAR(100) NOT NULL,
+    description TEXT,
+    is_active   BOOLEAN NOT NULL DEFAULT true,
+    created_by  INTEGER REFERENCES amr_users(id),
+    created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- Many-to-many: user ↔ group membership
+CREATE TABLE IF NOT EXISTS amr_user_group_members (
+    id         SERIAL PRIMARY KEY,
+    group_id   INTEGER NOT NULL REFERENCES amr_user_groups(id) ON DELETE CASCADE,
+    user_id    INTEGER NOT NULL REFERENCES amr_users(id) ON DELETE CASCADE,
+    added_at   TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE (group_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ugm_group ON amr_user_group_members(group_id);
+CREATE INDEX IF NOT EXISTS idx_ugm_user  ON amr_user_group_members(user_id);
 
 -- Tenants (one row per customer, e.g. "Rohas Group")
 CREATE TABLE IF NOT EXISTS tenants (
