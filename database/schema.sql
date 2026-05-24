@@ -17,6 +17,26 @@ CREATE TABLE IF NOT EXISTS amr_users (
     updated_at      TIMESTAMP    NOT NULL DEFAULT NOW()
 );
 
+-- Canonical platform roles — one source of truth for valid role names
+-- is_system=true roles cannot be deleted (only descriptions can be edited).
+CREATE TABLE IF NOT EXISTS amr_roles (
+    id          SERIAL PRIMARY KEY,
+    name        VARCHAR(50) UNIQUE NOT NULL,   -- matches amr_users.role
+    label       VARCHAR(100) NOT NULL,
+    description TEXT,
+    is_system   BOOLEAN NOT NULL DEFAULT false,
+    created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO amr_roles (name, label, description, is_system) VALUES
+    ('site_admin',    'Site Admin',    'Full platform access including user and role management', true),
+    ('admin',         'Admin',         'Tenant, invoice and enhancement management', true),
+    ('sales_manager', 'Sales Manager', 'View and manage tenant sales pipeline', true),
+    ('billing',       'Billing',       'Access to invoices and payments', true),
+    ('staff',         'Staff',         'Basic read-only platform access', true)
+ON CONFLICT (name) DO NOTHING;
+
 -- Staff user groups (e.g. "Billing Team", "Sales IN")
 CREATE TABLE IF NOT EXISTS amr_user_groups (
     id          SERIAL PRIMARY KEY,

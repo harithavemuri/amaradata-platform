@@ -14,7 +14,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const root = window.__amrd.renderSidebar('Users');
 
-    const ROLES = ['site_admin', 'admin', 'sales_manager', 'billing', 'staff'];
+    let availableRoles = [];
     let users = [];
     let editId = null;
 
@@ -67,8 +67,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function loadUsers() {
         root.innerHTML = '<p style="color:#94a3b8;padding:20px">Loading…</p>';
         try {
-            const res = await window.__amrd.apiFetch('/api/admin/users');
-            users = res.data || [];
+            const [uRes, rRes] = await Promise.all([
+                window.__amrd.apiFetch('/api/admin/users'),
+                window.__amrd.apiFetch('/api/admin/roles'),
+            ]);
+            users = uRes.data || [];
+            availableRoles = rRes.data || [];
             render();
         } catch (e) {
             root.innerHTML = `<p style="color:#dc2626;padding:20px">Failed to load users: ${e.message}</p>`;
@@ -115,7 +119,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="amrd-form-row">
                     <div><label>Name *</label><input id="fName" type="text" placeholder="Full name"></div>
                     <div><label>Role</label>
-                        <select id="fRole">${ROLES.map(r => `<option value="${r}">${r.replace('_',' ')}</option>`).join('')}</select>
+                        <select id="fRole">${availableRoles.map(r => `<option value="${r.name}">${r.label}</option>`).join('')}</select>
                     </div>
                 </div>
                 <div class="amrd-form-row full">

@@ -1,6 +1,7 @@
 {
   "tables": [
     "amr_users",
+    "amr_roles",
     "amr_user_groups",
     "amr_user_group_members",
     "tenants",

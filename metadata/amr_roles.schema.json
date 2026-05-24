@@ -1,0 +1,12 @@
+{
+  "table": "amr_roles",
+  "columns": [
+    { "name": "id",          "type": "serial",      "primaryKey": true },
+    { "name": "name",        "type": "varchar(50)", "notNull": true, "unique": true },
+    { "name": "label",       "type": "varchar(100)","notNull": true },
+    { "name": "description", "type": "text" },
+    { "name": "is_system",   "type": "boolean",     "notNull": true, "default": false },
+    { "name": "created_at",  "type": "timestamp",   "notNull": true },
+    { "name": "updated_at",  "type": "timestamp",   "notNull": true }
+  ]
+}

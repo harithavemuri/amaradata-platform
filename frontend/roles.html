@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+  <title>Roles — AmaraData Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="/js/platform.js"></script>
+</head>
+<body>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const root = window.__amrd.renderSidebar('Roles');
+
+    let roles = [];
+    let editId = null;
+    let viewRoleId = null;
+
+    async function loadRoles() {
+        root.innerHTML = '<p style="color:#94a3b8;padding:20px">Loading…</p>';
+        try {
+            const res = await window.__amrd.apiFetch('/api/admin/roles');
+            roles = res.data || [];
+            render();
+        } catch (e) {
+            root.innerHTML = `<p style="color:#dc2626;padding:20px">Failed to load roles: ${e.message}</p>`;
+        }
+    }
+
+    // ── role modal ────────────────────────────────────────────────────────────
+    function roleModal(show, role = {}) {
+        editId = role.id || null;
+        document.getElementById('rmTitle').textContent  = editId ? 'Edit Role' : 'New Role';
+        document.getElementById('rmName').value         = role.name  || '';
+        document.getElementById('rmName').disabled      = !!editId;   // name is immutable once set
+        document.getElementById('rmLabel').value        = role.label || '';
+        document.getElementById('rmDesc').value         = role.description || '';
+        document.getElementById('rmErr').textContent    = '';
+        document.getElementById('roleModal').style.display = show ? 'flex' : 'none';
+    }
+
+    async function saveRole() {
+        const name  = document.getElementById('rmName').value.trim().toLowerCase().replace(/\s+/g,'_');
+        const label = document.getElementById('rmLabel').value.trim();
+        const description = document.getElementById('rmDesc').value.trim();
+        const errEl = document.getElementById('rmErr');
+        if (!label || (!editId && !name)) { errEl.textContent = 'Name and label are required'; return; }
+
+        try {
+            if (editId) {
+                await window.__amrd.apiFetch(`/api/admin/roles/${editId}`, {
+                    method:'PUT', body: JSON.stringify({ label, description }),
+                });
+            } else {
+                await window.__amrd.apiFetch('/api/admin/roles', {
+                    method:'POST', body: JSON.stringify({ name, label, description }),
+                });
+            }
+            roleModal(false);
+            await loadRoles();
+            if (viewRoleId) usersPanel(true, viewRoleId);
+        } catch (e) { errEl.textContent = e.message; }
+    }
+
+    async function deleteRole(id) {
+        const role = roles.find(r => r.id == id);
+        if (!role) return;
+        if (role.is_system) { alert('System roles cannot be deleted.'); return; }
+        if ((role.user_count || 0) > 0) {
+            alert(`Cannot delete — ${role.user_count} user(s) have this role. Reassign them on the Users page first.`);
+            return;
+        }
+        if (!confirm(`Delete the "${role.label}" role?`)) return;
+        try {
+            await window.__amrd.apiFetch(`/api/admin/roles/${id}`, { method:'DELETE' });
+            if (viewRoleId == id) usersPanel(false);
+            loadRoles();
+        } catch (e) { alert(e.message); }
+    }
+
+    // ── users panel ───────────────────────────────────────────────────────────
+    function usersPanel(show, roleId) {
+        viewRoleId = roleId || null;
+        if (!show) { document.getElementById('usersPanel').style.display = 'none'; return; }
+        const role = roles.find(r => r.id == roleId);
+        document.getElementById('usersPanelTitle').textContent = `${role?.label || ''} — Members`;
+        document.getElementById('usersPanel').style.display = 'flex';
+        renderPanelUsers(role?.users || []);
+    }
+
+    function renderPanelUsers(users) {
+        const fmt = d => d ? new Date(d).toLocaleDateString() : '—';
+        document.getElementById('panelUserList').innerHTML = users.length
+            ? users.map(u => `
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9">
+                    <div style="width:32px;height:32px;border-radius:50%;background:#e0f2fe;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#0284c7;flex-shrink:0">
+                        ${u.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div style="flex:1;min-width:0">
+                        <div style="font-weight:600;font-size:13px;color:${u.is_active?'#0f172a':'#94a3b8'}">${u.name}</div>
+                        <div style="font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u.email}</div>
+                    </div>
+                    <span class="amrd-badge ${u.is_active ? 'amrd-badge-active' : 'amrd-badge-cancelled'}" style="flex-shrink:0">
+                        ${u.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                </div>`).join('')
+            : '<p style="color:#94a3b8;font-size:13px;margin:12px 0">No users with this role.</p>';
+    }
+
+    // ── render ────────────────────────────────────────────────────────────────
+    function render() {
+        root.innerHTML = `
+        <div style="display:flex;gap:20px">
+            <!-- Roles list -->
+            <div style="flex:1;min-width:0">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <span style="font-size:14px;color:#64748b">${roles.length} role${roles.length !== 1?'s':''}</span>
+                    <button class="amrd-btn amrd-btn-primary" onclick="openNewRole()">+ New Role</button>
+                </div>
+
+                <div class="amrd-card" style="padding:0;overflow:hidden">
+                    <table class="amrd-table">
+                        <thead><tr>
+                            <th>Name</th><th>Label</th><th>Description</th><th>Users</th><th>Type</th><th>Actions</th>
+                        </tr></thead>
+                        <tbody>
+                            ${roles.map(r => `
+                            <tr style="cursor:pointer" onclick="viewUsers(${r.id})">
+                                <td><code style="background:#f1f5f9;padding:2px 7px;border-radius:4px;font-size:12px">${r.name}</code></td>
+                                <td style="font-weight:600">${r.label}</td>
+                                <td style="color:#64748b;max-width:220px">${r.description || '—'}</td>
+                                <td>
+                                    <span class="amrd-badge" style="background:#dbeafe;color:#1d4ed8;cursor:pointer"
+                                          onclick="event.stopPropagation();viewUsers(${r.id})">
+                                        ${r.user_count || 0} user${(r.user_count||0)!==1?'s':''}
+                                    </span>
+                                </td>
+                                <td>
+                                    ${r.is_system
+                                        ? '<span class="amrd-badge" style="background:#fef3c7;color:#d97706">System</span>'
+                                        : '<span class="amrd-badge" style="background:#f0fdf4;color:#15803d">Custom</span>'}
+                                </td>
+                                <td onclick="event.stopPropagation()">
+                                    <button class="amrd-btn amrd-btn-sm amrd-btn-ghost" onclick="openEditRole(${r.id})">Edit</button>
+                                    ${!r.is_system
+                                        ? `<button class="amrd-btn amrd-btn-sm" style="background:#fee2e2;color:#dc2626;margin-left:6px"
+                                               onclick="deleteRole(${r.id})">Delete</button>`
+                                        : ''}
+                                </td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+
+                <p style="font-size:12px;color:#94a3b8;margin-top:12px">
+                    System roles are built-in and cannot be deleted, but their labels and descriptions can be edited.<br>
+                    Custom roles can be deleted only when no users are assigned to them.
+                </p>
+            </div>
+
+            <!-- Users panel -->
+            <div id="usersPanel" style="display:none;flex-direction:column;width:300px;flex-shrink:0">
+                <div class="amrd-card" style="flex:1">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                        <h3 id="usersPanelTitle" style="margin:0;font-size:13px;font-weight:700"></h3>
+                        <button class="amrd-btn amrd-btn-sm amrd-btn-ghost" onclick="closePanel()">✕</button>
+                    </div>
+                    <div id="panelUserList"></div>
+                    <div style="margin-top:14px;padding-top:12px;border-top:1px solid #f1f5f9">
+                        <a href="/users" class="amrd-btn amrd-btn-ghost amrd-btn-sm" style="display:block;text-align:center;text-decoration:none">
+                            Manage users →
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Role Modal -->
+        <div id="roleModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center">
+            <div style="background:#fff;border-radius:12px;padding:28px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+                <h3 id="rmTitle" style="margin:0 0 20px;font-size:16px;color:#0f172a"></h3>
+                <div id="rmErr" style="color:#dc2626;font-size:13px;margin-bottom:10px"></div>
+                <div class="amrd-form-row full"><div>
+                    <label>Role name * <span style="color:#94a3b8;font-weight:400">(lowercase_with_underscores, permanent)</span></label>
+                    <input id="rmName" type="text" placeholder="e.g. finance_lead">
+                </div></div>
+                <div class="amrd-form-row full"><div>
+                    <label>Display label *</label>
+                    <input id="rmLabel" type="text" placeholder="e.g. Finance Lead">
+                </div></div>
+                <div class="amrd-form-row full"><div>
+                    <label>Description</label>
+                    <input id="rmDesc" type="text" placeholder="What this role can do">
+                </div></div>
+                <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+                    <button class="amrd-btn amrd-btn-ghost" onclick="closeRoleModal()">Cancel</button>
+                    <button class="amrd-btn amrd-btn-primary" onclick="saveRole()">Save</button>
+                </div>
+            </div>
+        </div>`;
+
+        window.openNewRole   = () => roleModal(true);
+        window.openEditRole  = (id) => roleModal(true, roles.find(r => r.id == id));
+        window.closeRoleModal= () => roleModal(false);
+        window.saveRole      = saveRole;
+        window.deleteRole    = deleteRole;
+        window.viewUsers     = (id) => usersPanel(true, id);
+        window.closePanel    = () => usersPanel(false);
+
+        if (viewRoleId) usersPanel(true, viewRoleId);
+    }
+
+    loadRoles();
+});
+</script>
+</body>
+</html>
