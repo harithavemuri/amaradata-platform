@@ -52,10 +52,19 @@ module.exports = `
     billing_type: String
     status: String!
     estimated_hours: Float
+    actual_hours: Float
     hourly_rate: Float
     milestone_amount: Float
+    delivered_at: String
     invoice_id: ID
     notes: String
+    source: String
+    issue_id: Int
+    site_name: String
+    fixed: String
+    item_type: String
+    is_billable: Boolean
+    report_date: String
     created_at: String
   }
 
@@ -103,7 +112,7 @@ module.exports = `
     tenant(id: ID!): Tenant
     invoices(tenant_id: ID, status: String): [Invoice]!
     invoice(id: ID!): Invoice
-    enhancements(tenant_id: ID, status: String): [Enhancement]!
+    enhancements(tenant_id: ID, status: String, source: String, item_type: String): [Enhancement]!
     billingMetrics(tenant_id: ID, year: Int, month: Int): [BillingMetric]!
     subscriptionPlans: [SubscriptionPlan]!
     subscriptions(tenant_id: ID): [TenantSubscription]!

@@ -12,6 +12,7 @@
     "invoice_line_items",
     "enhancements",
     "payments",
-    "contact_submissions"
+    "contact_submissions",
+    "amr_password_reset_tokens"
   ]
 }

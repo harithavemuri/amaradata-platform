@@ -32,6 +32,7 @@
                     <button class="amrd-btn amrd-btn-primary" onclick="openForm()">+ New Invoice</button>
                 </div>
                 <div class="amrd-card" style="padding:0">
+                    <div class="amrd-table-wrap">
                     <table class="amrd-table">
                         <thead><tr><th>Invoice #</th><th>Tenant</th><th>Period</th><th>Total</th><th>Due</th><th>Status</th><th></th></tr></thead>
                         <tbody>
@@ -50,6 +51,7 @@
                             </tr>`).join('') || '<tr><td colspan="7" style="color:#94a3b8;text-align:center;padding:24px">No invoices</td></tr>'}
                         </tbody>
                     </table>
+                    </div>
                 </div>
                 <div id="form-slot"></div>`;
         }

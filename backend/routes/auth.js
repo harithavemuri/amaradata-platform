@@ -4,28 +4,33 @@ const crypto                              = require('crypto');
 const db                                  = require('../db');
 const { sign, signRefresh, verifyRefresh, requireAuth } = require('../middleware/auth');
 const GoogleOAuth                         = require('../auth/google-auth');
+const { sendEmail }                       = require('../services/ses');
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'email and password required' });
     try {
+        let user;
         if (req.db.mode === 'nondb') {
             const users = req.db.fileDb.find('amr_users').filter(u => u.email === email && u.is_active);
-            const user  = users[0];
-            if (!user || !(await bcrypt.compare(password, user.password_hash)))
-                return res.status(401).json({ error: 'Invalid credentials' });
-            req.db.fileDb.update('amr_users', user.id, { last_login_at: new Date().toISOString() });
-            const safe = { id: user.id, email: user.email, name: user.name, role: user.role };
-            return res.json({ success: true, token: sign(safe), refresh_token: signRefresh(safe), user: safe });
+            user = users[0];
+        } else {
+            const { rows } = await db.query(
+                'SELECT * FROM amr_users WHERE email = $1 AND is_active = true', [email]
+            );
+            user = rows[0];
         }
-        const { rows } = await db.query(
-            'SELECT * FROM amr_users WHERE email = $1 AND is_active = true', [email]
-        );
-        const user = rows[0];
+
         if (!user || !(await bcrypt.compare(password, user.password_hash)))
             return res.status(401).json({ error: 'Invalid credentials' });
-        await db.query('UPDATE amr_users SET last_login_at = NOW() WHERE id = $1', [user.id]);
+
+        if (req.db.mode === 'nondb') {
+            req.db.fileDb.update('amr_users', user.id, { last_login_at: new Date().toISOString() });
+        } else {
+            await db.query('UPDATE amr_users SET last_login_at = NOW() WHERE id = $1', [user.id]);
+        }
+
         const safe = { id: user.id, email: user.email, name: user.name, role: user.role };
         res.json({ success: true, token: sign(safe), refresh_token: signRefresh(safe), user: safe });
     } catch (e) {
@@ -195,6 +200,113 @@ router.post('/google/exchange', async (req, res) => {
     } catch (e) {
         console.error('Google exchange error:', e.message);
         res.status(500).json({ error: e.message });
+    }
+});
+
+// POST /api/auth/forgot-password
+router.post('/forgot-password', async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'email required' });
+
+    try {
+        let user;
+        if (req.db.mode === 'nondb') {
+            user = req.db.fileDb.find('amr_users').find(u => u.email === email && u.is_active !== false);
+        } else {
+            const { rows } = await db.query('SELECT * FROM amr_users WHERE email = $1 AND is_active = true', [email]);
+            user = rows[0];
+        }
+
+        // Only send if the user has a password (not Google-only accounts)
+        if (user && user.password_hash) {
+            const token       = crypto.randomBytes(32).toString('hex');
+            const expiresAt   = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+            const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:9000').replace(/\/$/, '');
+            const resetLink   = `${frontendUrl}/reset-password?token=${token}`;
+            const company     = process.env.COMPANY_NAME || 'AmaraData';
+
+            if (req.db.mode === 'nondb') {
+                req.db.fileDb.find('amr_password_reset_tokens')
+                    .filter(t => t.user_id === user.id)
+                    .forEach(t => req.db.fileDb.delete('amr_password_reset_tokens', t.id));
+                req.db.fileDb.create('amr_password_reset_tokens', { user_id: user.id, token, expires_at: expiresAt });
+                console.log(`[reset-link] ${resetLink}`);
+            } else {
+                await db.query('DELETE FROM amr_password_reset_tokens WHERE user_id = $1', [user.id]);
+                await db.query(
+                    'INSERT INTO amr_password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
+                    [user.id, token, expiresAt]
+                );
+            }
+
+            await sendEmail({
+                to:      user.email,
+                subject: `Reset your ${company} password`,
+                html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
+                    <div style="text-align:center;margin-bottom:24px">
+                        <div style="display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,#1E3A5F,#0D9488)">
+                            <svg viewBox="0 0 500 500" width="32" height="32"><path d="M250 50L50 400H150L180 340H320L350 400H450L250 50Z" fill="white"/><circle cx="215" cy="278" r="30" fill="rgba(14,165,233,0.8)"/><circle cx="285" cy="278" r="30" fill="rgba(14,165,233,0.8)"/></svg>
+                        </div>
+                        <div style="font-size:20px;font-weight:700;color:#0f172a;margin-top:12px">${company}</div>
+                    </div>
+                    <h2 style="color:#0f172a;margin:0 0 12px">Password Reset Request</h2>
+                    <p style="color:#374151;margin:0 0 8px">Hi ${user.name || 'there'},</p>
+                    <p style="color:#374151;margin:0 0 24px">We received a request to reset your <strong>${company}</strong> account password. Click the button below — this link expires in <strong>1 hour</strong>.</p>
+                    <div style="text-align:center;margin:28px 0">
+                        <a href="${resetLink}" style="background:#0D9488;color:#fff;padding:13px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;display:inline-block">Reset Password</a>
+                    </div>
+                    <p style="color:#64748b;font-size:12px;margin:0 0 6px">Or paste this link in your browser:</p>
+                    <p style="color:#0D9488;font-size:12px;word-break:break-all;margin:0 0 24px">${resetLink}</p>
+                    <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0">
+                    <p style="color:#94a3b8;font-size:11px;margin:0">If you didn't request a password reset, you can safely ignore this email. Your password won't change.</p>
+                </div>`,
+                text: `Reset your ${company} password\n\nHi ${user.name || 'there'},\n\nClick the link below to reset your password (expires in 1 hour):\n${resetLink}\n\nIf you didn't request this, ignore this email.`,
+            });
+        }
+
+        // Always return 200 — don't reveal whether the email is registered
+        res.json({ success: true, message: "If that email is registered, you'll receive a reset link shortly." });
+    } catch (e) {
+        console.error('forgot-password error:', e.message);
+        res.status(500).json({ error: 'Failed to process request' });
+    }
+});
+
+// POST /api/auth/reset-password
+router.post('/reset-password', async (req, res) => {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ error: 'token and password required' });
+    if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+    try {
+        if (req.db.mode === 'nondb') {
+            const tokenRow = req.db.fileDb.find('amr_password_reset_tokens')
+                .find(t => t.token === token && new Date(t.expires_at) > new Date());
+            if (!tokenRow) return res.status(400).json({ error: 'Invalid or expired reset link' });
+            const user = req.db.fileDb.getById('amr_users', tokenRow.user_id);
+            if (!user || user.is_active === false) return res.status(400).json({ error: 'User not found' });
+            const hash = await bcrypt.hash(password, 12);
+            req.db.fileDb.update('amr_users', user.id, { password_hash: hash });
+            req.db.fileDb.delete('amr_password_reset_tokens', tokenRow.id);
+        } else {
+            const { rows } = await db.query(
+                `SELECT t.id, t.user_id, u.is_active
+                 FROM amr_password_reset_tokens t
+                 JOIN amr_users u ON u.id = t.user_id
+                 WHERE t.token = $1 AND t.expires_at > NOW()`,
+                [token]
+            );
+            const tokenRow = rows[0];
+            if (!tokenRow || !tokenRow.is_active) return res.status(400).json({ error: 'Invalid or expired reset link' });
+            const hash = await bcrypt.hash(password, 12);
+            await db.query('UPDATE amr_users SET password_hash = $2, updated_at = NOW() WHERE id = $1', [tokenRow.user_id, hash]);
+            await db.query('DELETE FROM amr_password_reset_tokens WHERE token = $1', [token]);
+        }
+
+        res.json({ success: true, message: 'Password updated. You can now sign in.' });
+    } catch (e) {
+        console.error('reset-password error:', e.message);
+        res.status(500).json({ error: 'Failed to reset password' });
     }
 });
 

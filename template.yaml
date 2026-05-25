@@ -68,6 +68,13 @@ Parameters:
     Type: List<AWS::EC2::Subnet::Id>
     Description: Two subnets in different AZs (same as rohas-group)
 
+  SesFromEmail:
+    Type: String
+    Default: noreply@amaradata.com
+    Description: >
+      Verified SES sender email address (or domain). Created here and shared with
+      rohas-group and any other tenant stacks. Store as /shared/<env>/ses-from-email in SSM.
+
   # ── Cost allocation tags ──────────────────────────────────────────────────────
   TagApplication:
     Type: String
@@ -125,6 +132,8 @@ Globals:
         ORIGIN_SECRET:          !Sub '{{resolve:secretsmanager:/${Tenant}/${Env}/origin-secret}}'
         SSO_SECRET:             !Sub '{{resolve:secretsmanager:/shared/${Env}/sso-secret}}'
         ROHAS_URL:              !Sub '{{resolve:ssm:/rohas/${Env}/frontend-url}}'
+        PASSWORD_EXPIRY_DAYS:   '365'
+        SES_FROM_EMAIL:         !Ref SesFromEmail
 
 Resources:
 
@@ -170,6 +179,11 @@ Resources:
       Handler: backend/lambda/api.handler
       CodeUri: .
       MemorySize: 1024
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: ses:SendEmail
+              Resource: !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesFromEmail}'
       Events:
         ApiProxy:
           Type: HttpApi
@@ -411,6 +425,23 @@ Resources:
       ServiceToken: !GetAtt DBInitFn.Arn
       ResourceVersion: '1'
 
+  # ── SES — shared email identity (owned here; rohas uses the same sender) ──────
+  # After deploy, verify DNS/email at AWS Console → SES → Verified identities.
+  # Then store SesFromEmail in /shared/<env>/ses-from-email SSM param so other stacks can read it.
+  SesEmailIdentity:
+    Type: AWS::SES::EmailIdentity
+    Properties:
+      EmailIdentity: !Ref SesFromEmail
+
+  # SSM — publish the SES from-email to /shared/<env>/ so rohas and other tenant stacks can read it
+  SsmSharedSesFromEmail:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub '/shared/${Env}/ses-from-email'
+      Type: String
+      Value: !Ref SesFromEmail
+      Description: Verified SES sender email — shared across all tenant stacks
+
 Outputs:
   AppUrl:
     Description: CloudFront domain — point amaradata.com to this via Route 53 alias record; also ensure /amaradata/<env>/google-redirect-uri in SSM is set to https://amaradata.com/api/auth/google/callback
@@ -428,3 +459,9 @@ Outputs:
     Condition: ShouldCreateDb
     Description: Aurora writer endpoint — store as /amaradata/<env>/db-host in SSM Parameter Store
     Value: !GetAtt DBCluster.Endpoint.Address
+  SesIdentityArn:
+    Description: SES email identity ARN — use as Resource in rohas ses:SendEmail IAM policies
+    Value: !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesFromEmail}'
+  SesFromEmailOutput:
+    Description: Verified SES sender email shared with all tenant stacks
+    Value: !Ref SesFromEmail

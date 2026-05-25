@@ -25,6 +25,7 @@
                     <button class="amrd-btn amrd-btn-primary" onclick="openForm()">+ Add Tenant</button>
                 </div>
                 <div class="amrd-card" style="padding:0">
+                    <div class="amrd-table-wrap">
                     <table class="amrd-table">
                         <thead><tr><th>Name</th><th>Contact</th><th>Phone</th><th>Status</th><th>Onboarded</th><th>Site</th><th></th></tr></thead>
                         <tbody>
@@ -40,6 +41,7 @@
                             </tr>`).join('') || '<tr><td colspan="7" style="color:#94a3b8;text-align:center;padding:24px">No tenants yet</td></tr>'}
                         </tbody>
                     </table>
+                    </div>
                 </div>
                 <div id="form-slot"></div>`;
         }

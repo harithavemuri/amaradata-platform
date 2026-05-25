@@ -65,12 +65,14 @@ module.exports = {
         return { ...inv, line_items: items };
     },
 
-    enhancements: async ({ tenant_id, status }, { db }) => {
+    enhancements: async ({ tenant_id, status, source, item_type }, { db }) => {
         if (db.mode === 'nondb') {
             const tMap = Object.fromEntries(db.fileDb.find('tenants').map(t => [t.id, t]));
             let rows = db.fileDb.find('enhancements');
             if (tenant_id) rows = rows.filter(r => r.tenant_id == tenant_id);
             if (status)    rows = rows.filter(r => r.status === status);
+            if (source)    rows = rows.filter(r => r.source === source);
+            if (item_type) rows = rows.filter(r => r.item_type === item_type);
             return rows
                 .map(r => ({ ...r, tenant_name: tMap[r.tenant_id]?.name }))
                 .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -81,6 +83,8 @@ module.exports = {
         let n = 1;
         if (tenant_id) { sql += ` AND e.tenant_id=$${n++}`; params.push(tenant_id); }
         if (status)    { sql += ` AND e.status=$${n++}`;    params.push(status); }
+        if (source)    { sql += ` AND e.source=$${n++}`;    params.push(source); }
+        if (item_type) { sql += ` AND e.item_type=$${n++}`; params.push(item_type); }
         sql += ' ORDER BY e.created_at DESC';
         const { rows } = await readPool.query(sql, params);
         return rows;

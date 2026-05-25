@@ -38,10 +38,12 @@ INSERT INTO amr_roles (name, label, description, is_system) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- Staff user groups (e.g. "Billing Team", "Sales IN")
+-- A group can optionally confer a role on all its members (role column references amr_roles.name).
 CREATE TABLE IF NOT EXISTS amr_user_groups (
     id          SERIAL PRIMARY KEY,
     name        VARCHAR(100) NOT NULL,
     description TEXT,
+    role        VARCHAR(50) REFERENCES amr_roles(name) ON DELETE SET NULL,
     is_active   BOOLEAN NOT NULL DEFAULT true,
     created_by  INTEGER REFERENCES amr_users(id),
     created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -185,8 +187,17 @@ CREATE TABLE IF NOT EXISTS enhancements (
     delivered_at      DATE,
     invoice_id        INTEGER       REFERENCES invoices(id),   -- set once billed
     notes             TEXT,
+    -- CSV import fields (source='csv' rows come from RohasTestNotesSheet_Fixed.csv)
+    source            VARCHAR(20)   NOT NULL DEFAULT 'manual', -- 'manual' | 'csv'
+    issue_id          INTEGER,
+    site_name         VARCHAR(100),
+    fixed             VARCHAR(200),
+    item_type         VARCHAR(50)   NOT NULL DEFAULT 'enhancement', -- 'bug' | 'enhancement'
+    is_billable       BOOLEAN       NOT NULL DEFAULT true,
+    report_date       DATE,
     created_at        TIMESTAMP     NOT NULL DEFAULT NOW(),
-    updated_at        TIMESTAMP     NOT NULL DEFAULT NOW()
+    updated_at        TIMESTAMP     NOT NULL DEFAULT NOW(),
+    UNIQUE (tenant_id, issue_id)  -- NULLs are not considered equal, so manual rows are unaffected
 );
 
 -- Payment receipts against invoices
@@ -219,6 +230,19 @@ CREATE TABLE IF NOT EXISTS contact_submissions (
     updated_at      TIMESTAMP    NOT NULL DEFAULT NOW()
 );
 
+-- Password reset tokens (one active token per user, 1-hour TTL)
+CREATE TABLE IF NOT EXISTS amr_password_reset_tokens (
+    id         SERIAL PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES amr_users(id) ON DELETE CASCADE,
+    token      VARCHAR(64) NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '1 hour'),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_prt_token ON amr_password_reset_tokens(token);
+
+-- issue_fixes retired — issue fix data is now stored in enhancements (source='csv')
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_bm_tenant_period     ON billing_metrics(tenant_id, period_year, period_month);
 CREATE INDEX IF NOT EXISTS idx_invoices_tenant       ON invoices(tenant_id);
@@ -229,6 +253,8 @@ CREATE INDEX IF NOT EXISTS idx_payments_invoice      ON payments(invoice_id);
 CREATE INDEX IF NOT EXISTS idx_tsub_tenant           ON tenant_subscriptions(tenant_id);
 -- Prevent a tenant from having two active subscriptions simultaneously
 CREATE UNIQUE INDEX IF NOT EXISTS idx_tsub_one_active ON tenant_subscriptions(tenant_id) WHERE effective_to IS NULL;
+CREATE INDEX IF NOT EXISTS idx_issue_fixes_tenant   ON issue_fixes(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_issue_fixes_billable ON issue_fixes(is_billable) WHERE is_billable = true;
 
 -- Seed: default plan
 INSERT INTO subscription_plans (name, description, sales_pct, rental_pct, hourly_rate, min_monthly_fee)

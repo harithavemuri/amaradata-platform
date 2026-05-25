@@ -10,16 +10,35 @@ router.use(requireSiteAdmin);
 
 // ── Users ─────────────────────────────────────────────────────────────────────
 
-// GET /api/admin/users
+// GET /api/admin/users  — enriched with group memberships
 router.get('/users', async (req, res) => {
     try {
         if (req.db.mode === 'nondb') {
-            const rows = req.db.fileDb.find('amr_users');
-            return res.json({ success: true, data: rows.map(_safeUser) });
+            const rows    = req.db.fileDb.find('amr_users');
+            const members = req.db.fileDb.find('amr_user_group_members');
+            const groups  = req.db.fileDb.find('amr_user_groups');
+            const enriched = rows.map(u => {
+                const userGroups = members
+                    .filter(m => m.user_id == u.id)
+                    .map(m => {
+                        const g = groups.find(g => g.id == m.group_id);
+                        return g ? { id: g.id, name: g.name, role: g.role || null } : null;
+                    })
+                    .filter(Boolean);
+                return { ..._safeUser(u), groups: userGroups };
+            });
+            return res.json({ success: true, data: enriched });
         }
-        const { rows } = await db.query(
-            'SELECT id,email,name,role,google_id,picture,is_active,last_login_at,created_at,updated_at FROM amr_users ORDER BY created_at DESC'
-        );
+        const { rows } = await db.query(`
+            SELECT u.id, u.email, u.name, u.role, u.google_id, u.picture,
+                   u.is_active, u.last_login_at, u.created_at, u.updated_at,
+                   COALESCE(json_agg(json_build_object('id',g.id,'name',g.name,'role',g.role))
+                     FILTER (WHERE g.id IS NOT NULL), '[]') AS groups
+            FROM amr_users u
+            LEFT JOIN amr_user_group_members m ON m.user_id = u.id
+            LEFT JOIN amr_user_groups g ON g.id = m.group_id
+            GROUP BY u.id ORDER BY u.created_at DESC
+        `);
         res.json({ success: true, data: rows });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -97,11 +116,11 @@ router.delete('/users/:id', async (req, res) => {
 
 // ── User Groups ───────────────────────────────────────────────────────────────
 
-// GET /api/admin/user-groups
+// GET /api/admin/user-groups  — enriched with members and their is_active status
 router.get('/user-groups', async (req, res) => {
     try {
         if (req.db.mode === 'nondb') {
-            const groups = req.db.fileDb.find('amr_user_groups');
+            const groups  = req.db.fileDb.find('amr_user_groups');
             const members = req.db.fileDb.find('amr_user_group_members');
             const users   = req.db.fileDb.find('amr_users');
             const enriched = groups.map(g => ({
@@ -111,7 +130,7 @@ router.get('/user-groups', async (req, res) => {
                     .filter(m => m.group_id == g.id)
                     .map(m => {
                         const u = users.find(u => u.id == m.user_id);
-                        return u ? { id: u.id, name: u.name, email: u.email, role: u.role } : null;
+                        return u ? { id: u.id, name: u.name, email: u.email, role: u.role, is_active: u.is_active } : null;
                     })
                     .filter(Boolean),
             }));
@@ -120,7 +139,7 @@ router.get('/user-groups', async (req, res) => {
         const { rows } = await db.query(`
             SELECT g.*,
                    COUNT(m.user_id)::int AS member_count,
-                   COALESCE(json_agg(json_build_object('id',u.id,'name',u.name,'email',u.email,'role',u.role))
+                   COALESCE(json_agg(json_build_object('id',u.id,'name',u.name,'email',u.email,'role',u.role,'is_active',u.is_active))
                      FILTER (WHERE u.id IS NOT NULL), '[]') AS members
             FROM amr_user_groups g
             LEFT JOIN amr_user_group_members m ON m.group_id = g.id
@@ -133,16 +152,18 @@ router.get('/user-groups', async (req, res) => {
 
 // POST /api/admin/user-groups
 router.post('/user-groups', async (req, res) => {
-    const { name, description } = req.body;
+    const { name, description, role } = req.body;
     if (!name) return res.status(400).json({ error: 'name is required' });
     try {
         if (req.db.mode === 'nondb') {
-            const row = req.db.fileDb.create('amr_user_groups', { name, description: description || '', is_active: true, created_by: req.staff.id });
+            const row = req.db.fileDb.create('amr_user_groups', {
+                name, description: description || '', role: role || null, is_active: true, created_by: req.staff.id,
+            });
             return res.status(201).json({ success: true, data: row });
         }
         const { rows } = await db.query(
-            'INSERT INTO amr_user_groups (name,description,created_by) VALUES ($1,$2,$3) RETURNING *',
-            [name, description || '', req.staff.id]
+            'INSERT INTO amr_user_groups (name,description,role,created_by) VALUES ($1,$2,$3,$4) RETURNING *',
+            [name, description || '', role || null, req.staff.id]
         );
         res.status(201).json({ success: true, data: rows[0] });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -150,11 +171,12 @@ router.post('/user-groups', async (req, res) => {
 
 // PUT /api/admin/user-groups/:id
 router.put('/user-groups/:id', async (req, res) => {
-    const { name, description, is_active } = req.body;
+    const { name, description, role, is_active } = req.body;
     try {
         const updates = {};
         if (name        !== undefined) updates.name        = name;
         if (description !== undefined) updates.description = description;
+        if (role        !== undefined) updates.role        = role || null;
         if (is_active   !== undefined) updates.is_active   = is_active;
 
         if (req.db.mode === 'nondb') {
@@ -233,25 +255,40 @@ router.delete('/user-groups/:id/members/:userId', async (req, res) => {
 
 // ── Roles ─────────────────────────────────────────────────────────────────────
 
-// GET /api/admin/roles
+// GET /api/admin/roles  — enriched with direct users and groups that confer this role
 router.get('/roles', async (req, res) => {
     try {
         if (req.db.mode === 'nondb') {
-            const roles = req.db.fileDb.find('amr_roles');
-            const users = req.db.fileDb.find('amr_users');
+            const roles  = req.db.fileDb.find('amr_roles');
+            const users  = req.db.fileDb.find('amr_users');
+            const groups = req.db.fileDb.find('amr_user_groups');
             const enriched = roles.map(r => ({
                 ...r,
                 user_count: users.filter(u => u.role === r.name).length,
                 users: users.filter(u => u.role === r.name)
                             .map(u => ({ id: u.id, name: u.name, email: u.email, is_active: u.is_active })),
+                groups: groups.filter(g => g.role === r.name)
+                              .map(g => ({ id: g.id, name: g.name, member_count: 0 })),
             }));
+            // back-fill member_count on groups
+            const members = req.db.fileDb.find('amr_user_group_members');
+            enriched.forEach(r => {
+                r.groups.forEach(g => {
+                    g.member_count = members.filter(m => m.group_id == g.id).length;
+                });
+            });
             return res.json({ success: true, data: enriched });
         }
         const { rows } = await db.query(`
             SELECT r.*,
-                   COUNT(u.id)::int AS user_count,
-                   COALESCE(json_agg(json_build_object('id',u.id,'name',u.name,'email',u.email,'is_active',u.is_active))
-                     FILTER (WHERE u.id IS NOT NULL), '[]') AS users
+                   COUNT(DISTINCT u.id)::int AS user_count,
+                   COALESCE(json_agg(DISTINCT json_build_object('id',u.id,'name',u.name,'email',u.email,'is_active',u.is_active))
+                     FILTER (WHERE u.id IS NOT NULL), '[]') AS users,
+                   COALESCE((
+                     SELECT json_agg(json_build_object('id',g.id,'name',g.name,'member_count',
+                       (SELECT COUNT(*)::int FROM amr_user_group_members m WHERE m.group_id = g.id)))
+                     FROM amr_user_groups g WHERE g.role = r.name
+                   ), '[]') AS groups
             FROM amr_roles r
             LEFT JOIN amr_users u ON u.role = r.name
             GROUP BY r.id ORDER BY r.created_at ASC
@@ -328,6 +365,76 @@ router.delete('/roles/:id', async (req, res) => {
         await db.query('DELETE FROM amr_roles WHERE id = $1', [req.params.id]);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Sync ──────────────────────────────────────────────────────────────────────
+
+// POST /api/admin/sync-to-db
+// Upserts every row from transactiondata/*.json into the live DB.
+// Only meaningful when the server is running against a real DB (not nondb mode).
+router.post('/sync-to-db', async (req, res) => {
+    if (req.db.mode === 'nondb') {
+        return res.status(400).json({ error: 'Server is running in NonDB mode — no database to sync to.' });
+    }
+
+    const fs       = require('fs');
+    const path     = require('path');
+    const manifest = require('../../metadata/manifest.json');
+    const DATA_DIR = process.env.TRANSACTIONDATA_DIR
+        ? path.resolve(process.env.TRANSACTIONDATA_DIR)
+        : path.join(__dirname, '../../transactiondata');
+
+    const results = [];
+
+    for (const table of manifest.tables) {
+        const file = path.join(DATA_DIR, `${table}.json`);
+        if (!fs.existsSync(file)) {
+            results.push({ table, skipped: true, reason: 'no file' });
+            continue;
+        }
+
+        let rows;
+        try { rows = JSON.parse(fs.readFileSync(file, 'utf8')); }
+        catch (e) { results.push({ table, skipped: true, reason: `parse error: ${e.message}` }); continue; }
+
+        if (!rows.length) { results.push({ table, rows: 0, inserted: 0, updated: 0 }); continue; }
+
+        let inserted = 0, updated = 0, errors = 0;
+        for (const row of rows) {
+            // Strip NonDB-internal and joined fields — only keep primitive DB columns
+            const cleaned = Object.fromEntries(
+                Object.entries(row).filter(([k, v]) =>
+                    k !== '_metadata' && !Array.isArray(v) && (typeof v !== 'object' || v === null)
+                )
+            );
+            if (!cleaned.id) continue;
+
+            const cols = Object.keys(cleaned);
+            const vals = Object.values(cleaned);
+            // SET clause excludes id and created_at to preserve originals on conflict
+            const setCols = cols.filter(c => c !== 'id' && c !== 'created_at');
+            const setClause = setCols.map(c => `${c} = EXCLUDED.${c}`).join(', ');
+            const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ');
+
+            try {
+                const result = await db.query(
+                    `INSERT INTO ${table} (${cols.join(', ')})
+                     VALUES (${placeholders})
+                     ON CONFLICT (id) DO UPDATE SET ${setClause}
+                     RETURNING (xmax = 0) AS was_inserted`,
+                    vals
+                );
+                result.rows[0]?.was_inserted ? inserted++ : updated++;
+            } catch (e) {
+                errors++;
+                // Log but continue — don't abort the whole sync for one bad row
+                console.error(`sync ${table} id=${cleaned.id}: ${e.message}`);
+            }
+        }
+        results.push({ table, rows: rows.length, inserted, updated, errors });
+    }
+
+    res.json({ success: true, data: results });
 });
 
 function _safeUser(u) {

@@ -14,65 +14,153 @@
     document.addEventListener('DOMContentLoaded', async () => {
         const root = window.__amrd.renderSidebar('Enhancements');
 
-        async function load(filter = '') {
+        let _tenants = [];
+        let _filter  = { status: '', source: '', item_type: '' };
+
+        // ── helpers ──────────────────────────────────────────────────────────
+        function badge(text, color) {
+            return `<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;background:${color};color:#fff">${text}</span>`;
+        }
+        function sourceBadge(s)    { return badge(s === 'csv' ? 'CSV' : 'Manual', s === 'csv' ? '#6366f1' : '#0ea5e9'); }
+        function typeBadge(t)      { return badge(t === 'bug' ? 'Bug' : 'Enhancement', t === 'bug' ? '#dc2626' : '#16a34a'); }
+        function billBadge(b)      { return b ? badge('Billable', '#d97706') : badge('No charge', '#94a3b8'); }
+        function statusBadge(s)    {
+            const map = { scoped:'#6366f1', in_progress:'#f59e0b', delivered:'#3b82f6', billed:'#16a34a', cancelled:'#94a3b8' };
+            return `<span class="amrd-badge amrd-badge-${s}">${s.replace('_',' ')}</span>`;
+        }
+        function billableAmount(e) {
+            if (!e.is_billable) return '—';
+            if (e.billing_type === 'hourly') {
+                const hrs = e.actual_hours ?? e.estimated_hours ?? 0;
+                return hrs && e.hourly_rate ? new Intl.NumberFormat().format(hrs * e.hourly_rate) : '—';
+            }
+            return e.milestone_amount ? new Intl.NumberFormat().format(e.milestone_amount) : '—';
+        }
+
+        // ── load & render ────────────────────────────────────────────────────
+        async function load() {
             const gql = await window.__amrd.gqlFetch(
-                `query($status: String) {
-                    enhancements(status: $status) { id tenant_id tenant_name title description billing_type status estimated_hours hourly_rate milestone_amount delivered_at notes invoice_id }
+                `query($status: String, $source: String, $item_type: String) {
+                    enhancements(status: $status, source: $source, item_type: $item_type) {
+                        id tenant_id tenant_name title description billing_type status
+                        estimated_hours actual_hours hourly_rate milestone_amount
+                        delivered_at notes invoice_id
+                        source issue_id site_name fixed item_type is_billable report_date
+                    }
                     tenants { id name }
                 }`,
-                { status: filter || null }
+                { status: _filter.status || null, source: _filter.source || null, item_type: _filter.item_type || null }
             );
-            const enhancements = gql?.enhancements || [];
-            const tenants      = gql?.tenants      || [];
+            const rows    = gql?.enhancements || [];
+            _tenants      = gql?.tenants      || [];
+
+            const total      = rows.length;
+            const billable   = rows.filter(r => r.is_billable).length;
+            const bugs       = rows.filter(r => r.item_type === 'bug').length;
+            const billed     = rows.filter(r => r.status === 'billed').length;
 
             root.innerHTML = `
-                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;align-items:center">
-                    ${['','scoped','in_progress','delivered','billed'].map(s =>
-                        `<button class="amrd-btn amrd-btn-${filter===s?'primary':'ghost'} amrd-btn-sm" onclick="loadFilter('${s}')">
-                            ${s||'All'}
-                         </button>`).join('')}
-                    <div style="flex:1"></div>
-                    <button class="amrd-btn amrd-btn-primary" onclick="openForm(null, ${JSON.stringify(tenants)})">+ Log Work</button>
+                <!-- stats -->
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+                    ${[['Total', total, '#6366f1'], ['Billable', billable, '#d97706'], ['Bugs (no charge)', bugs, '#dc2626'], ['Billed', billed, '#16a34a']]
+                        .map(([l,v,c]) => `<div class="amrd-card" style="padding:14px 18px;display:flex;align-items:center;gap:12px">
+                            <div style="width:10px;height:40px;border-radius:4px;background:${c}"></div>
+                            <div><div style="font-size:22px;font-weight:700">${v}</div><div style="font-size:12px;color:#94a3b8">${l}</div></div>
+                        </div>`).join('')}
                 </div>
+
+                <!-- filter bar -->
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+                    <div style="display:flex;gap:4px;flex-wrap:wrap">
+                        ${[['','All'],['scoped','Scoped'],['in_progress','In Progress'],['delivered','Delivered'],['billed','Billed'],['cancelled','Cancelled']]
+                            .map(([v,l]) => `<button class="amrd-btn amrd-btn-${_filter.status===v?'primary':'ghost'} amrd-btn-sm" onclick="setFilter('status','${v}')">${l}</button>`).join('')}
+                        <span style="width:1px;background:#e2e8f0;margin:0 4px;align-self:stretch"></span>
+                        ${[['','All Sources'],['manual','Manual'],['csv','From CSV']]
+                            .map(([v,l]) => `<button class="amrd-btn amrd-btn-${_filter.source===v?'primary':'ghost'} amrd-btn-sm" onclick="setFilter('source','${v}')">${l}</button>`).join('')}
+                        <span style="width:1px;background:#e2e8f0;margin:0 4px;align-self:stretch"></span>
+                        ${[['','All Types'],['enhancement','Enhancements'],['bug','Bugs']]
+                            .map(([v,l]) => `<button class="amrd-btn amrd-btn-${_filter.item_type===v?'primary':'ghost'} amrd-btn-sm" onclick="setFilter('item_type','${v}')">${l}</button>`).join('')}
+                    </div>
+                    <div style="flex:1"></div>
+                    <button class="amrd-btn amrd-btn-ghost" onclick="toggleImport()">↑ Upload CSV</button>
+                    <button class="amrd-btn amrd-btn-primary" onclick="openForm(null)">+ Log Work</button>
+                </div>
+
+                <!-- csv import panel -->
+                <div id="import-panel" style="display:none" class="amrd-card" style="margin-bottom:16px">
+                    <h3 style="margin:0 0 12px">Import from RohasTestNotesSheet_Fixed.csv</h3>
+                    <p style="margin:0 0 12px;color:#64748b;font-size:13px">
+                        Upload the output CSV from the <strong>/fix-issues</strong> skill. Each row with
+                        <em>Apply Fix? = Yes</em> will be upserted. The <em>Tenant Name</em> column in the
+                        CSV is used to auto-match the tenant — use the fallback dropdown only if a row has
+                        no tenant name or the name doesn't match.
+                    </p>
+                    <div class="amrd-form-row">
+                        <div>
+                            <label>CSV File *</label>
+                            <input type="file" id="imp-file" accept=".csv" style="padding:6px 0">
+                        </div>
+                        <div>
+                            <label>Fallback Tenant (if CSV has no Tenant Name match)</label>
+                            <select id="imp-tenant">
+                                <option value="">-- None --</option>
+                                ${_tenants.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:10px;margin-top:12px">
+                        <button class="amrd-btn amrd-btn-primary" onclick="importCsv()">Import</button>
+                        <button class="amrd-btn amrd-btn-ghost" onclick="toggleImport()">Cancel</button>
+                    </div>
+                    <div id="imp-result" style="margin-top:12px;font-size:13px"></div>
+                </div>
+
+                <!-- table -->
                 <div class="amrd-card" style="padding:0">
                     <table class="amrd-table">
-                        <thead><tr><th>Title</th><th>Tenant</th><th>Type</th><th>Hours</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+                        <thead><tr>
+                            <th>Source</th><th>Issue #</th><th>Title</th><th>Tenant</th>
+                            <th>Type</th><th>Billable</th><th>Amount</th><th>Status</th><th></th>
+                        </tr></thead>
                         <tbody>
-                            ${enhancements.map(e => {
-                                const amt = e.billing_type === 'hourly'
-                                    ? (e.actual_hours || e.estimated_hours || 0) * (e.hourly_rate || 0)
-                                    : (e.milestone_amount || 0);
-                                return `<tr>
-                                    <td><strong>${e.title}</strong>${e.description ? `<br><span style="color:#94a3b8;font-size:11px">${e.description.slice(0,60)}</span>` : ''}</td>
-                                    <td>${e.tenant_name}</td>
-                                    <td>${e.billing_type}</td>
-                                    <td>${e.actual_hours ?? e.estimated_hours ?? '—'}</td>
-                                    <td>${amt ? new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Number(amt)) : '—'}</td>
-                                    <td><span class="amrd-badge amrd-badge-${e.status}">${e.status}</span></td>
-                                    <td><button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick='openForm(${JSON.stringify(e)}, ${JSON.stringify(tenants)})'>Edit</button></td>
-                                </tr>`;
-                            }).join('') || '<tr><td colspan="7" style="color:#94a3b8;text-align:center;padding:24px">No enhancements logged</td></tr>'}
+                            ${rows.map(e => `<tr>
+                                <td>${sourceBadge(e.source)}</td>
+                                <td style="color:#94a3b8;font-size:12px">${e.issue_id ? '#'+e.issue_id : '—'}</td>
+                                <td style="max-width:280px">
+                                    <strong>${e.title}</strong>
+                                    ${e.site_name ? `<br><span style="color:#94a3b8;font-size:11px">${e.site_name}</span>` : ''}
+                                    ${e.description && !e.site_name ? `<br><span style="color:#94a3b8;font-size:11px">${e.description.slice(0,70)}${e.description.length>70?'…':''}</span>` : ''}
+                                </td>
+                                <td>${e.tenant_name}</td>
+                                <td>${typeBadge(e.item_type)}</td>
+                                <td>${billBadge(e.is_billable)}</td>
+                                <td style="font-variant-numeric:tabular-nums">${billableAmount(e)}</td>
+                                <td>${statusBadge(e.status)}</td>
+                                <td><button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick='openForm(${JSON.stringify(e)})'>Edit</button></td>
+                            </tr>`).join('') || '<tr><td colspan="9" style="color:#94a3b8;text-align:center;padding:24px">No records</td></tr>'}
                         </tbody>
                     </table>
                 </div>
+
                 <div id="form-slot"></div>`;
         }
 
-        function openForm(e, tenants) {
+        // ── form ─────────────────────────────────────────────────────────────
+        function openForm(e) {
             const slot = document.getElementById('form-slot');
             slot.innerHTML = `
-                <div class="amrd-card">
-                    <h3>${e ? 'Edit Enhancement' : 'Log Enhancement'}</h3>
+                <div class="amrd-card" style="margin-top:16px">
+                    <h3>${e ? 'Edit' : 'Log'} Enhancement</h3>
                     <div class="amrd-form-row">
                         <div><label>Tenant *</label>
                             <select id="f-tenant">
                                 <option value="">-- Select --</option>
-                                ${tenants.map(t=>`<option value="${t.id}"${e?.tenant_id==t.id?' selected':''}>${t.name}</option>`).join('')}
+                                ${_tenants.map(t => `<option value="${t.id}"${e?.tenant_id==t.id?' selected':''}>${t.name}</option>`).join('')}
                             </select>
                         </div>
                         <div><label>Billing Type</label>
                             <select id="f-type">
-                                ${['hourly','milestone','fixed'].map(t=>`<option value="${t}"${e?.billing_type===t?' selected':''}>${t}</option>`).join('')}
+                                ${['hourly','milestone','fixed'].map(t => `<option value="${t}"${e?.billing_type===t?' selected':''}>${t}</option>`).join('')}
                             </select>
                         </div>
                     </div>
@@ -89,7 +177,7 @@
                     <div class="amrd-form-row">
                         <div><label>Status</label>
                             <select id="f-status">
-                                ${['scoped','in_progress','delivered','billed','cancelled'].map(s=>`<option value="${s}"${e?.status===s?' selected':''}>${s}</option>`).join('')}
+                                ${['scoped','in_progress','delivered','billed','cancelled'].map(s => `<option value="${s}"${e?.status===s?' selected':''}>${s}</option>`).join('')}
                             </select>
                         </div>
                         <div><label>Delivered Date</label><input id="f-deliv" type="date" value="${e?.delivered_at?.slice(0,10)||''}"></div>
@@ -124,16 +212,110 @@
                 } else {
                     await window.__amrd.apiFetch('/api/enhancements', { method: 'POST', body: JSON.stringify(body) });
                 }
-                await load(_currentFilter);
+                document.getElementById('form-slot').innerHTML = '';
+                await load();
             } catch (e) {
                 document.getElementById('save-err').textContent = e.message;
             }
         }
 
-        let _currentFilter = '';
-        window.loadFilter = (f) => { _currentFilter = f; load(f); };
-        window.openForm   = openForm;
-        window.save       = save;
+        // ── csv import ───────────────────────────────────────────────────────
+        function toggleImport() {
+            const p = document.getElementById('import-panel');
+            if (p) p.style.display = p.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function importCsv() {
+            const fallback_tenant_id = document.getElementById('imp-tenant').value;
+            const file               = document.getElementById('imp-file').files[0];
+            const resultEl           = document.getElementById('imp-result');
+            if (!file) { resultEl.style.color='#dc2626'; resultEl.textContent='Choose a CSV file.'; return; }
+
+            resultEl.style.color='#64748b';
+            resultEl.textContent='Parsing…';
+
+            const text = await file.text();
+            const lines = text.trim().split('\n');
+            const header = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g,'').toLowerCase().replace(/[\s?]+/g,'_'));
+
+            const get = (row, name) => {
+                const i = header.indexOf(name);
+                if (i < 0) return '';
+                return (row[i]?.trim().replace(/^"|"$/g,'') || '');
+            };
+
+            // Group rows by tenant_name so we can send one request per tenant
+            const byTenant = {};
+            for (let i = 1; i < lines.length; i++) {
+                const row = splitCsvLine(lines[i]);
+                if (!row.length || row.every(c => !c.trim())) continue;
+                if (get(row, 'apply_fix_').toLowerCase() !== 'yes') continue;
+
+                const tenantName = get(row, 'tenant_name') || null;
+                const key = tenantName || '__fallback__';
+                if (!byTenant[key]) byTenant[key] = { tenant_name: tenantName, rows: [] };
+                byTenant[key].rows.push({
+                    issue_id:    Number(get(row, 'issueid')) || null,
+                    report_date: get(row, 'report_date') || null,
+                    notes:       get(row, 'notes'),
+                    fix_details: get(row, 'fix_details'),
+                    item_type:   get(row, 'type').toLowerCase() || 'enhancement',
+                    is_billable: get(row, 'billable').toLowerCase() === 'yes',
+                    fixed:       get(row, 'fixed_'),
+                    site_name:   get(row, 'site_name'),
+                });
+            }
+
+            const groups = Object.values(byTenant);
+            if (!groups.length) { resultEl.style.color='#dc2626'; resultEl.textContent='No eligible rows found (Apply Fix? = Yes).'; return; }
+
+            const totalRows = groups.reduce((s,g) => s + g.rows.length, 0);
+            resultEl.textContent=`Uploading ${totalRows} rows across ${groups.length} tenant group(s)…`;
+
+            let totalInserted=0, totalUpdated=0, totalSkipped=0, allErrors=[];
+            for (const g of groups) {
+                const body = { rows: g.rows };
+                if (g.tenant_name) body.tenant_name = g.tenant_name;
+                else if (fallback_tenant_id) body.tenant_id = fallback_tenant_id;
+                else { allErrors.push(`Rows without tenant name skipped — set a fallback tenant`); totalSkipped += g.rows.length; continue; }
+
+                try {
+                    const res = await window.__amrd.apiFetch('/api/enhancements/import', { method:'POST', body:JSON.stringify(body) });
+                    totalInserted += res.data.inserted;
+                    totalUpdated  += res.data.updated;
+                    totalSkipped  += res.data.skipped;
+                    allErrors = allErrors.concat(res.data.errors || []);
+                } catch (e) {
+                    allErrors.push(`${g.tenant_name||'fallback'}: ${e.message}`);
+                }
+            }
+
+            resultEl.style.color = allErrors.length ? '#dc2626' : '#16a34a';
+            resultEl.textContent = `Done — ${totalInserted} inserted, ${totalUpdated} updated, ${totalSkipped} skipped`
+                + (allErrors.length ? `. Errors: ${allErrors.slice(0,3).join('; ')}` : '');
+            await load();
+        }
+
+        function splitCsvLine(line) {
+            const result = [];
+            let cur = '', inQ = false;
+            for (let i = 0; i < line.length; i++) {
+                const ch = line[i];
+                if (ch === '"') { inQ = !inQ; }
+                else if (ch === ',' && !inQ) { result.push(cur); cur = ''; }
+                else { cur += ch; }
+            }
+            result.push(cur);
+            return result;
+        }
+
+        // ── filter ───────────────────────────────────────────────────────────
+        window.setFilter = (key, val) => { _filter[key] = val; load(); };
+        window.openForm  = openForm;
+        window.save      = save;
+        window.toggleImport = toggleImport;
+        window.importCsv    = importCsv;
+
         await load();
     });
   </script>

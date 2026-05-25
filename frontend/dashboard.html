@@ -59,6 +59,7 @@
 
                 <div class="amrd-card">
                     <h3>Recent Invoices</h3>
+                    <div class="amrd-table-wrap">
                     <table class="amrd-table">
                         <thead><tr><th>Invoice</th><th>Tenant</th><th>Amount</th><th>Due</th><th>Status</th></tr></thead>
                         <tbody>
@@ -72,10 +73,12 @@
                             </tr>`).join('') || '<tr><td colspan="5" style="color:#94a3b8;text-align:center">No invoices yet</td></tr>'}
                         </tbody>
                     </table>
+                    </div>
                 </div>
 
                 <div class="amrd-card">
                     <h3>Tenants</h3>
+                    <div class="amrd-table-wrap">
                     <table class="amrd-table">
                         <thead><tr><th>Name</th><th>Contact</th><th>Status</th><th>Onboarded</th></tr></thead>
                         <tbody>
@@ -88,6 +91,7 @@
                             </tr>`).join('') || '<tr><td colspan="4" style="color:#94a3b8;text-align:center">No tenants yet</td></tr>'}
                         </tbody>
                     </table>
+                    </div>
                 </div>`;
         } catch (e) {
             root.innerHTML = `<p style="color:#dc2626">Failed to load: ${e.message}</p>`;

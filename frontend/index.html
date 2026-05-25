@@ -474,6 +474,15 @@
             .nav-links li:not(.nav-login) { display: none; }
             .footer-inner { flex-direction: column; text-align: center; }
             .footer-links { flex-wrap: wrap; justify-content: center; }
+            /* Normalize button heights: border on btn-login adds box height, so use explicit equal height */
+            .btn-login, .btn-demo {
+                height: 36px;
+                display: inline-flex;
+                align-items: center;
+                padding: 0 .9rem;
+                font-size: .85rem;
+                box-sizing: border-box;
+            }
         }
 
         /* ── Animations ──────────────────────────────────────────────── */

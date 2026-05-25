@@ -5,6 +5,7 @@
     "updated_at": "2026-05-24T00:00:00.000Z",
     "name": "Platform Admins",
     "description": "Full access to all platform features",
+    "role": "site_admin",
     "is_active": true,
     "created_by": 1
   },
@@ -14,6 +15,7 @@
     "updated_at": "2026-05-24T00:00:00.000Z",
     "name": "Sales Team",
     "description": "Tenant acquisition and account management",
+    "role": "sales_manager",
     "is_active": true,
     "created_by": 1
   }

@@ -14,21 +14,24 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const root = window.__amrd.renderSidebar('User Groups');
 
-    let groups = [];
+    let groups   = [];
     let allUsers = [];
-    let editId = null;
+    let allRoles = [];
+    let editId   = null;
     let viewGroupId = null;
 
     // ── load ─────────────────────────────────────────────────────────────────
     async function loadAll() {
         root.innerHTML = '<p style="color:#94a3b8;padding:20px">Loading…</p>';
         try {
-            const [gRes, uRes] = await Promise.all([
+            const [gRes, uRes, rRes] = await Promise.all([
                 window.__amrd.apiFetch('/api/admin/user-groups'),
                 window.__amrd.apiFetch('/api/admin/users'),
+                window.__amrd.apiFetch('/api/admin/roles'),
             ]);
             groups   = gRes.data || [];
             allUsers = uRes.data || [];
+            allRoles = rRes.data || [];
             render();
         } catch (e) {
             root.innerHTML = `<p style="color:#dc2626;padding:20px">Failed to load: ${e.message}</p>`;
@@ -41,30 +44,65 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('gmTitle').textContent = editId ? 'Edit Group' : 'New Group';
         document.getElementById('gmName').value = g.name || '';
         document.getElementById('gmDesc').value = g.description || '';
+        document.getElementById('gmRole').value = g.role || '';
         document.getElementById('gmErr').textContent  = '';
+
+        // Show member list when editing
+        const memberSection = document.getElementById('gmMemberSection');
+        if (editId && g.members) {
+            const members = g.members || [];
+            memberSection.innerHTML = `
+                <div style="margin-top:6px;border-top:1px solid #f1f5f9;padding-top:14px">
+                    <div style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">
+                        Members (${members.length})
+                    </div>
+                    ${members.length ? members.map(m => `
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f8fafc">
+                            <div>
+                                <div style="font-weight:600;font-size:13px;color:${m.is_active!==false?'#0f172a':'#94a3b8'}">${m.name}</div>
+                                <div style="font-size:11px;color:#64748b">${m.email}</div>
+                            </div>
+                            <button class="amrd-btn amrd-btn-sm" style="background:#fee2e2;color:#dc2626;flex-shrink:0"
+                                onclick="modalRemoveMember(${g.id},${m.id})">Remove</button>
+                        </div>`).join('')
+                    : '<p style="color:#94a3b8;font-size:13px;margin:4px 0">No members yet.</p>'}
+                </div>`;
+            memberSection.style.display = 'block';
+        } else {
+            memberSection.style.display = 'none';
+            memberSection.innerHTML = '';
+        }
+
         document.getElementById('groupModal').style.display = show ? 'flex' : 'none';
     }
 
     async function saveGroup() {
-        const name = document.getElementById('gmName').value.trim();
+        const name        = document.getElementById('gmName').value.trim();
         const description = document.getElementById('gmDesc').value.trim();
-        const errEl = document.getElementById('gmErr');
+        const role        = document.getElementById('gmRole').value || null;
+        const errEl       = document.getElementById('gmErr');
         if (!name) { errEl.textContent = 'Name is required'; return; }
         try {
             if (editId) {
-                await window.__amrd.apiFetch(`/api/admin/user-groups/${editId}`, { method:'PUT', body:JSON.stringify({name,description}) });
+                await window.__amrd.apiFetch(`/api/admin/user-groups/${editId}`, {
+                    method: 'PUT', body: JSON.stringify({ name, description, role }),
+                });
             } else {
-                await window.__amrd.apiFetch('/api/admin/user-groups', { method:'POST', body:JSON.stringify({name,description}) });
+                await window.__amrd.apiFetch('/api/admin/user-groups', {
+                    method: 'POST', body: JSON.stringify({ name, description, role }),
+                });
             }
             groupModal(false);
-            loadAll();
+            await loadAll();
+            if (viewGroupId) memberPanel(true, viewGroupId);
         } catch (e) { errEl.textContent = e.message; }
     }
 
     async function deleteGroup(id) {
         if (!confirm('Delete this group and remove all members?')) return;
         try {
-            await window.__amrd.apiFetch(`/api/admin/user-groups/${id}`, { method:'DELETE' });
+            await window.__amrd.apiFetch(`/api/admin/user-groups/${id}`, { method: 'DELETE' });
+            if (viewGroupId == id) memberPanel(false);
             loadAll();
         } catch (e) { alert(e.message); }
     }
@@ -79,20 +117,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderMembers(g);
     }
 
+    function roleBadge(role) {
+        if (!role) return '';
+        const colours = {
+            site_admin:'#7c3aed;background:#ede9fe', admin:'#1d4ed8;background:#dbeafe',
+            sales_manager:'#0D9488;background:#ccfbf1', billing:'#d97706;background:#fef3c7', staff:'#64748b;background:#f1f5f9',
+        };
+        const c = colours[role] || '64748b;background:#f1f5f9';
+        return `<span class="amrd-badge" style="color:${c}">${role.replace(/_/g,' ')}</span>`;
+    }
+
     function renderMembers(g) {
-        const members = g?.members || [];
+        const members    = g?.members || [];
         const nonMembers = allUsers.filter(u => !members.some(m => m.id == u.id) && u.is_active);
 
-        document.getElementById('memberList').innerHTML = members.length
+        const groupRole = g?.role;
+        const roleNote  = groupRole
+            ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#15803d">
+                   Members of this group inherit role: ${roleBadge(groupRole)}
+               </div>`
+            : `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#64748b">
+                   No role assigned to this group. <a href="#" onclick="openEditGroup(${g?.id});return false" style="color:#0D9488">Edit group</a> to set one.
+               </div>`;
+
+        document.getElementById('memberList').innerHTML = roleNote + (members.length
             ? members.map(m => `
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;">
                     <div>
-                        <div style="font-weight:600;font-size:13px;color:#0f172a">${m.name}</div>
-                        <div style="font-size:11px;color:#64748b">${m.email} · ${m.role.replace('_',' ')}</div>
+                        <div style="font-weight:600;font-size:13px;color:${m.is_active?'#0f172a':'#94a3b8'}">${m.name}</div>
+                        <div style="font-size:11px;color:#64748b">${m.email} · direct: ${(m.role||'').replace(/_/g,' ')}</div>
                     </div>
                     <button class="amrd-btn amrd-btn-sm" style="background:#fee2e2;color:#dc2626" onclick="removeMember(${g.id},${m.id})">Remove</button>
                 </div>`).join('')
-            : '<p style="color:#94a3b8;font-size:13px;margin:12px 0">No members yet.</p>';
+            : '<p style="color:#94a3b8;font-size:13px;margin:12px 0">No members yet.</p>');
 
         document.getElementById('addMemberSelect').innerHTML =
             `<option value="">— Add a user —</option>` +
@@ -104,7 +161,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!userId || !viewGroupId) return;
         try {
             await window.__amrd.apiFetch(`/api/admin/user-groups/${viewGroupId}/members`, {
-                method:'POST', body:JSON.stringify({ user_id: parseInt(userId) }),
+                method: 'POST', body: JSON.stringify({ user_id: parseInt(userId) }),
             });
             await loadAll();
             memberPanel(true, viewGroupId);
@@ -113,16 +170,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function removeMember(groupId, userId) {
         try {
-            await window.__amrd.apiFetch(`/api/admin/user-groups/${groupId}/members/${userId}`, { method:'DELETE' });
+            await window.__amrd.apiFetch(`/api/admin/user-groups/${groupId}/members/${userId}`, { method: 'DELETE' });
             await loadAll();
             memberPanel(true, viewGroupId);
+        } catch (e) { alert(e.message); }
+    }
+
+    async function modalRemoveMember(groupId, userId) {
+        try {
+            await window.__amrd.apiFetch(`/api/admin/user-groups/${groupId}/members/${userId}`, { method: 'DELETE' });
+            await loadAll();
+            // Refresh the modal with updated group data
+            const updated = groups.find(g => g.id == groupId);
+            if (updated) groupModal(true, updated);
         } catch (e) { alert(e.message); }
     }
 
     // ── render ────────────────────────────────────────────────────────────────
     function render() {
         root.innerHTML = `
-        <div style="display:flex;gap:20px">
+        <div class="amrd-flex-row">
             <!-- Groups list -->
             <div style="flex:1;min-width:0">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
@@ -139,9 +206,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <div>
                                 <div style="font-weight:700;font-size:14px;color:#0f172a;margin-bottom:4px">${g.name}</div>
                                 <div style="font-size:12px;color:#64748b">${g.description || '—'}</div>
-                                <div style="margin-top:8px">
+                                <div style="margin-top:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
                                     <span class="amrd-badge" style="background:#dbeafe;color:#1d4ed8">${g.member_count || 0} member${(g.member_count||0)!==1?'s':''}</span>
-                                    ${g.is_active ? '' : '<span class="amrd-badge amrd-badge-cancelled" style="margin-left:6px">Inactive</span>'}
+                                    ${g.role ? `<span style="font-size:11px;color:#64748b">Role: ${roleBadge(g.role)}</span>` : '<span style="font-size:11px;color:#94a3b8;font-style:italic">No role</span>'}
+                                    ${g.is_active ? '' : '<span class="amrd-badge amrd-badge-cancelled">Inactive</span>'}
                                 </div>
                             </div>
                             <div onclick="event.stopPropagation()" style="display:flex;gap:6px">
@@ -154,10 +222,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
 
             <!-- Members panel -->
-            <div id="memberPanel" style="display:none;flex-direction:column;width:320px;flex-shrink:0">
+            <div id="memberPanel" class="amrd-side-panel" style="display:none;flex-direction:column;width:340px;flex-shrink:0">
                 <div class="amrd-card" style="flex:1">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-                        <h3 id="memberPanelTitle" style="margin:0;font-size:14px"></h3>
+                        <h3 id="memberPanelTitle" style="margin:0;font-size:14px;font-weight:700"></h3>
                         <button class="amrd-btn amrd-btn-sm amrd-btn-ghost" onclick="closeMembers()">✕</button>
                     </div>
                     <div id="memberList"></div>
@@ -171,7 +239,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         <!-- Group Modal -->
         <div id="groupModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center">
-            <div style="background:#fff;border-radius:12px;padding:28px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+            <div style="background:#fff;border-radius:12px;padding:28px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
                 <h3 id="gmTitle" style="margin:0 0 20px;font-size:16px;color:#0f172a"></h3>
                 <div id="gmErr" style="color:#dc2626;font-size:13px;margin-bottom:10px"></div>
                 <div class="amrd-form-row full"><div>
@@ -182,22 +250,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <label>Description</label>
                     <input id="gmDesc" type="text" placeholder="Optional description">
                 </div></div>
-                <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+                <div class="amrd-form-row full"><div>
+                    <label>Role <span style="color:#94a3b8;font-weight:400">(role conferred on all members)</span></label>
+                    <select id="gmRole">
+                        <option value="">— No role —</option>
+                        ${allRoles.map(r => `<option value="${r.name}">${r.label}</option>`).join('')}
+                    </select>
+                </div></div>
+                <div id="gmMemberSection" style="display:none"></div>
+                <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
                     <button class="amrd-btn amrd-btn-ghost" onclick="closeGroupModal()">Cancel</button>
                     <button class="amrd-btn amrd-btn-primary" onclick="saveGroup()">Save</button>
                 </div>
             </div>
         </div>`;
 
-        window.openNewGroup   = () => groupModal(true);
-        window.openEditGroup  = (id) => groupModal(true, groups.find(g => g.id == id));
-        window.closeGroupModal= () => groupModal(false);
-        window.saveGroup      = saveGroup;
-        window.deleteGroup    = deleteGroup;
-        window.viewMembers    = (id) => { memberPanel(true, id); };
-        window.closeMembers   = () => memberPanel(false);
-        window.addMember      = addMember;
-        window.removeMember   = removeMember;
+        window.openNewGroup      = () => groupModal(true);
+        window.openEditGroup     = (id) => groupModal(true, groups.find(g => g.id == id));
+        window.closeGroupModal   = () => groupModal(false);
+        window.saveGroup         = saveGroup;
+        window.deleteGroup       = deleteGroup;
+        window.viewMembers       = (id) => memberPanel(true, id);
+        window.closeMembers      = () => memberPanel(false);
+        window.addMember         = addMember;
+        window.removeMember      = removeMember;
+        window.modalRemoveMember = modalRemoveMember;
 
         if (viewGroupId) memberPanel(true, viewGroupId);
     }

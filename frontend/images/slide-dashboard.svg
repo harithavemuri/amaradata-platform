@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-100 0 1600 600" font-family="'Segoe UI',Arial,sans-serif">
-  <!-- Background -->
-  <rect width="1400" height="600" fill="#0f172a"/>
+  <!-- Background — covers full viewBox (-100 to 1500) -->
+  <rect x="-100" width="1600" height="600" fill="#0f172a"/>
 
-  <!-- Sidebar -->
-  <rect width="220" height="600" fill="#1e293b"/>
+  <!-- Sidebar — extends left to cover the viewBox offset -->
+  <rect x="-100" width="320" height="600" fill="#1e293b"/>
   <text x="24" y="38" fill="#0D9488" font-size="18" font-weight="700" letter-spacing="1">AmaraData</text>
   <text x="24" y="54" fill="#475569" font-size="10">Platform Console</text>
   <!-- Sidebar nav items -->

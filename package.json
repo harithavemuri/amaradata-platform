@@ -9,7 +9,7 @@
     "dev:nondb": "NONDB_MODE=true nodemon server.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "deploy": "npm test && sam build && sam deploy",
+    "deploy": "npm test && sam build && sam deploy --no-confirm-changeset && aws s3 sync frontend/ s3://amrd-platform-amaradata-prod-797666412164/ --delete && aws cloudfront create-invalidation --distribution-id EVRE22H489D0P --paths \"/*\"",
     "export-db": "node scripts/cli.js export-db",
     "check-db": "node scripts/cli.js check-db",
     "stats": "node scripts/cli.js stats",

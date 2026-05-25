@@ -42,6 +42,7 @@
                     <button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="openManual(${JSON.stringify(tenants)})">+ Manual Entry</button>
                 </div>
                 <div class="amrd-card" style="padding:0">
+                    <div class="amrd-table-wrap">
                     <table class="amrd-table">
                         <thead><tr><th>Tenant</th><th>Sales (count)</th><th>Sales Value</th><th>Rental Units</th><th>Rental Income</th><th>Active Props</th><th>Collected</th></tr></thead>
                         <tbody>
@@ -60,6 +61,7 @@
                             }).join('') || '<tr><td colspan="7" style="color:#94a3b8;text-align:center;padding:24px">No tenants configured</td></tr>'}
                         </tbody>
                     </table>
+                    </div>
                 </div>
                 <div id="form-slot"></div>`;
         }
