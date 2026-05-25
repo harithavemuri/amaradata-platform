@@ -104,6 +104,28 @@
         return _refreshing;
     }
 
+    /* ── NonDB indicator ──────────────────────────────────────────── */
+    let _nonDbShown = false;
+    function _showNonDbBadge(reason) {
+        if (_nonDbShown) return;
+        _nonDbShown = true;
+        const label = reason === 'fallback' ? '⚠ DB Fallback' : '⚠ NonDB Mode';
+        const tip   = reason === 'fallback'
+            ? 'PostgreSQL unavailable — serving data from local files'
+            : 'Running in file-based mode (NONDB_MODE=true)';
+        const badge = document.createElement('span');
+        badge.id        = 'amrd-nondb-badge';
+        badge.title     = tip;
+        badge.innerHTML = `<span class="amrd-nondb-dot"></span>${label}`;
+        const slot = document.getElementById('amrd-nondb-slot');
+        if (slot) {
+            slot.replaceChildren(badge);
+        } else {
+            badge.style.cssText += ';position:fixed;bottom:16px;right:16px;z-index:9999';
+            document.body.appendChild(badge);
+        }
+    }
+
     /* ── API fetch helper ──────────────────────────────────────────── */
     async function apiFetch(path, opts = {}, _retry = true) {
         const headers = {
@@ -114,6 +136,7 @@
         const token = getToken();
         if (token) headers['Authorization'] = `Bearer ${token}`;
         const res  = await fetch(`${API}${path}`, { ...opts, headers });
+        if (res.headers.get('X-DB-Mode') === 'nondb') _showNonDbBadge(res.headers.get('X-DB-Mode-Reason') || 'env');
         if (res.status === 401 && _retry) {
             try {
                 await _refreshToken();
@@ -271,7 +294,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#0D9488;box-sh
  .amrd-sidebar.collapsed{width:240px;}
  .amrd-topbar{padding:10px 16px;}
 }
-@media print{.amrd-sidebar,.amrd-topbar{display:none!important;}.amrd-main{overflow:visible!important;}}`;
+@media print{.amrd-sidebar,.amrd-topbar{display:none!important;}.amrd-main{overflow:visible!important;}}
+#amrd-nondb-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:20px;font-size:11px;font-weight:700;flex-shrink:0;cursor:default;}
+.amrd-nondb-dot{width:7px;height:7px;border-radius:50%;background:#f59e0b;animation:amrd-nondb-pulse 2s ease-in-out infinite;flex-shrink:0;}
+@keyframes amrd-nondb-pulse{0%,100%{opacity:1}50%{opacity:.3}}`;
         document.head.appendChild(s);
     }
 
@@ -323,12 +349,14 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#0D9488;box-sh
                     <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
                 </button>
                 <span class="amrd-topbar-title">${pageTitle || ''}</span>
-            </div>`
-            + (staff?.role === 'site_admin' ? `
-                <div style="display:flex;align-items:center;gap:10px">
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+                ${staff?.role === 'site_admin' ? `
                     <button id="amrd-sync-btn" style="padding:5px 14px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#334155;font-size:12px;font-weight:600;cursor:pointer;" title="Sync JSON files → PostgreSQL DB">⇅ Sync to DB</button>
                     <span id="amrd-sync-result" style="font-size:12px"></span>
-                </div>` : '');
+                ` : ''}
+                <span id="amrd-nondb-slot"></span>
+            </div>`;
         if (staff?.role === 'site_admin') {
             topbar.querySelector('#amrd-sync-btn').addEventListener('click', async () => {
                 const btn = topbar.querySelector('#amrd-sync-btn');
