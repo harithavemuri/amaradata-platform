@@ -1,0 +1,86 @@
+[
+  {
+    "id": 1,
+    "created_at": "2026-05-26T16:35:28.745Z",
+    "updated_at": "2026-05-26T16:35:28.745Z",
+    "name": "Standard-mpmuwhnq04rq",
+    "sales_pct": 2.5,
+    "rental_pct": 1,
+    "hourly_rate": 0,
+    "min_monthly_fee": 5000,
+    "currency_code": "INR",
+    "is_active": true
+  },
+  {
+    "id": 2,
+    "created_at": "2026-05-26T16:35:28.808Z",
+    "updated_at": "2026-05-26T16:35:28.808Z",
+    "name": "Premium-mpmuwhpjncxg",
+    "sales_pct": 4,
+    "rental_pct": 0,
+    "hourly_rate": 0,
+    "min_monthly_fee": 10000,
+    "currency_code": "INR",
+    "is_active": true
+  },
+  {
+    "id": 3,
+    "created_at": "2026-05-26T16:35:31.479Z",
+    "updated_at": "2026-05-26T16:35:31.479Z",
+    "name": "BasePlan-mpmuwjrogibv",
+    "sales_pct": 2.5,
+    "rental_pct": 1,
+    "hourly_rate": 0,
+    "min_monthly_fee": 0,
+    "currency_code": "INR",
+    "is_active": true
+  },
+  {
+    "id": 4,
+    "created_at": "2026-05-26T16:35:31.495Z",
+    "updated_at": "2026-05-26T16:35:31.495Z",
+    "name": "MinPlan-mpmuwjs5elvk",
+    "sales_pct": 0,
+    "rental_pct": 0,
+    "hourly_rate": 0,
+    "min_monthly_fee": 0,
+    "currency_code": "INR",
+    "is_active": true
+  },
+  {
+    "id": 5,
+    "created_at": "2026-05-26T16:35:31.499Z",
+    "updated_at": "2026-05-26T16:35:31.499Z",
+    "name": "GrowthPlan-mpmuwjs9bs4l",
+    "sales_pct": 3,
+    "rental_pct": 1.5,
+    "hourly_rate": 1500,
+    "min_monthly_fee": 5000,
+    "currency_code": "INR",
+    "is_active": true
+  },
+  {
+    "id": 6,
+    "created_at": "2026-05-26T16:35:31.503Z",
+    "updated_at": "2026-05-26T16:35:31.503Z",
+    "name": "SAPlan-mpmuwjsdq5nb",
+    "sales_pct": 0,
+    "rental_pct": 0,
+    "hourly_rate": 0,
+    "min_monthly_fee": 0,
+    "currency_code": "INR",
+    "is_active": true
+  },
+  {
+    "id": 7,
+    "created_at": "2026-05-26T16:35:31.537Z",
+    "updated_at": "2026-05-26T16:35:31.537Z",
+    "name": "Plan2-mpmuwjtb2eje",
+    "sales_pct": 4,
+    "rental_pct": 0,
+    "hourly_rate": 0,
+    "min_monthly_fee": 0,
+    "currency_code": "INR",
+    "is_active": true
+  }
+]

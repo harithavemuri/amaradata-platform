@@ -1,0 +1,58 @@
+[
+  {
+    "id": 1,
+    "created_at": "2026-05-26T00:18:49.277Z",
+    "updated_at": "2026-05-26T00:18:49.277Z",
+    "tenant_id": 9,
+    "period_year": 2025,
+    "period_month": 1,
+    "sales_count": 0,
+    "sales_value": 0,
+    "rental_units": 0,
+    "rental_income": 0,
+    "active_properties": 0,
+    "collected_at": "2026-05-26T00:18:49.277Z"
+  },
+  {
+    "id": 2,
+    "created_at": "2026-05-26T00:18:49.413Z",
+    "updated_at": "2026-05-26T00:18:49.413Z",
+    "tenant_id": 9,
+    "period_year": 2025,
+    "period_month": 2,
+    "sales_count": 10,
+    "sales_value": 500000,
+    "rental_units": 5,
+    "rental_income": 120000,
+    "active_properties": 15,
+    "collected_at": "2026-05-26T00:18:49.377Z"
+  },
+  {
+    "id": 3,
+    "created_at": "2026-05-26T00:18:49.430Z",
+    "updated_at": "2026-05-26T00:18:49.441Z",
+    "tenant_id": 9,
+    "period_year": 2025,
+    "period_month": 3,
+    "sales_count": 5,
+    "sales_value": 9999,
+    "rental_units": 0,
+    "rental_income": 0,
+    "active_properties": 0,
+    "collected_at": "2026-05-26T00:18:49.441Z"
+  },
+  {
+    "id": 4,
+    "created_at": "2026-05-26T00:18:49.481Z",
+    "updated_at": "2026-05-26T00:18:49.481Z",
+    "tenant_id": 9,
+    "period_year": 2025,
+    "period_month": 4,
+    "sales_count": 0,
+    "sales_value": 0,
+    "rental_units": 0,
+    "rental_income": 0,
+    "active_properties": 0,
+    "collected_at": "2026-05-26T00:18:49.481Z"
+  }
+]

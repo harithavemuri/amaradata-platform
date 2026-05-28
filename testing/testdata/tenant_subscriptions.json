@@ -1,0 +1,81 @@
+[
+  {
+    "id": 1,
+    "created_at": "2026-05-26T16:35:28.751Z",
+    "updated_at": "2026-05-26T16:35:28.812Z",
+    "tenant_id": 1,
+    "plan_id": 1,
+    "effective_from": "2025-01-01",
+    "effective_to": "2025-07-01",
+    "custom_sales_pct": null,
+    "custom_rental_pct": null,
+    "custom_hourly_rate": null,
+    "custom_min_fee": null
+  },
+  {
+    "id": 2,
+    "created_at": "2026-05-26T16:35:28.812Z",
+    "updated_at": "2026-05-26T16:35:28.812Z",
+    "tenant_id": 1,
+    "plan_id": 2,
+    "effective_from": "2025-07-01",
+    "effective_to": null,
+    "custom_sales_pct": null,
+    "custom_rental_pct": null,
+    "custom_hourly_rate": null,
+    "custom_min_fee": null
+  },
+  {
+    "id": 3,
+    "created_at": "2026-05-26T16:35:31.528Z",
+    "updated_at": "2026-05-26T16:35:31.528Z",
+    "tenant_id": 4,
+    "plan_id": 3,
+    "effective_from": "2025-01-01",
+    "effective_to": null,
+    "custom_sales_pct": null,
+    "custom_rental_pct": null,
+    "custom_hourly_rate": null,
+    "custom_min_fee": null
+  },
+  {
+    "id": 4,
+    "created_at": "2026-05-26T16:35:31.540Z",
+    "updated_at": "2026-05-26T16:35:31.544Z",
+    "tenant_id": 5,
+    "plan_id": 3,
+    "effective_from": "2025-01-01",
+    "effective_to": "2025-06-01",
+    "custom_sales_pct": null,
+    "custom_rental_pct": null,
+    "custom_hourly_rate": null,
+    "custom_min_fee": null
+  },
+  {
+    "id": 5,
+    "created_at": "2026-05-26T16:35:31.545Z",
+    "updated_at": "2026-05-26T16:35:31.545Z",
+    "tenant_id": 5,
+    "plan_id": 7,
+    "effective_from": "2025-06-01",
+    "effective_to": null,
+    "custom_sales_pct": null,
+    "custom_rental_pct": null,
+    "custom_hourly_rate": null,
+    "custom_min_fee": null
+  },
+  {
+    "id": 6,
+    "created_at": "2026-05-26T16:35:31.553Z",
+    "updated_at": "2026-05-26T16:35:31.553Z",
+    "tenant_id": 6,
+    "plan_id": 3,
+    "effective_from": "2025-01-01",
+    "effective_to": null,
+    "custom_sales_pct": 1.75,
+    "custom_rental_pct": 0.8,
+    "custom_hourly_rate": null,
+    "custom_min_fee": null,
+    "notes": "Negotiated rate"
+  }
+]

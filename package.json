@@ -9,6 +9,11 @@
     "dev:nondb": "NONDB_MODE=true nodemon server.js",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:unittests": "vitest run --config testing/unittests/vitest.config.js",
+    "test:unittests:watch": "vitest --config testing/unittests/vitest.config.js",
+    "test:regression": "playwright test --config testing/regression_testsuite/playwright.config.js",
+    "test:regression:ui": "playwright test --config testing/regression_testsuite/playwright.config.js --ui",
     "deploy": "npm test && sam build && sam deploy --no-confirm-changeset && aws s3 sync frontend/ s3://amrd-platform-amaradata-prod-797666412164/ --delete && aws cloudfront create-invalidation --distribution-id EVRE22H489D0P --paths \"/*\"",
     "export-db": "node scripts/cli.js export-db",
     "check-db": "node scripts/cli.js check-db",
@@ -27,6 +32,8 @@
     "serverless-http": "^3.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@vitest/coverage-v8": "^4.1.7",
     "jsdom": "^24.0.0",
     "nodemon": "^3.1.4",
     "supertest": "^7.2.2",

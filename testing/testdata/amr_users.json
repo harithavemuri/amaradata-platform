@@ -1,0 +1,143 @@
+[
+  {
+    "id": 1,
+    "created_at": "2026-05-26T16:35:26.439Z",
+    "updated_at": "2026-05-26T16:35:27.007Z",
+    "email": "auth-mpmuwfmbnxsm@example.com",
+    "name": "Auth Test User",
+    "role": "staff",
+    "password_hash": "$2a$12$kEn4kZ3pnz7JyWqwh9QB7OPJVNi0jWJJI.C22aa.l.wbb2ommw3ca",
+    "is_active": true,
+    "last_login_at": "2026-05-26T16:35:27.007Z"
+  },
+  {
+    "id": 2,
+    "created_at": "2026-05-26T16:35:27.815Z",
+    "updated_at": "2026-05-26T16:35:28.208Z",
+    "email": "seed-mpmuwgxim7ra@t.com",
+    "name": "Renamed User",
+    "role": "billing",
+    "password_hash": "",
+    "is_active": false
+  },
+  {
+    "id": 3,
+    "created_at": "2026-05-26T16:35:28.164Z",
+    "updated_at": "2026-05-26T16:35:28.164Z",
+    "email": "new-mpmuwgzekxoe@t.com",
+    "name": "New User",
+    "role": "billing",
+    "password_hash": "$2a$12$FsSNfu83O4dnGQjpUxxTheKYdnZYinj2gPJi/.KMim9uNquxzumUm",
+    "is_active": true
+  },
+  {
+    "id": 4,
+    "created_at": "2026-05-26T16:35:28.172Z",
+    "updated_at": "2026-05-26T16:35:28.172Z",
+    "email": "dup-mpmuwh7rygj6@t.com",
+    "name": "First",
+    "role": "staff",
+    "password_hash": "",
+    "is_active": true
+  },
+  {
+    "id": 5,
+    "created_at": "2026-05-26T16:35:28.180Z",
+    "updated_at": "2026-05-26T16:35:28.180Z",
+    "email": "role-site_admin-mpmuwh823pin@t.com",
+    "name": "Role site_admin",
+    "role": "site_admin",
+    "password_hash": "",
+    "is_active": true
+  },
+  {
+    "id": 6,
+    "created_at": "2026-05-26T16:35:28.185Z",
+    "updated_at": "2026-05-26T16:35:28.185Z",
+    "email": "role-admin-mpmuwh86ie8x@t.com",
+    "name": "Role admin",
+    "role": "admin",
+    "password_hash": "",
+    "is_active": true
+  },
+  {
+    "id": 7,
+    "created_at": "2026-05-26T16:35:28.189Z",
+    "updated_at": "2026-05-26T16:35:28.189Z",
+    "email": "role-sales_manager-mpmuwh8cem0q@t.com",
+    "name": "Role sales_manager",
+    "role": "sales_manager",
+    "password_hash": "",
+    "is_active": true
+  },
+  {
+    "id": 8,
+    "created_at": "2026-05-26T16:35:28.193Z",
+    "updated_at": "2026-05-26T16:35:28.193Z",
+    "email": "role-billing-mpmuwh8fqx7z@t.com",
+    "name": "Role billing",
+    "role": "billing",
+    "password_hash": "",
+    "is_active": true
+  },
+  {
+    "id": 9,
+    "created_at": "2026-05-26T16:35:28.196Z",
+    "updated_at": "2026-05-26T16:35:28.196Z",
+    "email": "role-staff-mpmuwh8iaikr@t.com",
+    "name": "Role staff",
+    "role": "staff",
+    "password_hash": "",
+    "is_active": true
+  },
+  {
+    "id": 10,
+    "created_at": "2026-05-26T16:35:28.211Z",
+    "updated_at": "2026-05-26T16:35:28.214Z",
+    "email": "del-mpmuwh8ygxfo@t.com",
+    "name": "To Delete",
+    "role": "staff",
+    "password_hash": "",
+    "is_active": false
+  },
+  {
+    "id": 11,
+    "created_at": "2026-05-26T16:35:28.234Z",
+    "updated_at": "2026-05-26T16:35:28.234Z",
+    "email": "mem-mpmuwh9kwa05@t.com",
+    "name": "Member User",
+    "role": "staff",
+    "password_hash": "",
+    "is_active": true
+  },
+  {
+    "id": 12,
+    "created_at": "2026-05-26T16:35:28.242Z",
+    "updated_at": "2026-05-26T16:35:28.242Z",
+    "email": "remv-mpmuwh9s7e2c@t.com",
+    "name": "Remove User",
+    "role": "staff",
+    "password_hash": "",
+    "is_active": true
+  },
+  {
+    "id": 13,
+    "created_at": "2026-05-26T16:35:28.880Z",
+    "updated_at": "2026-05-26T16:35:28.880Z",
+    "email": "staff-mpmuwhriyc3h@t.com",
+    "name": "Sales Person",
+    "role": "sales_manager",
+    "password_hash": "",
+    "is_active": true
+  },
+  {
+    "id": 14,
+    "created_at": "2026-05-26T16:35:28.907Z",
+    "updated_at": "2026-05-26T16:35:28.907Z",
+    "email": "grp-mem-mpmuwhs9m3za@t.com",
+    "name": "Group Member",
+    "role": "staff",
+    "password_hash": "",
+    "is_active": true
+  }
+]

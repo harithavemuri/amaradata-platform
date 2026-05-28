@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1,
+    "created_at": "2026-05-26T00:17:28.208Z",
+    "updated_at": "2026-05-26T00:17:29.351Z",
+    "name": "Renamed Group",
+    "description": "For tests",
+    "role": null,
+    "is_active": false,
+    "created_by": 902
+  },
+  {
+    "id": 2,
+    "created_at": "2026-05-26T00:17:29.336Z",
+    "updated_at": "2026-05-26T00:17:29.336Z",
+    "name": "Group mplvysc4evyg",
+    "description": "Test group",
+    "role": "billing",
+    "is_active": true,
+    "created_by": 902
+  }
+]

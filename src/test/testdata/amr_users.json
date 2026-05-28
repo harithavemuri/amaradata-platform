@@ -1,0 +1,94 @@
+[
+  {
+    "id": 1,
+    "created_at": "2026-05-26T00:17:27.929Z",
+    "updated_at": "2026-05-26T00:17:29.187Z",
+    "email": "admin-seed-mplvyr77h04a@t.com",
+    "name": "Updated Name",
+    "role": "admin",
+    "password_hash": "",
+    "is_active": true
+  },
+  {
+    "id": 2,
+    "created_at": "2026-05-26T00:17:28.799Z",
+    "updated_at": "2026-05-26T00:17:28.799Z",
+    "email": "new-mplvyrx5dfr0@test.com",
+    "name": "New User",
+    "role": "billing",
+    "password_hash": "",
+    "is_active": true
+  },
+  {
+    "id": 3,
+    "created_at": "2026-05-26T00:17:28.808Z",
+    "updated_at": "2026-05-26T00:17:28.808Z",
+    "email": "dup-mplvyrxesbaz@test.com",
+    "name": "A",
+    "role": "staff",
+    "password_hash": "",
+    "is_active": true
+  },
+  {
+    "id": 4,
+    "created_at": "2026-05-26T00:17:29.302Z",
+    "updated_at": "2026-05-26T00:17:29.312Z",
+    "email": "del-mplvys8m15go@t.com",
+    "name": "To Delete",
+    "role": "staff",
+    "password_hash": "",
+    "is_active": false
+  },
+  {
+    "id": 5,
+    "created_at": "2026-05-26T00:17:49.424Z",
+    "updated_at": "2026-05-26T00:17:49.424Z",
+    "email": "user-mplvz6trqpiy@test.com",
+    "name": "Test User",
+    "role": "staff",
+    "password_hash": "$2a$12$Wn9DBpRmf/tvxJAf1szUhOkBBvTArQEW/Xj2QOmIcldDAdOP1UBku",
+    "is_active": true
+  },
+  {
+    "id": 6,
+    "created_at": "2026-05-26T00:17:50.159Z",
+    "updated_at": "2026-05-26T00:17:50.159Z",
+    "email": "dup-mplvz7ufsa1u@test.com",
+    "name": "First",
+    "role": "staff",
+    "password_hash": "$2a$12$o7zNVh3bgO7dYzdVKCTW4uO72rBXC/O7uIThXyqOCUWsPB/LoFVd2",
+    "is_active": true
+  },
+  {
+    "id": 7,
+    "created_at": "2026-05-26T00:17:51.862Z",
+    "updated_at": "2026-05-26T00:17:52.580Z",
+    "email": "login-mplvz92opksz@test.com",
+    "name": "Login User",
+    "role": "staff",
+    "password_hash": "$2a$12$TlhQpTVDWxoQGSPfBUcvJedq06xwD6epz8XU/nRCSuJpgvSBto1Q6",
+    "is_active": true,
+    "last_login_at": "2026-05-26T00:17:52.579Z"
+  },
+  {
+    "id": 8,
+    "created_at": "2026-05-26T00:17:54.080Z",
+    "updated_at": "2026-05-26T00:17:54.852Z",
+    "email": "refresh-mplvzaa8xv2c@test.com",
+    "name": "Refresh User",
+    "role": "staff",
+    "password_hash": "$2a$12$MG2FxIrr3/Y6fYAOgjTcdeR7VFUXjGM3B0idoELVdsbWA6HS9/5jq",
+    "is_active": true,
+    "last_login_at": "2026-05-26T00:17:54.852Z"
+  },
+  {
+    "id": 9,
+    "created_at": "2026-05-26T00:17:56.066Z",
+    "updated_at": "2026-05-26T00:17:56.066Z",
+    "email": "fp-mplvzccongzy@test.com",
+    "name": "FP User",
+    "role": "staff",
+    "password_hash": "$2a$12$K89rArCz/lyCtIpi20S6/OgKgQVtAqrs9ug8rsqoCgTvnSAbXuUIe",
+    "is_active": true
+  }
+]

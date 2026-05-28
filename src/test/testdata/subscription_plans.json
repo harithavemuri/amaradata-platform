@@ -1,0 +1,40 @@
+[
+  {
+    "id": 1,
+    "created_at": "2026-05-26T00:18:11.727Z",
+    "updated_at": "2026-05-26T00:18:11.727Z",
+    "name": "Plan mplvzoyy75lx",
+    "description": "Seed plan",
+    "sales_pct": 1.5,
+    "rental_pct": 2,
+    "hourly_rate": 0,
+    "min_monthly_fee": 0,
+    "currency_code": "INR",
+    "is_active": true
+  },
+  {
+    "id": 2,
+    "created_at": "2026-05-26T00:18:12.156Z",
+    "updated_at": "2026-05-26T00:18:12.156Z",
+    "name": "Growth mplvzpdjv25q",
+    "sales_pct": 0,
+    "rental_pct": 0,
+    "hourly_rate": 0,
+    "min_monthly_fee": 0,
+    "currency_code": "INR",
+    "is_active": true
+  },
+  {
+    "id": 3,
+    "created_at": "2026-05-26T00:18:12.169Z",
+    "updated_at": "2026-05-26T00:18:12.169Z",
+    "name": "Premium mplvzpdwgsi9",
+    "description": "Full service",
+    "sales_pct": 2.5,
+    "rental_pct": 3,
+    "hourly_rate": 1500,
+    "min_monthly_fee": 10000,
+    "currency_code": "USD",
+    "is_active": true
+  }
+]

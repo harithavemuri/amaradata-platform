@@ -1,0 +1,68 @@
+[
+  {
+    "id": 1,
+    "created_at": "2026-05-26T16:35:28.769Z",
+    "updated_at": "2026-05-26T16:35:28.769Z",
+    "invoice_id": 1,
+    "description": "Platform subscription",
+    "quantity": 1,
+    "unit_price": 0,
+    "amount": 25000,
+    "sort_order": 0
+  },
+  {
+    "id": 2,
+    "created_at": "2026-05-26T16:35:28.769Z",
+    "updated_at": "2026-05-26T16:35:28.769Z",
+    "invoice_id": 1,
+    "description": "Support hours (10h)",
+    "quantity": 1,
+    "unit_price": 0,
+    "amount": 15000,
+    "sort_order": 1
+  },
+  {
+    "id": 3,
+    "created_at": "2026-05-26T16:35:30.924Z",
+    "updated_at": "2026-05-26T16:35:30.924Z",
+    "invoice_id": 3,
+    "description": "Setup fee",
+    "quantity": 1,
+    "unit_price": 0,
+    "amount": 5000,
+    "sort_order": 0
+  },
+  {
+    "id": 4,
+    "created_at": "2026-05-26T16:35:30.954Z",
+    "updated_at": "2026-05-26T16:35:30.954Z",
+    "invoice_id": 6,
+    "description": "Dev work",
+    "quantity": 1,
+    "unit_price": 0,
+    "amount": 10000,
+    "sort_order": 0
+  },
+  {
+    "id": 5,
+    "created_at": "2026-05-26T16:35:30.954Z",
+    "updated_at": "2026-05-26T16:35:30.954Z",
+    "invoice_id": 6,
+    "description": "Support",
+    "quantity": 1,
+    "unit_price": 0,
+    "amount": 2000,
+    "sort_order": 1
+  },
+  {
+    "id": 6,
+    "created_at": "2026-05-26T16:35:30.959Z",
+    "updated_at": "2026-05-26T16:35:30.959Z",
+    "invoice_id": 7,
+    "description": "One item",
+    "quantity": 1,
+    "unit_price": 0,
+    "amount": 50000,
+    "sort_order": 0
+  }
+]

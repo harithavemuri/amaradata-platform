@@ -1,6 +1,6 @@
-// Test environment — set before any test file imports server.js
+// Shared test environment — loaded before every test file via vitest setupFiles
 process.env.NONDB_MODE           = 'true';
-process.env.TRANSACTIONDATA_DIR  = 'src/test/testdata';
+process.env.TRANSACTIONDATA_DIR  = 'testing/testdata';
 process.env.AMRD_JWT_SECRET      = 'test-jwt-secret-32-chars-minimum!!';
 process.env.SSO_SECRET           = 'test-sso-secret-32-chars-minimum!!';
 process.env.ROHAS_URL            = 'http://localhost:8002';

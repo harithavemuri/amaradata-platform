@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "created_at": "2026-05-26T00:17:28.453Z",
+    "updated_at": "2026-05-26T00:17:30.307Z",
+    "name": "test_role_mplvyrhph_lw",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 2,
+    "created_at": "2026-05-26T00:17:30.177Z",
+    "updated_at": "2026-05-26T00:17:30.177Z",
+    "name": "custom_role_mplvyszglh",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 3,
+    "created_at": "2026-05-26T00:17:30.186Z",
+    "updated_at": "2026-05-26T00:17:30.186Z",
+    "name": "dup_role_mplvyszpnq",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  }
+]
