@@ -31,50 +31,6 @@ app.use((req, res, next) => {
     next();
 });
 
-// ── Schema migrations — run once per cold start, block API requests until done ──
-const _migrationReady = (() => {
-    if (process.env.NONDB_MODE === 'true') return Promise.resolve();
-    const _db = require('./backend/db');
-    return (async () => {
-        const steps = [
-            `CREATE TABLE IF NOT EXISTS amr_roles (
-                id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE NOT NULL,
-                label VARCHAR(100) NOT NULL, description TEXT,
-                is_system BOOLEAN NOT NULL DEFAULT false,
-                created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                updated_at TIMESTAMP NOT NULL DEFAULT NOW())`,
-            `INSERT INTO amr_roles (name,label,description,is_system) VALUES
-                ('site_admin','Site Admin','Full platform access including user and role management',true),
-                ('admin','Admin','Tenant, invoice and enhancement management',true),
-                ('sales_manager','Sales Manager','View and manage tenant sales pipeline',true),
-                ('billing','Billing','Access to invoices and payments',true),
-                ('staff','Staff','Basic read-only platform access',true)
-             ON CONFLICT (name) DO NOTHING`,
-            `CREATE TABLE IF NOT EXISTS amr_user_groups (
-                id SERIAL PRIMARY KEY, name VARCHAR(100) NOT NULL, description TEXT,
-                role VARCHAR(50) REFERENCES amr_roles(name) ON DELETE SET NULL,
-                is_active BOOLEAN NOT NULL DEFAULT true,
-                created_by INTEGER REFERENCES amr_users(id),
-                created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                updated_at TIMESTAMP NOT NULL DEFAULT NOW())`,
-            `CREATE TABLE IF NOT EXISTS amr_user_group_members (
-                id SERIAL PRIMARY KEY,
-                group_id INTEGER NOT NULL REFERENCES amr_user_groups(id) ON DELETE CASCADE,
-                user_id  INTEGER NOT NULL REFERENCES amr_users(id)  ON DELETE CASCADE,
-                added_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                UNIQUE (group_id, user_id))`,
-            `CREATE INDEX IF NOT EXISTS idx_ugm_group ON amr_user_group_members(group_id)`,
-            `CREATE INDEX IF NOT EXISTS idx_ugm_user  ON amr_user_group_members(user_id)`,
-        ];
-        for (const sql of steps) {
-            try { await _db.query(sql); }
-            catch (e) { console.error('[migration]', e.message); }
-        }
-    })();
-})();
-
-// All API requests wait for migrations to complete before being handled
-app.use('/api', (req, res, next) => { _migrationReady.then(next, next); });
 
 app.use(express.static(path.join(__dirname, 'frontend'), { extensions: ['html'] }));
 

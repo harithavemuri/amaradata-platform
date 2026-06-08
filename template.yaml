@@ -464,6 +464,26 @@ Resources:
       ServiceToken: !GetAtt DBInitFn.Arn
       ResourceVersion: '1'
 
+  # ── DB migration — runs on every deploy via npm run deploy ───────────────────
+  # Invoked explicitly after sam deploy (not a CF Custom Resource) so it always
+  # runs regardless of whether the CF changeset touched this function.
+  DBMigrateFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Tenant}-${Env}-db-migrate'
+      Handler: backend/lambda/db-migrate.handler
+      CodeUri: .
+      Timeout: 120
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/amaradata/aurora/*'
+      Environment:
+        Variables:
+          DB_MASTER_SECRET_NAME: !Sub '/${Tenant}/aurora/master-password'
+          DB_MASTER_USER: postgres
+
   # ── SES — domain identity for amaradata.com ────────────────────────────────────
   # Verifies the entire amaradata.com domain so any @amaradata.com address can send.
   # CloudFormation generates 3 DKIM CNAME records; SesRoute53DkimRecords writes them
