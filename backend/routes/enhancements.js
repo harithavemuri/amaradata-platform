@@ -36,7 +36,7 @@ router.post('/', requireAdmin, async (req, res) => {
              notes, row.item_type, row.is_billable]
         );
         res.status(201).json({ success: true, data: rows[0] });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[enhancements]', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
 
 // PUT /api/enhancements/:id
@@ -59,7 +59,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
         );
         if (!rows[0]) return res.status(404).json({ error: 'Not found' });
         res.json({ success: true, data: rows[0] });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[enhancements]', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
 
 // POST /api/enhancements/import  — bulk upsert from RohasTestNotesSheet_Fixed.csv

@@ -1,5 +1,16 @@
 const { defineConfig, devices } = require('@playwright/test');
 
+// Set REGRESSION_DB=1 to run against the amaradata-platform_test PostgreSQL database.
+// Default (unset) runs in NonDB mode — reads playwright-testdata/ JSON files.
+//
+//   NonDB (default):  npx playwright test --config=testing/regression_testsuite/playwright.config.js
+//   DB mode (Windows): $env:REGRESSION_DB=1; npx playwright test --config=...
+//   DB mode (Unix):    REGRESSION_DB=1 npx playwright test --config=...
+//
+// DB mode requires the _test database to exist and have the schema applied:
+//   psql -U postgres -p 5435 -d amaradata-platform_test -f database/schema.sql
+const DB_MODE = process.env.REGRESSION_DB === '1';
+
 module.exports = defineConfig({
     testDir:  '.',
     timeout:  30_000,
@@ -30,7 +41,9 @@ module.exports = defineConfig({
     ],
 
     webServer: {
-        command:             'node server-entry.js',
+        command:             DB_MODE
+            ? 'node start-server-db.js'
+            : 'node server-entry.js',
         url:                 'http://localhost:9001/api/site-config',
         reuseExistingServer: false,
         timeout:             15_000,

@@ -49,7 +49,7 @@ router.post('/', requireAdmin, async (req, res) => {
             );
         }
         res.status(201).json({ success: true, data: inv });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[invoices]', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
 
 // PATCH /api/invoices/:id/status
@@ -70,7 +70,7 @@ router.patch('/:id/status', requireAdmin, async (req, res) => {
         );
         if (!rows[0]) return res.status(404).json({ error: 'Not found' });
         res.json({ success: true, data: rows[0] });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[invoices]', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
 
 module.exports = router;

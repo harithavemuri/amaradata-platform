@@ -77,21 +77,21 @@ router.post('/', async (req, res) => {
         sendAdminEmail(row);
 
         res.status(201).json({ success: true, ref_number: row.ref_number });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[contact]', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
 
 // GET /api/contact  (admin — view all submissions)
 router.get('/', requireAuth, async (req, res) => {
     try {
         if (req.db.mode === 'nondb') {
-            const rows = req.db.fileDb.list('contact_submissions');
+            const rows = req.db.fileDb.find('contact_submissions');
             return res.json({ success: true, data: rows.sort((a, b) => b.id - a.id) });
         }
         const { rows } = await db.query(
             `SELECT * FROM contact_submissions ORDER BY submitted_at DESC`
         );
         res.json({ success: true, data: rows });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[contact]', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
 
 module.exports = router;

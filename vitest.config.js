@@ -5,7 +5,7 @@ export default defineConfig({
         globalSetup:     ['src/test/global-setup.js'],
         setupFiles:      ['src/test/setup.js'],
         fileParallelism: false,
-        exclude:         ['**/node_modules/**', '**/regression_testsuite/**', '**/*.spec.js'],
+        exclude:         ['**/node_modules/**', '**/.aws-sam/**', '**/regression_testsuite/**', '**/*.spec.js'],
         coverage: {
             provider: 'v8',
             exclude: [

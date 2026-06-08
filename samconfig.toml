@@ -14,7 +14,7 @@ confirm_changeset = true
 resolve_s3        = true
 s3_prefix         = "amaradata-platform"
 region            = "ap-south-1"
-parameter_overrides = "Tenant=amaradata Env=prod CreateDbCluster=false DbName=amaradata_platform VpcId=vpc-f45ce29c VpcSubnetIds=\"subnet-565fe13e,subnet-7349a73f\" FrontendUrl=https://amaradata.com AcmCertificateArn=arn:aws:acm:us-east-1:797666412164:certificate/7c3cb474-3b95-48b6-83b7-d2f4cb5e6b3c"
+parameter_overrides = "Tenant=amaradata Env=prod CreateDbCluster=false DbName=amaradata_platform VpcId=vpc-f45ce29c VpcSubnetIds=\"subnet-565fe13e,subnet-7349a73f\" FrontendUrl=https://amaradata.com AcmCertificateArn=arn:aws:acm:us-east-1:797666412164:certificate/7c3cb474-3b95-48b6-83b7-d2f4cb5e6b3c HostedZoneId=Z0211863ZTM35C1BVWY4"
 # amaradata Aurora cluster provisioned manually outside CloudFormation; do not recreate
 
 [staging]

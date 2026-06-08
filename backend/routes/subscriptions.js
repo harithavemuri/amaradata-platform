@@ -21,7 +21,7 @@ router.post('/plans', requireAdmin, async (req, res) => {
             [name, description, sales_pct||0, rental_pct||0, hourly_rate||0, min_monthly_fee||0, currency_code||'INR']
         );
         res.status(201).json({ success: true, data: rows[0] });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[subscriptions]', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
 
 // POST /api/subscriptions  (assign plan to tenant, closes previous)
@@ -57,7 +57,7 @@ router.post('/', requireAdmin, async (req, res) => {
              custom_hourly_rate||null, custom_min_fee||null, notes]
         );
         res.status(201).json({ success: true, data: rows[0] });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[subscriptions]', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
 
 module.exports = router;

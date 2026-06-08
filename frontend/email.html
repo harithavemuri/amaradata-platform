@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+  <title>Email — AmaraData Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="/js/platform.js"></script>
+  <style>
+    .email-wrap { display:flex; height:calc(100vh - 56px); overflow:hidden; gap:0; }
+    .email-list { width:320px; min-width:220px; border-right:1px solid #e2e8f0; overflow-y:auto; background:#fff; flex-shrink:0; }
+    .email-pane { flex:1; overflow-y:auto; background:#f8fafc; padding:24px; }
+    .email-item { padding:14px 16px; border-bottom:1px solid #f1f5f9; cursor:pointer; transition:background .15s; }
+    .email-item:hover { background:#f8fafc; }
+    .email-item.active { background:#eff6ff; border-left:3px solid #3b82f6; }
+    .email-from { font-size:13px; font-weight:600; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .email-subj { font-size:12px; color:#475569; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+    .email-date { font-size:11px; color:#94a3b8; margin-top:3px; }
+    .email-clip  { font-size:11px; color:#94a3b8; float:right; margin-top:2px; }
+    .email-detail { background:#fff; border-radius:12px; border:1px solid #e2e8f0; padding:28px 32px; max-width:800px; }
+    .email-detail-hdr { border-bottom:1px solid #f1f5f9; padding-bottom:16px; margin-bottom:20px; }
+    .email-detail-subj { font-size:18px; font-weight:700; color:#1e293b; margin-bottom:10px; }
+    .email-detail-meta { font-size:13px; color:#64748b; line-height:1.8; }
+    .email-detail-meta strong { color:#334155; }
+    .email-body { font-size:14px; color:#374151; line-height:1.7; white-space:pre-wrap; word-break:break-word; }
+    .email-html  { font-size:14px; line-height:1.7; }
+    .att-list { margin-top:20px; display:flex; flex-wrap:wrap; gap:8px; }
+    .att-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:8px; font-size:12px; color:#334155; text-decoration:none; cursor:pointer; transition:background .15s; }
+    .att-pill:hover { background:#e0e7ff; }
+    .btn { padding:8px 18px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:background .15s; }
+    .btn-primary { background:#3b82f6; color:#fff; }
+    .btn-primary:hover { background:#2563eb; }
+    .btn-secondary { background:#f1f5f9; color:#334155; border:1px solid #e2e8f0; }
+    .btn-secondary:hover { background:#e2e8f0; }
+    .btn-sm { padding:5px 14px; font-size:12px; }
+    .compose-bar { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid #e2e8f0; background:#fff; }
+    .compose-bar-title { font-size:13px; font-weight:700; color:#1e293b; letter-spacing:.02em; }
+    .empty-pane { display:flex; align-items:center; justify-content:center; height:100%; color:#94a3b8; font-size:14px; }
+    /* Modal */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1000; display:flex; align-items:center; justify-content:center; }
+    .modal-box { background:#fff; border-radius:14px; padding:28px 32px; width:600px; max-width:95vw; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+    .modal-title { font-size:16px; font-weight:700; color:#1e293b; margin-bottom:20px; }
+    .form-group { margin-bottom:14px; }
+    .form-group label { display:block; font-size:12px; font-weight:600; color:#475569; margin-bottom:5px; }
+    .form-control { width:100%; padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:13px; color:#1e293b; font-family:Inter,sans-serif; box-sizing:border-box; }
+    .form-control:focus { outline:none; border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.15); }
+    textarea.form-control { min-height:160px; resize:vertical; }
+    .att-added { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+    .att-tag { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; background:#e0f2fe; border-radius:20px; font-size:11px; color:#0369a1; }
+    .att-tag button { background:none; border:none; cursor:pointer; color:#0369a1; font-size:13px; line-height:1; padding:0; }
+    .modal-footer { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
+    .loading { color:#94a3b8; font-size:13px; padding:20px; text-align:center; }
+  </style>
+</head>
+<body>
+  <script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    const root = window.__amrd.renderSidebar('Email');
+
+    let _emails   = [];
+    let _current  = null;
+    let _composeMode = null; // 'new' | 'reply'
+
+    // ── DOM ─────────────────────────────────────────────────────────
+    const listEl  = document.createElement('div');
+    listEl.className = 'email-list';
+    listEl.innerHTML = `
+      <div class="compose-bar">
+        <span class="compose-bar-title">Inbox</span>
+        <button class="btn btn-primary btn-sm" id="btn-compose">+ Compose</button>
+      </div>
+      <div id="email-items"><div class="loading">Loading…</div></div>`;
+
+    const paneEl = document.createElement('div');
+    paneEl.className = 'email-pane';
+    paneEl.innerHTML = '<div class="empty-pane">Select an email to read</div>';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'email-wrap';
+    wrap.appendChild(listEl);
+    wrap.appendChild(paneEl);
+    root.appendChild(wrap);
+
+    // ── Inbox load ──────────────────────────────────────────────────
+    async function loadInbox() {
+      const itemsEl = document.getElementById('email-items');
+      itemsEl.innerHTML = '<div class="loading">Loading…</div>';
+      try {
+        const res = await window.__amrd.apiFetch('/api/email/inbox');
+        _emails = res.data || [];
+        renderList();
+      } catch (e) {
+        itemsEl.innerHTML = `<div class="loading" style="color:#dc2626">${e.message}</div>`;
+      }
+    }
+
+    function renderList() {
+      const itemsEl = document.getElementById('email-items');
+      if (!_emails.length) { itemsEl.innerHTML = '<div class="loading">No emails</div>'; return; }
+      itemsEl.innerHTML = _emails.map(e => `
+        <div class="email-item${_current?.id === e.id ? ' active' : ''}" data-id="${e.id}">
+          ${e.hasAttachments ? '<span class="email-clip">📎</span>' : ''}
+          <div class="email-from">${esc(senderName(e.from))}</div>
+          <div class="email-subj">${esc(e.subject)}</div>
+          <div class="email-date">${fmtDate(e.date)}</div>
+        </div>`).join('');
+      itemsEl.querySelectorAll('.email-item').forEach(el =>
+        el.addEventListener('click', () => openEmail(el.dataset.id))
+      );
+    }
+
+    async function openEmail(id) {
+      _current = _emails.find(e => e.id === id);
+      renderList();
+      paneEl.innerHTML = '<div class="loading">Loading…</div>';
+      try {
+        const res = await window.__amrd.apiFetch(`/api/email/${encodeURIComponent(id)}`);
+        _current = res.data;
+        renderPane(_current);
+      } catch (e) {
+        paneEl.innerHTML = `<div class="loading" style="color:#dc2626">${e.message}</div>`;
+      }
+    }
+
+    function renderPane(email) {
+      const atts = (email.attachments || []).map((a, i) => `
+        <a class="att-pill" href="/api/email/${encodeURIComponent(email.id)}/attachment/${i}" download="${esc(a.filename)}">
+          📎 ${esc(a.filename)} <span style="color:#94a3b8">(${fmtSize(a.size)})</span>
+        </a>`).join('');
+
+      const body = email.html
+        ? `<div class="email-html">${email.html}</div>`
+        : `<div class="email-body">${esc(email.text)}</div>`;
+
+      paneEl.innerHTML = `
+        <div class="email-detail">
+          <div class="email-detail-hdr">
+            <div class="email-detail-subj">${esc(email.subject)}</div>
+            <div class="email-detail-meta">
+              <strong>From:</strong> ${esc(email.from)}<br>
+              <strong>To:</strong> ${esc(email.to)}
+              ${email.cc ? `<br><strong>CC:</strong> ${esc(email.cc)}` : ''}
+              <br><strong>Date:</strong> ${fmtDateFull(email.date)}
+            </div>
+          </div>
+          ${body}
+          ${atts ? `<div class="att-list">${atts}</div>` : ''}
+          <div style="margin-top:24px">
+            <button class="btn btn-secondary" id="btn-reply">↩ Reply</button>
+          </div>
+        </div>`;
+
+      document.getElementById('btn-reply').addEventListener('click', () => openCompose('reply', email));
+    }
+
+    // ── Compose / Reply modal ────────────────────────────────────────
+    document.getElementById('btn-compose').addEventListener('click', () => openCompose('new'));
+
+    function openCompose(mode, original) {
+      _composeMode = mode;
+      const isReply = mode === 'reply';
+      const subject = isReply
+        ? ((original.subject || '').startsWith('Re:') ? original.subject : `Re: ${original.subject}`)
+        : '';
+      const toVal = isReply ? (original.replyTo || original.from || '') : '';
+
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.id = 'compose-modal';
+      overlay.innerHTML = `
+        <div class="modal-box">
+          <div class="modal-title">${isReply ? 'Reply' : 'New Email'}</div>
+          ${!isReply ? `
+          <div class="form-group">
+            <label>To</label>
+            <input id="cm-to" class="form-control" type="email" placeholder="recipient@example.com" value="${esc(toVal)}">
+          </div>` : `<input type="hidden" id="cm-to" value="${esc(toVal)}">`}
+          <div class="form-group">
+            <label>Subject</label>
+            <input id="cm-subject" class="form-control" type="text" value="${esc(subject)}">
+          </div>
+          <div class="form-group">
+            <label>Message</label>
+            <textarea id="cm-body" class="form-control"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Attachments</label>
+            <input type="file" id="cm-file" multiple style="font-size:12px">
+            <div class="att-added" id="cm-atts"></div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" id="cm-cancel">Cancel</button>
+            <button class="btn btn-primary" id="cm-send">Send</button>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+
+      const _atts = [];
+      document.getElementById('cm-file').addEventListener('change', async (e) => {
+        for (const file of e.target.files) {
+          const content = await readFileBase64(file);
+          _atts.push({ filename: file.name, content, contentType: file.type || 'application/octet-stream' });
+        }
+        renderAttTags();
+        e.target.value = '';
+      });
+
+      function renderAttTags() {
+        document.getElementById('cm-atts').innerHTML = _atts.map((a, i) =>
+          `<span class="att-tag">${esc(a.filename)} <button data-i="${i}">×</button></span>`
+        ).join('');
+        document.getElementById('cm-atts').querySelectorAll('button').forEach(btn =>
+          btn.addEventListener('click', () => { _atts.splice(+btn.dataset.i, 1); renderAttTags(); })
+        );
+      }
+
+      document.getElementById('cm-cancel').addEventListener('click', () => overlay.remove());
+      overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+      document.getElementById('cm-send').addEventListener('click', async () => {
+        const sendBtn = document.getElementById('cm-send');
+        sendBtn.disabled = true;
+        sendBtn.textContent = 'Sending…';
+        try {
+          const body = {
+            to:          document.getElementById('cm-to').value.trim(),
+            subject:     document.getElementById('cm-subject').value.trim(),
+            text:        document.getElementById('cm-body').value,
+            attachments: _atts,
+          };
+          if (isReply) {
+            await window.__amrd.apiFetch(`/api/email/${encodeURIComponent(original.id)}/reply`, {
+              method: 'POST', body: JSON.stringify({ text: body.text, attachments: _atts }),
+            });
+          } else {
+            await window.__amrd.apiFetch('/api/email/send', { method: 'POST', body: JSON.stringify(body) });
+          }
+          overlay.remove();
+        } catch (e) {
+          sendBtn.disabled = false;
+          sendBtn.textContent = 'Send';
+          alert('Failed to send: ' + e.message);
+        }
+      });
+    }
+
+    // ── Utils ────────────────────────────────────────────────────────
+    function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function senderName(from) {
+      const m = (from||'').match(/^([^<]+)</);
+      return m ? m[1].trim() : from || '';
+    }
+    function fmtDate(d) {
+      if (!d) return '';
+      const dt = new Date(d);
+      const now = new Date();
+      if (dt.toDateString() === now.toDateString()) return dt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      return dt.toLocaleDateString([], {month:'short',day:'numeric'});
+    }
+    function fmtDateFull(d) { return d ? new Date(d).toLocaleString() : ''; }
+    function fmtSize(b) {
+      if (!b) return '?';
+      if (b < 1024) return b + ' B';
+      if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+      return (b/1048576).toFixed(1) + ' MB';
+    }
+    function readFileBase64(file) {
+      return new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = e => resolve(e.target.result.split(',')[1]);
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+    }
+
+    await loadInbox();
+  });
+  </script>
+</body>
+</html>

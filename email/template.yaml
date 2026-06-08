@@ -1,0 +1,149 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AmaraData email — SES inbound → Lambda → Gmail for rajas@amaradata.com
+
+# After first deploy, activate the receipt rule set (one-time):
+#   aws ses set-active-receipt-rule-set --rule-set-name amrd-inbound --region us-east-1
+
+Parameters:
+  ForwardTo:
+    Type: String
+    Default: rajvemuri25@gmail.com
+    Description: Gmail address to forward inbound emails to.
+
+  FromEmail:
+    Type: String
+    Default: rajas@amaradata.com
+    Description: Verified SES sender address used when forwarding.
+
+  HostedZoneId:
+    Type: AWS::Route53::HostedZone::Id
+    Description: Route 53 hosted zone ID for amaradata.com.
+
+Resources:
+
+  # ── SES domain identity for us-east-1 ──────────────────────────────────────────
+  # Needed so the forwarder Lambda can send via SES from this region.
+  SesDomainIdentity:
+    Type: AWS::SES::EmailIdentity
+    Properties:
+      EmailIdentity: amaradata.com
+      DkimAttributes:
+        SigningEnabled: true
+
+  # DKIM CNAME records written to Route 53 automatically
+  DkimRecords:
+    Type: AWS::Route53::RecordSetGroup
+    DependsOn: SesDomainIdentity
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      RecordSets:
+        - Name: !Sub '${SesDomainIdentity.DkimDNSTokenName1}'
+          Type: CNAME
+          TTL: '1800'
+          ResourceRecords:
+            - !Sub '${SesDomainIdentity.DkimDNSTokenValue1}'
+        - Name: !Sub '${SesDomainIdentity.DkimDNSTokenName2}'
+          Type: CNAME
+          TTL: '1800'
+          ResourceRecords:
+            - !Sub '${SesDomainIdentity.DkimDNSTokenValue2}'
+        - Name: !Sub '${SesDomainIdentity.DkimDNSTokenName3}'
+          Type: CNAME
+          TTL: '1800'
+          ResourceRecords:
+            - !Sub '${SesDomainIdentity.DkimDNSTokenValue3}'
+
+  # ── S3 bucket — stores incoming raw emails (30-day auto-expiry) ─────────────────
+  EmailBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'amrd-email-inbound-${AWS::AccountId}'
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-after-30-days
+            Status: Enabled
+            ExpirationInDays: 30
+
+  EmailBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref EmailBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ses.amazonaws.com
+            Action: s3:PutObject
+            Resource: !Sub '${EmailBucket.Arn}/*'
+            Condition:
+              StringEquals:
+                aws:Referer: !Ref AWS::AccountId
+
+  # ── Lambda forwarder ────────────────────────────────────────────────────────────
+  ForwarderFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: amrd-email-forwarder
+      Handler: forwarder.handler
+      Runtime: nodejs22.x
+      Architectures: [arm64]
+      CodeUri: .
+      MemorySize: 256
+      Timeout: 30
+      Environment:
+        Variables:
+          FORWARD_TO: !Ref ForwardTo
+          FROM_EMAIL: !Ref FromEmail
+          BUCKET:     !Ref EmailBucket
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref EmailBucket
+        - Statement:
+            - Effect: Allow
+              Action: ses:SendRawEmail
+              Resource:
+                - !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/amaradata.com'
+                - !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/rajvemuri25@gmail.com'
+
+  ForwarderPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt ForwarderFn.Arn
+      Action: lambda:InvokeFunction
+      Principal: ses.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+
+  # ── SES receipt rules ───────────────────────────────────────────────────────────
+  ReceiptRuleSet:
+    Type: AWS::SES::ReceiptRuleSet
+    Properties:
+      RuleSetName: amrd-inbound
+
+  ReceiptRule:
+    Type: AWS::SES::ReceiptRule
+    DependsOn: [ForwarderPermission, EmailBucketPolicy]
+    Properties:
+      RuleSetName: !Ref ReceiptRuleSet
+      Rule:
+        Name: forward-rajas
+        Enabled: true
+        ScanEnabled: true
+        Recipients:
+          - rajas@amaradata.com
+        Actions:
+          - S3Action:
+              BucketName: !Ref EmailBucket
+              ObjectKeyPrefix: emails/
+          - LambdaAction:
+              FunctionArn: !GetAtt ForwarderFn.Arn
+              InvocationType: Event
+
+Outputs:
+  ForwarderArn:
+    Value: !GetAtt ForwarderFn.Arn
+  EmailBucket:
+    Value: !Ref EmailBucket
+  ActivateRuleSet:
+    Description: Run once after deploy to activate inbound email
+    Value: aws ses set-active-receipt-rule-set --rule-set-name amrd-inbound --region us-east-1

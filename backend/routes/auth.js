@@ -34,7 +34,8 @@ router.post('/login', async (req, res) => {
         const safe = { id: user.id, email: user.email, name: user.name, role: user.role };
         res.json({ success: true, token: sign(safe), refresh_token: signRefresh(safe), user: safe });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        console.error('[auth]', e.message);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
@@ -76,7 +77,8 @@ router.post('/create-user', async (req, res) => {
         );
         res.status(201).json({ success: true, data: rows[0] });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        console.error('[auth]', e.message);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
@@ -103,7 +105,8 @@ router.post('/google/login', (req, res) => {
             },
         });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        console.error('[auth]', e.message);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
@@ -198,8 +201,8 @@ router.post('/google/exchange', async (req, res) => {
             },
         });
     } catch (e) {
-        console.error('Google exchange error:', e.message);
-        res.status(500).json({ error: e.message });
+        console.error('[auth] google/exchange:', e.message);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 

@@ -12,3 +12,6 @@
 - [NonDB No AWS](feedback-nondb-no-aws.md) — NonDB mode must have ZERO AWS RDS/DynamoDB (no database AWS services); other AWS (SES, S3, SSM) are allowed; both sites
 - [Auth Error UX](feedback-auth-error-ux.md) — 401/403 must show access-denied popup with 10-sec countdown then redirect to login (both sites)
 - [Issue Fixes → Enhancements](project-issue-fixes-table.md) — issue_fixes retired; CSV import goes into enhancements table (source='csv'); bugs=not billable, enhancements=billable
+- [DB Queries Backend Only](feedback-db-queries-backend-only.md) — DB queries must NEVER run from frontend JS; all DB access is in backend/routes/*.js only
+- [No DB Errors to Frontend](feedback-no-db-errors-to-frontend.md) — Raw DB/internal errors must NEVER reach the frontend; log to CloudWatch, return generic 500 message
+- [DB Queries Backend Only](feedback-db-queries-backend-only.md) — DB queries must NEVER run from frontend JS; all DB access is in backend/routes/*.js only

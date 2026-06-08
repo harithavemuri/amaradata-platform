@@ -253,8 +253,6 @@ CREATE INDEX IF NOT EXISTS idx_payments_invoice      ON payments(invoice_id);
 CREATE INDEX IF NOT EXISTS idx_tsub_tenant           ON tenant_subscriptions(tenant_id);
 -- Prevent a tenant from having two active subscriptions simultaneously
 CREATE UNIQUE INDEX IF NOT EXISTS idx_tsub_one_active ON tenant_subscriptions(tenant_id) WHERE effective_to IS NULL;
-CREATE INDEX IF NOT EXISTS idx_issue_fixes_tenant   ON issue_fixes(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_issue_fixes_billable ON issue_fixes(is_billable) WHERE is_billable = true;
 
 -- Seed: default plan
 INSERT INTO subscription_plans (name, description, sales_pct, rental_pct, hourly_rate, min_monthly_fee)

@@ -36,7 +36,7 @@ router.post('/', requireAuth, async (req, res) => {
              sales_count||0, sales_value||0, rental_units||0, rental_income||0, active_properties||0]
         );
         res.status(201).json({ success: true, data: rows[0] });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[metrics]', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
 
 module.exports = router;

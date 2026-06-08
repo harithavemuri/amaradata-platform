@@ -29,18 +29,28 @@ router.get('/users', async (req, res) => {
             });
             return res.json({ success: true, data: enriched });
         }
-        const { rows } = await db.query(`
-            SELECT u.id, u.email, u.name, u.role, u.google_id, u.picture,
-                   u.is_active, u.last_login_at, u.created_at, u.updated_at,
-                   COALESCE(json_agg(json_build_object('id',g.id,'name',g.name,'role',g.role))
-                     FILTER (WHERE g.id IS NOT NULL), '[]') AS groups
-            FROM amr_users u
-            LEFT JOIN amr_user_group_members m ON m.user_id = u.id
-            LEFT JOIN amr_user_groups g ON g.id = m.group_id
-            GROUP BY u.id ORDER BY u.created_at DESC
-        `);
+        let rows;
+        try {
+            ({ rows } = await db.query(`
+                SELECT u.id, u.email, u.name, u.role, u.google_id, u.picture,
+                       u.is_active, u.last_login_at, u.created_at, u.updated_at,
+                       COALESCE(json_agg(json_build_object('id',g.id,'name',g.name,'role',g.role))
+                         FILTER (WHERE g.id IS NOT NULL), '[]') AS groups
+                FROM amr_users u
+                LEFT JOIN amr_user_group_members m ON m.user_id = u.id
+                LEFT JOIN amr_user_groups g ON g.id = m.group_id
+                GROUP BY u.id ORDER BY u.created_at DESC
+            `));
+        } catch {
+            ({ rows } = await db.query(`
+                SELECT id, email, name, role, google_id, picture,
+                       is_active, last_login_at, created_at, updated_at,
+                       '[]'::json AS groups
+                FROM amr_users ORDER BY created_at DESC
+            `));
+        }
         res.json({ success: true, data: rows });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[admin] users:', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
 
 // POST /api/admin/users
@@ -64,7 +74,8 @@ router.post('/users', async (req, res) => {
         res.status(201).json({ success: true, data: rows[0] });
     } catch (e) {
         if (e.code === '23505') return res.status(409).json({ error: 'Email already exists' });
-        res.status(500).json({ error: e.message });
+        console.error('[admin] create-user:', e.message);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
@@ -95,7 +106,7 @@ router.put('/users/:id', async (req, res) => {
         );
         if (!rows[0]) return res.status(404).json({ error: 'User not found' });
         res.json({ success: true, data: rows[0] });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[admin]', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
 
 // DELETE /api/admin/users/:id  (soft-delete — sets is_active=false)
@@ -111,7 +122,7 @@ router.delete('/users/:id', async (req, res) => {
         );
         if (!rowCount) return res.status(404).json({ error: 'User not found' });
         res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[admin]', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
 
 // ── User Groups ───────────────────────────────────────────────────────────────
@@ -147,7 +158,7 @@ router.get('/user-groups', async (req, res) => {
             GROUP BY g.id ORDER BY g.created_at DESC
         `);
         res.json({ success: true, data: rows });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[admin]', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
 
 // POST /api/admin/user-groups
@@ -166,7 +177,7 @@ router.post('/user-groups', async (req, res) => {
             [name, description || '', role || null, req.staff.id]
         );
         res.status(201).json({ success: true, data: rows[0] });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[admin]', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
 
 // PUT /api/admin/user-groups/:id
@@ -194,7 +205,7 @@ router.put('/user-groups/:id', async (req, res) => {
         );
         if (!rows[0]) return res.status(404).json({ error: 'Group not found' });
         res.json({ success: true, data: rows[0] });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[admin]', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
 
 // DELETE /api/admin/user-groups/:id
@@ -210,7 +221,7 @@ router.delete('/user-groups/:id', async (req, res) => {
         const { rowCount } = await db.query('DELETE FROM amr_user_groups WHERE id = $1', [req.params.id]);
         if (!rowCount) return res.status(404).json({ error: 'Group not found' });
         res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[admin]', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
 
 // POST /api/admin/user-groups/:id/members  { user_id }
@@ -229,7 +240,7 @@ router.post('/user-groups/:id/members', async (req, res) => {
             [req.params.id, user_id]
         );
         res.status(201).json({ success: true, data: rows[0] || null });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[admin]', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
 
 // DELETE /api/admin/user-groups/:id/members/:userId
@@ -250,7 +261,7 @@ router.delete('/user-groups/:id/members/:userId', async (req, res) => {
         );
         if (!rowCount) return res.status(404).json({ error: 'Member not found' });
         res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[admin]', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
 
 // ── Roles ─────────────────────────────────────────────────────────────────────
@@ -279,22 +290,31 @@ router.get('/roles', async (req, res) => {
             });
             return res.json({ success: true, data: enriched });
         }
-        const { rows } = await db.query(`
-            SELECT r.*,
-                   COUNT(DISTINCT u.id)::int AS user_count,
-                   COALESCE(json_agg(DISTINCT json_build_object('id',u.id,'name',u.name,'email',u.email,'is_active',u.is_active))
-                     FILTER (WHERE u.id IS NOT NULL), '[]') AS users,
-                   COALESCE((
-                     SELECT json_agg(json_build_object('id',g.id,'name',g.name,'member_count',
-                       (SELECT COUNT(*)::int FROM amr_user_group_members m WHERE m.group_id = g.id)))
-                     FROM amr_user_groups g WHERE g.role = r.name
-                   ), '[]') AS groups
-            FROM amr_roles r
-            LEFT JOIN amr_users u ON u.role = r.name
-            GROUP BY r.id ORDER BY r.created_at ASC
-        `);
+        let rows;
+        try {
+            ({ rows } = await db.query(`
+                SELECT r.*,
+                       COUNT(DISTINCT u.id)::int AS user_count,
+                       COALESCE(json_agg(DISTINCT json_build_object('id',u.id,'name',u.name,'email',u.email,'is_active',u.is_active))
+                         FILTER (WHERE u.id IS NOT NULL), '[]') AS users,
+                       COALESCE((
+                         SELECT json_agg(json_build_object('id',g.id,'name',g.name,'member_count',
+                           (SELECT COUNT(*)::int FROM amr_user_group_members m WHERE m.group_id = g.id)))
+                         FROM amr_user_groups g WHERE g.role = r.name
+                       ), '[]') AS groups
+                FROM amr_roles r
+                LEFT JOIN amr_users u ON u.role = r.name
+                GROUP BY r.id ORDER BY r.created_at ASC
+            `));
+        } catch {
+            ({ rows } = await db.query(`
+                SELECT id, name, label, description, is_system, created_at, updated_at,
+                       0 AS user_count, '[]'::json AS users, '[]'::json AS groups
+                FROM amr_roles ORDER BY created_at ASC
+            `));
+        }
         res.json({ success: true, data: rows });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[admin] roles:', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
 
 // POST /api/admin/roles
@@ -340,7 +360,7 @@ router.put('/roles/:id', async (req, res) => {
         );
         if (!rows[0]) return res.status(404).json({ error: 'Role not found' });
         res.json({ success: true, data: rows[0] });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[admin]', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
 
 // DELETE /api/admin/roles/:id  (system roles cannot be deleted)
@@ -364,7 +384,7 @@ router.delete('/roles/:id', async (req, res) => {
         if (cnt > 0) return res.status(409).json({ error: `${cnt} user(s) have this role. Reassign them first.` });
         await db.query('DELETE FROM amr_roles WHERE id = $1', [req.params.id]);
         res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { console.error('[admin]', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
 
 // ── Sync ──────────────────────────────────────────────────────────────────────

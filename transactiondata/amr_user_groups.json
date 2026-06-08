@@ -18,5 +18,755 @@
     "role": "sales_manager",
     "is_active": true,
     "created_by": 1
+  },
+  {
+    "id": 3,
+    "created_at": "2026-05-30T17:42:25.158Z",
+    "updated_at": "2026-05-30T17:42:25.281Z",
+    "name": "Renamed Group",
+    "description": "For tests",
+    "role": null,
+    "is_active": false,
+    "created_by": 902
+  },
+  {
+    "id": 4,
+    "created_at": "2026-05-30T17:42:25.272Z",
+    "updated_at": "2026-05-30T17:42:25.272Z",
+    "name": "Group mpsn1zhzvg0a",
+    "description": "Test group",
+    "role": "billing",
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 5,
+    "created_at": "2026-05-30T17:42:26.315Z",
+    "updated_at": "2026-05-30T17:42:26.433Z",
+    "name": "Renamed Group",
+    "description": "For tests",
+    "role": null,
+    "is_active": false,
+    "created_by": 902
+  },
+  {
+    "id": 6,
+    "created_at": "2026-05-30T17:42:26.421Z",
+    "updated_at": "2026-05-30T17:42:26.421Z",
+    "name": "Group mpsn20dwhvbm",
+    "description": "Test group",
+    "role": "billing",
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 7,
+    "created_at": "2026-05-30T17:42:27.124Z",
+    "updated_at": "2026-05-30T17:42:27.124Z",
+    "name": "Group-mpsn20xceejf",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 8,
+    "created_at": "2026-05-30T17:42:27.589Z",
+    "updated_at": "2026-05-30T17:42:27.589Z",
+    "name": "NewGroup-mpsn21abp7v1",
+    "description": "Desc",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 9,
+    "created_at": "2026-05-30T17:42:28.258Z",
+    "updated_at": "2026-05-30T17:42:28.258Z",
+    "name": "Group-mpsn21ssti0w",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 10,
+    "created_at": "2026-05-30T17:42:28.719Z",
+    "updated_at": "2026-05-30T17:42:28.719Z",
+    "name": "NewGroup-mpsn225qeb8z",
+    "description": "Desc",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 11,
+    "created_at": "2026-05-30T17:42:31.981Z",
+    "updated_at": "2026-05-30T17:42:31.981Z",
+    "name": "Sales Team mpsn24oclo1v",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 12,
+    "created_at": "2026-05-30T17:42:33.018Z",
+    "updated_at": "2026-05-30T17:42:33.018Z",
+    "name": "Sales Team mpsn25h3r89t",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 13,
+    "created_at": "2026-05-30T17:42:43.206Z",
+    "updated_at": "2026-05-30T17:42:43.206Z",
+    "name": "Group-mpsn2dc1mupl",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 14,
+    "created_at": "2026-05-30T17:42:43.909Z",
+    "updated_at": "2026-05-30T17:42:43.909Z",
+    "name": "NewGroup-mpsn2dvnv9xd",
+    "description": "Desc",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 15,
+    "created_at": "2026-05-30T17:42:45.166Z",
+    "updated_at": "2026-05-30T17:42:45.166Z",
+    "name": "Sales Team mpsn2euknprs",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 16,
+    "created_at": "2026-05-30T17:42:45.979Z",
+    "updated_at": "2026-05-30T17:42:46.140Z",
+    "name": "Renamed Group",
+    "description": "For tests",
+    "role": null,
+    "is_active": false,
+    "created_by": 902
+  },
+  {
+    "id": 17,
+    "created_at": "2026-05-30T17:42:46.130Z",
+    "updated_at": "2026-05-30T17:42:46.130Z",
+    "name": "Group mpsn2flcwhvi",
+    "description": "Test group",
+    "role": "billing",
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 18,
+    "created_at": "2026-06-01T01:45:04.516Z",
+    "updated_at": "2026-06-01T01:45:04.516Z",
+    "name": "Group-mpujqj9dlmuo",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 19,
+    "created_at": "2026-06-01T01:45:05.141Z",
+    "updated_at": "2026-06-01T01:45:05.141Z",
+    "name": "NewGroup-mpujqjqqoyml",
+    "description": "Desc",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 20,
+    "created_at": "2026-06-01T01:45:05.919Z",
+    "updated_at": "2026-06-01T01:45:05.919Z",
+    "name": "Group-mpujqkca6bmk",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 21,
+    "created_at": "2026-06-01T01:45:06.457Z",
+    "updated_at": "2026-06-01T01:45:06.457Z",
+    "name": "NewGroup-mpujqkrbehqo",
+    "description": "Desc",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 22,
+    "created_at": "2026-06-01T01:45:07.131Z",
+    "updated_at": "2026-06-01T01:45:07.131Z",
+    "name": "Group-mpujqla00ei3",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 23,
+    "created_at": "2026-06-01T01:45:07.613Z",
+    "updated_at": "2026-06-01T01:45:07.613Z",
+    "name": "NewGroup-mpujqlngy3dt",
+    "description": "Desc",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 24,
+    "created_at": "2026-06-01T01:45:08.497Z",
+    "updated_at": "2026-06-01T01:45:08.497Z",
+    "name": "Sales Team mpujqmbwufyo",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 25,
+    "created_at": "2026-06-01T01:45:09.381Z",
+    "updated_at": "2026-06-01T01:45:09.381Z",
+    "name": "Sales Team mpujqn0jjwt6",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 26,
+    "created_at": "2026-06-01T01:45:10.320Z",
+    "updated_at": "2026-06-01T01:45:10.320Z",
+    "name": "Sales Team mpujqnqn2ud7",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 27,
+    "created_at": "2026-06-01T01:45:10.943Z",
+    "updated_at": "2026-06-01T01:45:11.062Z",
+    "name": "Renamed Group",
+    "description": "For tests",
+    "role": null,
+    "is_active": false,
+    "created_by": 902
+  },
+  {
+    "id": 28,
+    "created_at": "2026-06-01T01:45:11.055Z",
+    "updated_at": "2026-06-01T01:45:11.055Z",
+    "name": "Group mpujqob19b6u",
+    "description": "Test group",
+    "role": "billing",
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 29,
+    "created_at": "2026-06-01T01:45:14.084Z",
+    "updated_at": "2026-06-01T01:45:14.215Z",
+    "name": "Renamed Group",
+    "description": "For tests",
+    "role": null,
+    "is_active": false,
+    "created_by": 902
+  },
+  {
+    "id": 30,
+    "created_at": "2026-06-01T01:45:14.205Z",
+    "updated_at": "2026-06-01T01:45:14.205Z",
+    "name": "Group mpujqqqktsdj",
+    "description": "Test group",
+    "role": "billing",
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 31,
+    "created_at": "2026-06-01T01:45:18.168Z",
+    "updated_at": "2026-06-01T01:45:18.290Z",
+    "name": "Renamed Group",
+    "description": "For tests",
+    "role": null,
+    "is_active": false,
+    "created_by": 902
+  },
+  {
+    "id": 32,
+    "created_at": "2026-06-01T01:45:18.282Z",
+    "updated_at": "2026-06-01T01:45:18.282Z",
+    "name": "Group mpujqtvsq0l2",
+    "description": "Test group",
+    "role": "billing",
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 33,
+    "created_at": "2026-06-01T01:48:00.067Z",
+    "updated_at": "2026-06-01T01:48:00.067Z",
+    "name": "Group-mpujuapmozxe",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 34,
+    "created_at": "2026-06-01T01:48:01.265Z",
+    "updated_at": "2026-06-01T01:48:01.265Z",
+    "name": "NewGroup-mpujubn3ytxp",
+    "description": "Desc",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 35,
+    "created_at": "2026-06-01T01:48:09.234Z",
+    "updated_at": "2026-06-01T01:48:09.234Z",
+    "name": "Sales Team mpujuhsez8td",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 36,
+    "created_at": "2026-06-01T01:48:10.968Z",
+    "updated_at": "2026-06-01T01:48:11.127Z",
+    "name": "Renamed Group",
+    "description": "For tests",
+    "role": null,
+    "is_active": false,
+    "created_by": 902
+  },
+  {
+    "id": 37,
+    "created_at": "2026-06-01T01:48:11.116Z",
+    "updated_at": "2026-06-01T01:48:11.116Z",
+    "name": "Group mpujuj8ppvgz",
+    "description": "Test group",
+    "role": "billing",
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 38,
+    "created_at": "2026-06-02T01:06:17.392Z",
+    "updated_at": "2026-06-02T01:06:17.392Z",
+    "name": "Group-mpvxsib0hpze",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 39,
+    "created_at": "2026-06-02T01:06:17.800Z",
+    "updated_at": "2026-06-02T01:06:17.800Z",
+    "name": "NewGroup-mpvxsime7jrw",
+    "description": "Desc",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 40,
+    "created_at": "2026-06-02T01:06:20.541Z",
+    "updated_at": "2026-06-02T01:06:20.541Z",
+    "name": "Sales Team mpvxskqjo0ye",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 41,
+    "created_at": "2026-06-02T01:06:21.043Z",
+    "updated_at": "2026-06-02T01:06:21.148Z",
+    "name": "Renamed Group",
+    "description": "For tests",
+    "role": null,
+    "is_active": false,
+    "created_by": 902
+  },
+  {
+    "id": 42,
+    "created_at": "2026-06-02T01:06:21.139Z",
+    "updated_at": "2026-06-02T01:06:21.139Z",
+    "name": "Group mpvxsl76qtlb",
+    "description": "Test group",
+    "role": "billing",
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 43,
+    "created_at": "2026-06-02T01:15:27.167Z",
+    "updated_at": "2026-06-02T01:15:27.167Z",
+    "name": "Group-mpvy4aijgmy2",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 44,
+    "created_at": "2026-06-02T01:15:27.773Z",
+    "updated_at": "2026-06-02T01:15:27.773Z",
+    "name": "NewGroup-mpvy4azfbdbw",
+    "description": "Desc",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 45,
+    "created_at": "2026-06-02T01:15:29.778Z",
+    "updated_at": "2026-06-02T01:15:29.778Z",
+    "name": "Sales Team mpvy4cj3njbp",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 46,
+    "created_at": "2026-06-02T01:15:30.467Z",
+    "updated_at": "2026-06-02T01:15:30.588Z",
+    "name": "Renamed Group",
+    "description": "For tests",
+    "role": null,
+    "is_active": false,
+    "created_by": 902
+  },
+  {
+    "id": 47,
+    "created_at": "2026-06-02T01:15:30.580Z",
+    "updated_at": "2026-06-02T01:15:30.580Z",
+    "name": "Group mpvy4d5e0qp1",
+    "description": "Test group",
+    "role": "billing",
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 48,
+    "created_at": "2026-06-02T01:26:52.105Z",
+    "updated_at": "2026-06-02T01:26:52.105Z",
+    "name": "Group-mpvyiz0kcxq4",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 49,
+    "created_at": "2026-06-02T01:26:52.527Z",
+    "updated_at": "2026-06-02T01:26:52.527Z",
+    "name": "NewGroup-mpvyizce6xdl",
+    "description": "Desc",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 50,
+    "created_at": "2026-06-02T01:26:53.344Z",
+    "updated_at": "2026-06-02T01:26:53.344Z",
+    "name": "Sales Team mpvyizz2bttf",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 51,
+    "created_at": "2026-06-02T01:26:54.787Z",
+    "updated_at": "2026-06-02T01:26:54.919Z",
+    "name": "Renamed Group",
+    "description": "For tests",
+    "role": null,
+    "is_active": false,
+    "created_by": 902
+  },
+  {
+    "id": 52,
+    "created_at": "2026-06-02T01:26:54.910Z",
+    "updated_at": "2026-06-02T01:26:54.910Z",
+    "name": "Group mpvyj16l533h",
+    "description": "Test group",
+    "role": "billing",
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 53,
+    "created_at": "2026-06-06T04:17:53.808Z",
+    "updated_at": "2026-06-06T04:17:53.808Z",
+    "name": "Group-mq1uebnq0bvx",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 54,
+    "created_at": "2026-06-06T04:17:54.503Z",
+    "updated_at": "2026-06-06T04:17:54.503Z",
+    "name": "NewGroup-mq1uec79xm1i",
+    "description": "Desc",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 55,
+    "created_at": "2026-06-06T04:17:56.469Z",
+    "updated_at": "2026-06-06T04:17:56.469Z",
+    "name": "Sales Team mq1uedptk2h8",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 56,
+    "created_at": "2026-06-06T04:18:00.254Z",
+    "updated_at": "2026-06-06T04:18:00.495Z",
+    "name": "Renamed Group",
+    "description": "For tests",
+    "role": null,
+    "is_active": false,
+    "created_by": 902
+  },
+  {
+    "id": 57,
+    "created_at": "2026-06-06T04:18:00.460Z",
+    "updated_at": "2026-06-06T04:18:00.460Z",
+    "name": "Group mq1uegsp752z",
+    "description": "Test group",
+    "role": "billing",
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 58,
+    "created_at": "2026-06-07T02:22:31.315Z",
+    "updated_at": "2026-06-07T02:22:31.315Z",
+    "name": "Group-mq35pswfjl0f",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 59,
+    "created_at": "2026-06-07T02:22:31.703Z",
+    "updated_at": "2026-06-07T02:22:31.703Z",
+    "name": "NewGroup-mq35pt79gix8",
+    "description": "Desc",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 60,
+    "created_at": "2026-06-07T02:22:32.413Z",
+    "updated_at": "2026-06-07T02:22:32.520Z",
+    "name": "Renamed Group",
+    "description": "For tests",
+    "role": null,
+    "is_active": false,
+    "created_by": 902
+  },
+  {
+    "id": 61,
+    "created_at": "2026-06-07T02:22:32.514Z",
+    "updated_at": "2026-06-07T02:22:32.514Z",
+    "name": "Group mq35ptttn5jd",
+    "description": "Test group",
+    "role": "billing",
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 62,
+    "created_at": "2026-06-07T02:22:34.784Z",
+    "updated_at": "2026-06-07T02:22:34.784Z",
+    "name": "Sales Team mq35pvku3isp",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 63,
+    "created_at": "2026-06-07T02:43:56.618Z",
+    "updated_at": "2026-06-07T02:43:56.618Z",
+    "name": "Group-mq36hcn8qt7a",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 64,
+    "created_at": "2026-06-07T02:43:57.469Z",
+    "updated_at": "2026-06-07T02:43:57.469Z",
+    "name": "NewGroup-mq36hdayzkwy",
+    "description": "Desc",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 65,
+    "created_at": "2026-06-07T02:43:59.428Z",
+    "updated_at": "2026-06-07T02:43:59.699Z",
+    "name": "Renamed Group",
+    "description": "For tests",
+    "role": null,
+    "is_active": false,
+    "created_by": 902
+  },
+  {
+    "id": 66,
+    "created_at": "2026-06-07T02:43:59.686Z",
+    "updated_at": "2026-06-07T02:43:59.686Z",
+    "name": "Group mq36hf0j67xe",
+    "description": "Test group",
+    "role": "billing",
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 67,
+    "created_at": "2026-06-07T02:44:01.536Z",
+    "updated_at": "2026-06-07T02:44:01.536Z",
+    "name": "Sales Team mq36hgfwbtm8",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 68,
+    "created_at": "2026-06-08T04:34:40.057Z",
+    "updated_at": "2026-06-08T04:34:40.057Z",
+    "name": "Group-mq4pvlfalepx",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 69,
+    "created_at": "2026-06-08T04:34:40.458Z",
+    "updated_at": "2026-06-08T04:34:40.458Z",
+    "name": "NewGroup-mq4pvlqhdt1w",
+    "description": "Desc",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 70,
+    "created_at": "2026-06-08T04:34:41.253Z",
+    "updated_at": "2026-06-08T04:34:41.365Z",
+    "name": "Renamed Group",
+    "description": "For tests",
+    "role": null,
+    "is_active": false,
+    "created_by": 902
+  },
+  {
+    "id": 71,
+    "created_at": "2026-06-08T04:34:41.356Z",
+    "updated_at": "2026-06-08T04:34:41.356Z",
+    "name": "Group mq4pvmfeargi",
+    "description": "Test group",
+    "role": "billing",
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 72,
+    "created_at": "2026-06-08T04:34:42.426Z",
+    "updated_at": "2026-06-08T04:34:42.426Z",
+    "name": "Sales Team mq4pvn94ar83",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 73,
+    "created_at": "2026-06-08T04:50:28.135Z",
+    "updated_at": "2026-06-08T04:50:28.135Z",
+    "name": "Group-mq4qfwymidm1",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 74,
+    "created_at": "2026-06-08T04:50:29.287Z",
+    "updated_at": "2026-06-08T04:50:29.287Z",
+    "name": "NewGroup-mq4qfxure08o",
+    "description": "Desc",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 75,
+    "created_at": "2026-06-08T04:50:31.816Z",
+    "updated_at": "2026-06-08T04:50:31.816Z",
+    "name": "Sales Team mq4qfzszp215",
+    "description": "",
+    "role": null,
+    "is_active": true,
+    "created_by": 902
+  },
+  {
+    "id": 76,
+    "created_at": "2026-06-08T04:50:34.549Z",
+    "updated_at": "2026-06-08T04:50:35.048Z",
+    "name": "Renamed Group",
+    "description": "For tests",
+    "role": null,
+    "is_active": false,
+    "created_by": 902
+  },
+  {
+    "id": 77,
+    "created_at": "2026-06-08T04:50:35.015Z",
+    "updated_at": "2026-06-08T04:50:35.015Z",
+    "name": "Group mq4qg29r7b6q",
+    "description": "Test group",
+    "role": "billing",
+    "is_active": true,
+    "created_by": 902
   }
 ]

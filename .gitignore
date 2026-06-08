@@ -2,3 +2,5 @@ node_modules/
 .env
 *.log
 .aws-sam/
+coverage/
+test-results/

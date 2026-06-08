@@ -25,6 +25,26 @@ Description: AmaraData Platform — tenant billing & management
 #   1. CREATE DATABASE amaradata_platform  on the amaradata cluster
 #   2. Run database/schema.sql against amaradata_platform
 #   3. Set /amaradata/prod/db-host to the amaradata cluster writer endpoint
+#
+# ─── SES inbound + Lambda email forwarding (rajas@amaradata.com → Gmail) ────────
+# Deploy the email/ stack first (us-east-1), then follow these steps.
+#
+#   1. Deploy the email forwarder stack:
+#        cd email && sam build && sam deploy
+#
+#   2. Activate the SES receipt rule set (one-time):
+#        aws ses set-active-receipt-rule-set --rule-set-name amrd-inbound --region us-east-1
+#
+#   3. Create SES SMTP credentials for Gmail "Send mail as":
+#        AWS Console → SES (ap-south-1) → SMTP settings → Create SMTP credentials
+#
+#   4. Configure Gmail to send/reply as rajas@amaradata.com:
+#        Gmail → Settings → Accounts → "Send mail as" → Add another address
+#        Name: Rajas   Email: rajas@amaradata.com   (uncheck "treat as alias")
+#        SMTP server: email-smtp.ap-south-1.amazonaws.com   Port: 587   TLS
+#        Username / Password: from step 3
+#      Gmail sends a verification code to rajas@amaradata.com — the Lambda
+#      forwards it to your Gmail inbox. Enter the code to confirm.
 
 Parameters:
   Tenant:
@@ -72,8 +92,12 @@ Parameters:
     Type: String
     Default: noreply@amaradata.com
     Description: >
-      Verified SES sender email address (or domain). Created here and shared with
-      rohas-group and any other tenant stacks. Store as /shared/<env>/ses-from-email in SSM.
+      SES sender address — must be within the verified amaradata.com domain.
+      Store as /shared/<env>/ses-from-email in SSM so rohas and other tenant stacks can read it.
+
+  HostedZoneId:
+    Type: AWS::Route53::HostedZone::Id
+    Description: Route 53 hosted zone ID for amaradata.com (used to add SES DKIM, DMARC, and ImprovMX records automatically).
 
   # ── Cost allocation tags ──────────────────────────────────────────────────────
   TagApplication:
@@ -134,6 +158,8 @@ Globals:
         ROHAS_URL:              !Sub '{{resolve:ssm:/rohas/${Env}/frontend-url}}'
         PASSWORD_EXPIRY_DAYS:   '365'
         SES_FROM_EMAIL:         !Ref SesFromEmail
+        EMAIL_BUCKET:           !Sub 'amrd-email-inbound-${AWS::AccountId}'
+        EMAIL_INBOX_FROM:       rajas@amaradata.com
 
 Resources:
 
@@ -183,7 +209,19 @@ Resources:
         - Statement:
             - Effect: Allow
               Action: ses:SendEmail
-              Resource: !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesFromEmail}'
+              Resource: !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/amaradata.com'
+            - Effect: Allow
+              Action: ses:SendRawEmail
+              Resource:
+                - !Sub 'arn:aws:ses:us-east-1:${AWS::AccountId}:identity/amaradata.com'
+                - !Sub 'arn:aws:ses:us-east-1:${AWS::AccountId}:identity/rajvemuri25@gmail.com'
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:ListBucket
+              Resource:
+                - !Sub 'arn:aws:s3:::amrd-email-inbound-${AWS::AccountId}'
+                - !Sub 'arn:aws:s3:::amrd-email-inbound-${AWS::AccountId}/*'
       Events:
         ApiProxy:
           Type: HttpApi
@@ -379,7 +417,8 @@ Resources:
     Properties:
       DBClusterIdentifier: !Ref Tenant
       Engine: aurora-postgresql
-      EngineVersion: '16.4'
+      EngineVersion: '17.7'
+      AllowMajorVersionUpgrade: true
       DatabaseName: !Ref DbName
       MasterUsername:     !Sub '{{resolve:ssm:/${Tenant}/${Env}/db-write-user}}'
       MasterUserPassword: !Sub '{{resolve:secretsmanager:/${Tenant}/${Env}/db-write-password}}'
@@ -425,13 +464,76 @@ Resources:
       ServiceToken: !GetAtt DBInitFn.Arn
       ResourceVersion: '1'
 
-  # ── SES — shared email identity (owned here; rohas uses the same sender) ──────
-  # After deploy, verify DNS/email at AWS Console → SES → Verified identities.
-  # Then store SesFromEmail in /shared/<env>/ses-from-email SSM param so other stacks can read it.
-  SesEmailIdentity:
+  # ── SES — domain identity for amaradata.com ────────────────────────────────────
+  # Verifies the entire amaradata.com domain so any @amaradata.com address can send.
+  # CloudFormation generates 3 DKIM CNAME records; SesRoute53DkimRecords writes them
+  # to Route 53 automatically. No manual DNS step required after deploy.
+  SesDomainIdentity:
     Type: AWS::SES::EmailIdentity
     Properties:
-      EmailIdentity: !Ref SesFromEmail
+      EmailIdentity: amaradata.com
+      DkimAttributes:
+        SigningEnabled: true
+      FeedbackAttributes:
+        EmailForwardingEnabled: true
+
+  # DKIM CNAME records — added automatically to Route 53
+  SesRoute53DkimRecords:
+    Type: AWS::Route53::RecordSetGroup
+    DependsOn: SesDomainIdentity
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      RecordSets:
+        - Name: !Sub '${SesDomainIdentity.DkimDNSTokenName1}'
+          Type: CNAME
+          TTL: '1800'
+          ResourceRecords:
+            - !Sub '${SesDomainIdentity.DkimDNSTokenValue1}'
+        - Name: !Sub '${SesDomainIdentity.DkimDNSTokenName2}'
+          Type: CNAME
+          TTL: '1800'
+          ResourceRecords:
+            - !Sub '${SesDomainIdentity.DkimDNSTokenValue2}'
+        - Name: !Sub '${SesDomainIdentity.DkimDNSTokenName3}'
+          Type: CNAME
+          TTL: '1800'
+          ResourceRecords:
+            - !Sub '${SesDomainIdentity.DkimDNSTokenValue3}'
+
+  # DMARC TXT record — instructs receiving servers to quarantine unauthenticated mail
+  SesRoute53DmarcRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: _dmarc.amaradata.com.
+      Type: TXT
+      TTL: '3600'
+      ResourceRecords:
+        - '"v=DMARC1; p=quarantine; rua=mailto:dmarc-reports@amaradata.com; adkim=s; aspf=s"'
+
+  # ── SES inbound — Route 53 DNS records ─────────────────────────────────────────
+  # MX record — routes inbound email for amaradata.com to SES in us-east-1
+  # (logical ID kept as WorkMailMxRecord to avoid a DELETE+CREATE conflict on the same physical record)
+  WorkMailMxRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: amaradata.com.
+      Type: MX
+      TTL: '3600'
+      ResourceRecords:
+        - '10 inbound-smtp.us-east-1.amazonaws.com'
+
+  # SPF TXT record — authorises SES for sending on behalf of amaradata.com
+  WorkMailSpfRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: amaradata.com.
+      Type: TXT
+      TTL: '3600'
+      ResourceRecords:
+        - '"v=spf1 include:amazonses.com ~all"'
 
   # SSM — publish the SES from-email to /shared/<env>/ so rohas and other tenant stacks can read it
   SsmSharedSesFromEmail:
@@ -459,9 +561,9 @@ Outputs:
     Condition: ShouldCreateDb
     Description: Aurora writer endpoint — store as /amaradata/<env>/db-host in SSM Parameter Store
     Value: !GetAtt DBCluster.Endpoint.Address
-  SesIdentityArn:
-    Description: SES email identity ARN — use as Resource in rohas ses:SendEmail IAM policies
-    Value: !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesFromEmail}'
+  SesDomainIdentityArn:
+    Description: SES domain identity ARN for amaradata.com — use as Resource in rohas and other tenant stack ses:SendEmail IAM policies
+    Value: !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/amaradata.com'
   SesFromEmailOutput:
-    Description: Verified SES sender email shared with all tenant stacks
+    Description: SES sender address in use — any @amaradata.com address is valid once the domain is verified
     Value: !Ref SesFromEmail
