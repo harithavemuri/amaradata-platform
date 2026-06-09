@@ -5,22 +5,22 @@
  * Production API smoke test — READ-only, DB mode.
  *
  * Usage:
- *   SMOKE_EMAIL=you@amaradata.com SMOKE_PASSWORD=secret node scripts/smoke-prod.js
+ *   SMOKE_TEST_USER=smoketest_admin SMOKE_TEST_ADMIN_PASSWORD=secret node scripts/smoke-prod.js
  *
  * Options (env vars):
- *   SMOKE_URL       Base URL (default: https://amaradata.com)
- *   SMOKE_EMAIL     Login email (required)
- *   SMOKE_PASSWORD  Login password (required)
- *   SMOKE_VERBOSE   Set to '1' for full response bodies
+ *   SMOKE_URL                  Base URL (default: https://amaradata.com)
+ *   SMOKE_TEST_USER            Login username (required)
+ *   SMOKE_TEST_ADMIN_PASSWORD  Login password (required)
+ *   SMOKE_VERBOSE              Set to '1' for full response bodies
  */
 
-const BASE  = (process.env.SMOKE_URL || 'https://amaradata.com').replace(/\/$/, '');
-const EMAIL = process.env.SMOKE_EMAIL || process.env.SMOKE_TEST_ADMIN_EMAIL;
-const PASS  = process.env.SMOKE_PASSWORD || process.env.SMOKE_TEST_ADMIN_PASSWORD;
-const VERBOSE = process.env.SMOKE_VERBOSE === '1';
+const BASE     = (process.env.SMOKE_URL || 'https://amaradata.com').replace(/\/$/, '');
+const USERNAME = process.env.SMOKE_TEST_USER;
+const PASS     = process.env.SMOKE_TEST_ADMIN_PASSWORD;
+const VERBOSE  = process.env.SMOKE_VERBOSE === '1';
 
-if (!EMAIL || !PASS) {
-    console.error('Set SMOKE_EMAIL / SMOKE_TEST_ADMIN_EMAIL and SMOKE_PASSWORD / SMOKE_TEST_ADMIN_PASSWORD before running.');
+if (!USERNAME || !PASS) {
+    console.error('Set SMOKE_TEST_USER and SMOKE_TEST_ADMIN_PASSWORD before running.');
     process.exit(1);
 }
 
@@ -59,7 +59,7 @@ function check(label, ok, detail) {
 async function main() {
     console.log(`\n── AmaraData Production Smoke Test ──`);
     console.log(`   Target: ${BASE}`);
-    console.log(`   User:   ${EMAIL}\n`);
+    console.log(`   User:   ${USERNAME}\n`);
 
     // ── 1. health check ──────────────────────────────────────────────────────
     const health = await get('/health');
@@ -72,7 +72,7 @@ async function main() {
     check('/api/site-config has companyName', !!sc.json?.companyName, sc.json?.companyName);
 
     // ── 3. login ──────────────────────────────────────────────────────────────
-    const login = await post('/api/auth/login', { email: EMAIL, password: PASS });
+    const login = await post('/api/auth/login', { username: USERNAME, password: PASS });
     check('POST /api/auth/login → 200', login.status === 200, `HTTP ${login.status}`);
     const token = login.json?.data?.token;
     check('Login returns access token', !!token);
