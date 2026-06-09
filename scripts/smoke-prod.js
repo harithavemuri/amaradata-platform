@@ -15,12 +15,12 @@
  */
 
 const BASE  = (process.env.SMOKE_URL || 'https://amaradata.com').replace(/\/$/, '');
-const EMAIL = process.env.SMOKE_EMAIL;
-const PASS  = process.env.SMOKE_PASSWORD;
+const EMAIL = process.env.SMOKE_EMAIL || process.env.SMOKE_TEST_ADMIN_EMAIL;
+const PASS  = process.env.SMOKE_PASSWORD || process.env.SMOKE_TEST_ADMIN_PASSWORD;
 const VERBOSE = process.env.SMOKE_VERBOSE === '1';
 
 if (!EMAIL || !PASS) {
-    console.error('Set SMOKE_EMAIL and SMOKE_PASSWORD before running.');
+    console.error('Set SMOKE_EMAIL / SMOKE_TEST_ADMIN_EMAIL and SMOKE_PASSWORD / SMOKE_TEST_ADMIN_PASSWORD before running.');
     process.exit(1);
 }
 
