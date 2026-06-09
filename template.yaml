@@ -120,6 +120,7 @@ Globals:
     Timeout: 29
     LoggingConfig:
       LogFormat: JSON
+      LogGroup: !Sub '${Tenant}-${Env}'
     Tags:
       tenant:      !Ref Tenant
       application: !Ref TagApplication
@@ -201,6 +202,7 @@ Resources:
   # ── API Lambda — Express app (all routes) ─────────────────────────────────────
   ApiFn:
     Type: AWS::Serverless::Function
+    DependsOn: AppLogGroup
     Properties:
       FunctionName: !Sub '${Tenant}-${Env}-api'
       Handler: backend/lambda/api.handler
@@ -450,7 +452,7 @@ Resources:
   DBInitFn:
     Type: AWS::Serverless::Function
     Condition: ShouldCreateDb
-    DependsOn: DBInstance
+    DependsOn: [DBInstance, AppLogGroup]
     Properties:
       FunctionName: !Sub '${Tenant}-${Env}-db-init'
       Handler: backend/lambda/db-init.handler
@@ -470,6 +472,7 @@ Resources:
   # runs regardless of whether the CF changeset touched this function.
   DBMigrateFn:
     Type: AWS::Serverless::Function
+    DependsOn: AppLogGroup
     Properties:
       FunctionName: !Sub '${Tenant}-${Env}-db-migrate'
       Handler: backend/lambda/db-migrate.handler

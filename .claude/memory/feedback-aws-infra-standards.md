@@ -1,6 +1,6 @@
 ---
 name: feedback-aws-infra-standards
-description: "AWS infrastructure standards: cost-allocation tags on all resources, one consolidated log group per application, 7-day retention nonprod / 30-day retention prod — applies to both amaradata and rohas-group"
+description: "AWS infrastructure standards: cost-allocation tags on all resources, one consolidated log group with Lambda directed to it, 7-day retention nonprod / 30-day retention prod — applies to both amaradata and rohas-group"
 metadata: 
   node_type: memory
   type: feedback
@@ -31,13 +31,19 @@ Drive `TagApplication` and `TagProject` from CloudFormation Parameters so they c
 
 ---
 
-## Rule: One consolidated log group per application (not one per function)
+## Rule: One consolidated log group per application — Lambda must write TO it
 
-Use a single `AWS::Logs::LogGroup` named `${Tenant}-${Env}` per stack.
+Use a single `AWS::Logs::LogGroup` named `${Tenant}-${Env}` per stack AND direct all Lambda functions to write to it via `LoggingConfig.LogGroup`.
 
 ```yaml
 Conditions:
   IsProd: !Equals [!Ref Env, 'prod']
+
+Globals:
+  Function:
+    LoggingConfig:
+      LogFormat: JSON
+      LogGroup: !Sub '${Tenant}-${Env}'   # <-- directs Lambda to the consolidated group
 
 AppLogGroup:
   Type: AWS::Logs::LogGroup
@@ -45,12 +51,17 @@ AppLogGroup:
     LogGroupName: !Sub '${Tenant}-${Env}'
     RetentionInDays: !If [IsProd, 30, 7]
     Tags: [...]
+
+ApiFn:
+  Type: AWS::Serverless::Function
+  DependsOn: AppLogGroup   # <-- ensures group exists before Lambda is created
+  ...
 ```
 
-**Why:** One log group per application for easy searching. 30-day retention on production (longer audit trail); 7-day for nonprod/QA to control costs.
+**Why:** Without `LogGroup` in `LoggingConfig`, Lambda auto-creates `/aws/lambda/<function-name>` groups that have no tags and no retention. Setting `LogGroup` in Globals redirects ALL Lambdas to the consolidated group.
 
 **How to apply:**
-- Both amaradata and rohas-group stacks: exactly one `AppLogGroup` resource
-- Add `IsProd: !Equals [!Ref Env, 'prod']` to the `Conditions:` block (create the block if it doesn't exist)
-- `RetentionInDays: !If [IsProd, 30, 7]` — never hardcode a single value
-- Tag it with the same four tags as all other resources
+- `Globals/Function/LoggingConfig`: add `LogGroup: !Sub '${Tenant}-${Env}'`
+- Every `AWS::Serverless::Function` resource: add `DependsOn: AppLogGroup` (or list form if already depending on other resources)
+- `RetentionInDays: !If [IsProd, 30, 7]` on the AppLogGroup — never hardcode
+- Tag AppLogGroup with the same four tags as all other resources
