@@ -4,7 +4,7 @@ export default defineConfig({
     test: {
         globalSetup:     ['src/test/global-setup.js'],
         setupFiles:      ['src/test/setup.js'],
-        pool:            'forks',
+        pool:            'threads',
         maxWorkers:      1,
         fileParallelism: false,
         exclude:         ['**/node_modules/**', '**/.aws-sam/**', '**/regression_testsuite/**', '**/*.spec.js'],
