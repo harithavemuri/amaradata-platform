@@ -1,6 +1,6 @@
 ---
 name: feedback-aws-infra-standards
-description: "AWS infrastructure standards: cost-allocation tags on all resources, one consolidated log group per application — applies to both amaradata and rohas-group"
+description: "AWS infrastructure standards: cost-allocation tags on all resources, one consolidated log group per application, 7-day retention nonprod / 30-day retention prod — applies to both amaradata and rohas-group"
 metadata: 
   node_type: memory
   type: feedback
@@ -36,19 +36,21 @@ Drive `TagApplication` and `TagProject` from CloudFormation Parameters so they c
 Use a single `AWS::Logs::LogGroup` named `${Tenant}-${Env}` per stack.
 
 ```yaml
+Conditions:
+  IsProd: !Equals [!Ref Env, 'prod']
+
 AppLogGroup:
   Type: AWS::Logs::LogGroup
   Properties:
     LogGroupName: !Sub '${Tenant}-${Env}'
-    RetentionInDays: 7
+    RetentionInDays: !If [IsProd, 30, 7]
     Tags: [...]
 ```
 
-**Why:** User prefers one consolidated log group so all Lambda logs for an application land in one place for easy searching, rather than scattered across per-function log groups.
+**Why:** One log group per application for easy searching. 30-day retention on production (longer audit trail); 7-day for nonprod/QA to control costs.
 
 **How to apply:**
-- Both amaradata and rohas-group stacks should have exactly one `AppLogGroup` resource
-- RetentionInDays: 7 (project default)
+- Both amaradata and rohas-group stacks: exactly one `AppLogGroup` resource
+- Add `IsProd: !Equals [!Ref Env, 'prod']` to the `Conditions:` block (create the block if it doesn't exist)
+- `RetentionInDays: !If [IsProd, 30, 7]` — never hardcode a single value
 - Tag it with the same four tags as all other resources
-
-[[feedback-aws-infra-standards]]

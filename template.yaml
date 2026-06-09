@@ -110,6 +110,7 @@ Parameters:
 Conditions:
   ShouldCreateDb:  !Equals [!Ref CreateDbCluster, 'true']
   HasCustomDomain: !Not [!Equals [!Ref AcmCertificateArn, '']]
+  IsProd:          !Equals [!Ref Env, 'prod']
 
 Globals:
   Function:
@@ -168,7 +169,7 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub '${Tenant}-${Env}'
-      RetentionInDays: 7
+      RetentionInDays: !If [IsProd, 30, 7]
       Tags:
         - { Key: tenant,      Value: !Ref Tenant }
         - { Key: application, Value: !Ref TagApplication }
