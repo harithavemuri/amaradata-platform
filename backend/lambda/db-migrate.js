@@ -32,9 +32,9 @@ exports.handler = async () => {
     // Split on semicolons and run each statement individually so one failure
     // (e.g. duplicate seed row) does not abort the rest.
     const statements = schema
-        .split(/;\s*(\n|$)/)
+        .split(/;\s*(?:\n|$)/)
         .map(s => s.trim())
-        .filter(s => s.length > 0 && !s.startsWith('--'));
+        .filter(s => s.length > 0);
 
     let ran = 0, errs = [];
     const client = await pool.connect();
