@@ -32,10 +32,23 @@ describe('Auth — full workflow', () => {
             expect(res.body.data).not.toHaveProperty('password_hash');
         });
 
-        it('duplicate email → 409', async () => {
+        it('duplicate username (same email) → 409', async () => {
             const res = await request(app).post('/api/auth/create-user')
                 .send({ email, password, name: 'Dup', setup_key: SETUP_KEY });
             expect(res.status).toBe(409);
+        });
+
+        it('same email, different username → both created (201)', async () => {
+            const sharedEmail = `shared-${uid()}@example.com`;
+            const r1 = await request(app).post('/api/auth/create-user')
+                .send({ email: sharedEmail, username: `ua-${uid()}`, name: 'User A', password, setup_key: SETUP_KEY });
+            expect(r1.status).toBe(201);
+            const r2 = await request(app).post('/api/auth/create-user')
+                .send({ email: sharedEmail, username: `ub-${uid()}`, name: 'User B', password, setup_key: SETUP_KEY });
+            expect(r2.status).toBe(201);
+            expect(r1.body.data.email).toBe(sharedEmail);
+            expect(r2.body.data.email).toBe(sharedEmail);
+            expect(r1.body.data.username).not.toBe(r2.body.data.username);
         });
 
         it('missing password → 500 (bcrypt.hash throws)', async () => {
@@ -48,7 +61,7 @@ describe('Auth — full workflow', () => {
     // ── Step 2: login ─────────────────────────────────────────────────────────
     describe('POST /api/auth/login', () => {
         it('correct credentials → 200 with access + refresh tokens', async () => {
-            const res = await request(app).post('/api/auth/login').send({ email, password });
+            const res = await request(app).post('/api/auth/login').send({ username: email, password });
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
             expect(res.body.token).toBeTruthy();
@@ -71,7 +84,7 @@ describe('Auth — full workflow', () => {
 
         it('wrong password → 401 JSON', async () => {
             const res = await request(app).post('/api/auth/login')
-                .send({ email, password: 'wrong-password' });
+                .send({ username: email, password: 'wrong-password' });
             expect(res.status).toBe(401);
             expect(res.headers['content-type']).toMatch(/json/);
             expect(res.body).toHaveProperty('error');
@@ -79,7 +92,7 @@ describe('Auth — full workflow', () => {
 
         it('unknown email → 401', async () => {
             const res = await request(app).post('/api/auth/login')
-                .send({ email: 'nobody@example.com', password });
+                .send({ username: 'nobody@example.com', password });
             expect(res.status).toBe(401);
         });
 
@@ -89,7 +102,7 @@ describe('Auth — full workflow', () => {
         });
 
         it('missing password → 400', async () => {
-            const res = await request(app).post('/api/auth/login').send({ email });
+            const res = await request(app).post('/api/auth/login').send({ username: email });
             expect(res.status).toBe(400);
         });
     });

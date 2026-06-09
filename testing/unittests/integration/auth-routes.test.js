@@ -25,7 +25,7 @@ describe('Auth routes — always return JSON, never HTML', () => {
     it('POST /api/auth/login with bad credentials → 401 JSON', async () => {
         const res = await request(app)
             .post('/api/auth/login')
-            .send({ email: 'nobody@test.com', password: 'wrong' });
+            .send({ username: 'nobody@test.com', password: 'wrong' });
         assertJson(res);
         expect(res.status).toBe(401);
         expect(res.body).toHaveProperty('error');
@@ -81,7 +81,7 @@ describe('Auth routes — always return JSON, never HTML', () => {
         const res = await request(app)
             .post('/api/auth/login')
             .set('x-origin-secret', 'wrong-secret')
-            .send({ email: 'test@test.com', password: 'pw' });
+            .send({ username: 'test@test.com', password: 'pw' });
         assertJson(res);
         expect([401, 403]).toContain(res.status);
     });

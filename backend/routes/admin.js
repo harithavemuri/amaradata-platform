@@ -56,24 +56,25 @@ router.get('/users', async (req, res) => {
 // POST /api/admin/users
 router.post('/users', async (req, res) => {
     const { email, name, role = 'staff', password } = req.body;
-    if (!email || !name) return res.status(400).json({ error: 'email and name are required' });
+    const username = req.body.username || email;  // default username to email
+    if (!username || !name) return res.status(400).json({ error: 'username and name are required' });
     if (!VALID_ROLES.includes(role)) return res.status(400).json({ error: `role must be one of: ${VALID_ROLES.join(', ')}` });
 
     try {
         const password_hash = password ? await bcrypt.hash(password, 12) : '';
         if (req.db.mode === 'nondb') {
-            const existing = req.db.fileDb.find('amr_users', { email });
-            if (existing.length) return res.status(409).json({ error: 'Email already exists' });
-            const row = req.db.fileDb.create('amr_users', { email, name, role, password_hash, is_active: true });
+            const existing = req.db.fileDb.find('amr_users').filter(u => u.username === username);
+            if (existing.length) return res.status(409).json({ error: 'Username already exists' });
+            const row = req.db.fileDb.create('amr_users', { username, email: email || username, name, role, password_hash, is_active: true });
             return res.status(201).json({ success: true, data: _safeUser(row) });
         }
         const { rows } = await db.query(
-            'INSERT INTO amr_users (email,name,role,password_hash) VALUES ($1,$2,$3,$4) RETURNING id,email,name,role,is_active,created_at',
-            [email, name, role, password_hash]
+            'INSERT INTO amr_users (username,email,name,role,password_hash) VALUES ($1,$2,$3,$4,$5) RETURNING id,username,email,name,role,is_active,created_at',
+            [username, email || username, name, role, password_hash]
         );
         res.status(201).json({ success: true, data: rows[0] });
     } catch (e) {
-        if (e.code === '23505') return res.status(409).json({ error: 'Email already exists' });
+        if (e.code === '23505') return res.status(409).json({ error: 'Username already exists' });
         console.error('[admin] create-user:', e.message);
         res.status(500).json({ error: 'Internal server error' });
     }

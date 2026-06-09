@@ -69,11 +69,11 @@
         location.href = '/login';
     }
 
-    async function login(email, password) {
+    async function login(username, password) {
         const res  = await fetch(`${API}/api/auth/login`, {
             method:  'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json;v=1' },
-            body:    JSON.stringify({ email, password }),
+            body:    JSON.stringify({ username, password }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Login failed');

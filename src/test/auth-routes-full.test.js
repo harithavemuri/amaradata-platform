@@ -27,13 +27,26 @@ describe('Auth routes — full coverage', () => {
             expect(res.body.data).not.toHaveProperty('password_hash');
         });
 
-        it('duplicate email → 409', async () => {
+        it('duplicate username → 409', async () => {
             const email = `dup-${uid()}@test.com`;
             await request(app).post('/api/auth/create-user')
                 .send({ email, name: 'First', password: 'pass1234', setup_key: SETUP_KEY });
             const res = await request(app).post('/api/auth/create-user')
                 .send({ email, name: 'Second', password: 'pass1234', setup_key: SETUP_KEY });
             expect(res.status).toBe(409);
+        });
+
+        it('same email, different username → both created (201)', async () => {
+            const sharedEmail = `shared-${uid()}@test.com`;
+            const res1 = await request(app).post('/api/auth/create-user')
+                .send({ email: sharedEmail, username: `u1-${uid()}`, name: 'User One', password: 'pass1234', setup_key: SETUP_KEY });
+            expect(res1.status).toBe(201);
+            const res2 = await request(app).post('/api/auth/create-user')
+                .send({ email: sharedEmail, username: `u2-${uid()}`, name: 'User Two', password: 'pass1234', setup_key: SETUP_KEY });
+            expect(res2.status).toBe(201);
+            expect(res1.body.data.email).toBe(sharedEmail);
+            expect(res2.body.data.email).toBe(sharedEmail);
+            expect(res1.body.data.username).not.toBe(res2.body.data.username);
         });
     });
 
@@ -48,7 +61,7 @@ describe('Auth routes — full coverage', () => {
 
         it('correct credentials → 200 with token and refresh_token', async () => {
             const res = await request(app).post('/api/auth/login')
-                .send({ email, password: 'correctpassword' });
+                .send({ username: email, password: 'correctpassword' });
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
             expect(res.body).toHaveProperty('token');
@@ -65,7 +78,7 @@ describe('Auth routes — full coverage', () => {
             await request(app).post('/api/auth/create-user')
                 .send({ email, name: 'Refresh User', password: 'pass1234', setup_key: SETUP_KEY });
             const login = await request(app).post('/api/auth/login')
-                .send({ email, password: 'pass1234' });
+                .send({ username: email, password: 'pass1234' });
             const refreshToken = login.body.refresh_token;
 
             const res = await request(app).post('/api/auth/refresh')

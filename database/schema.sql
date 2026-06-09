@@ -5,7 +5,8 @@
 -- Roles: site_admin | admin | sales_manager | billing | staff
 CREATE TABLE IF NOT EXISTS amr_users (
     id              SERIAL PRIMARY KEY,
-    email           VARCHAR(255) UNIQUE NOT NULL,
+    username        VARCHAR(255) UNIQUE NOT NULL,
+    email           VARCHAR(255) NOT NULL,
     name            VARCHAR(255) NOT NULL,
     role            VARCHAR(50)  NOT NULL DEFAULT 'staff',
     password_hash   TEXT         NOT NULL DEFAULT '',
@@ -16,6 +17,13 @@ CREATE TABLE IF NOT EXISTS amr_users (
     created_at      TIMESTAMP    NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMP    NOT NULL DEFAULT NOW()
 );
+
+-- Backward-compat migration: add username to existing tables, default to email
+ALTER TABLE amr_users ADD COLUMN IF NOT EXISTS username VARCHAR(255);
+UPDATE amr_users SET username = email WHERE username IS NULL OR username = '';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON amr_users(username);
+ALTER TABLE amr_users ALTER COLUMN username SET NOT NULL;
+ALTER TABLE amr_users DROP CONSTRAINT IF EXISTS amr_users_email_key;
 
 -- Canonical platform roles — one source of truth for valid role names
 -- is_system=true roles cannot be deleted (only descriptions can be edited).

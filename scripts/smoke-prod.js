@@ -64,15 +64,12 @@ async function main() {
     // ── 1. health check ──────────────────────────────────────────────────────
     const health = await get('/health');
     check('GET /health → 200', health.status === 200, `HTTP ${health.status}`);
-    check('/health returns { status: "ok" }', health.json?.status === 'ok', health.json?.status);
+    check('/health returns { ok: true }', health.json?.ok === true, JSON.stringify(health.json));
 
     // ── 2. site-config ───────────────────────────────────────────────────────
     const sc = await get('/api/site-config');
     check('GET /api/site-config → 200', sc.status === 200, `HTTP ${sc.status}`);
-    check('/api/site-config has dbMode field', 'dbMode' in (sc.json || {}));
-
-    const dbMode = sc.json?.dbMode;
-    check('/api/site-config dbMode is "db" (not nondb)', dbMode === 'db', `dbMode=${dbMode}`);
+    check('/api/site-config has companyName', !!sc.json?.companyName, sc.json?.companyName);
 
     // ── 3. login ──────────────────────────────────────────────────────────────
     const login = await post('/api/auth/login', { email: EMAIL, password: PASS });

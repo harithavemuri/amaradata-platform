@@ -8,16 +8,16 @@ const { sendEmail }                       = require('../services/ses');
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'email and password required' });
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ error: 'username and password required' });
     try {
         let user;
         if (req.db.mode === 'nondb') {
-            const users = req.db.fileDb.find('amr_users').filter(u => u.email === email && u.is_active);
+            const users = req.db.fileDb.find('amr_users').filter(u => u.username === username && u.is_active);
             user = users[0];
         } else {
             const { rows } = await db.query(
-                'SELECT * FROM amr_users WHERE email = $1 AND is_active = true', [email]
+                'SELECT * FROM amr_users WHERE username = $1 AND is_active = true', [username]
             );
             user = rows[0];
         }
@@ -31,7 +31,7 @@ router.post('/login', async (req, res) => {
             await db.query('UPDATE amr_users SET last_login_at = NOW() WHERE id = $1', [user.id]);
         }
 
-        const safe = { id: user.id, email: user.email, name: user.name, role: user.role };
+        const safe = { id: user.id, username: user.username, email: user.email, name: user.name, role: user.role };
         res.json({ success: true, token: sign(safe), refresh_token: signRefresh(safe), user: safe });
     } catch (e) {
         console.error('[auth]', e.message);
@@ -60,23 +60,25 @@ router.post('/logout', (req, res) => {
 // POST /api/auth/create-user  (first-time setup / admin only)
 router.post('/create-user', async (req, res) => {
     const { email, password, name, role = 'staff', setup_key } = req.body;
+    const username = req.body.username || email;  // default username to email for backward compat
     if (setup_key !== process.env.AMRD_JWT_SECRET) return res.status(403).json({ error: 'Forbidden' });
     try {
         const hash = await bcrypt.hash(password, 12);
         if (req.db.mode === 'nondb') {
-            const existing = req.db.fileDb.find('amr_users').filter(u => u.email === email);
-            if (existing.length) return res.status(409).json({ error: 'Email already exists' });
+            const existing = req.db.fileDb.find('amr_users').filter(u => u.username === username);
+            if (existing.length) return res.status(409).json({ error: 'Username already exists' });
             const row = req.db.fileDb.create('amr_users', {
-                email, name, role, password_hash: hash, is_active: true,
+                username, email, name, role, password_hash: hash, is_active: true,
             });
-            return res.status(201).json({ success: true, data: { id: row.id, email: row.email, name: row.name, role: row.role } });
+            return res.status(201).json({ success: true, data: { id: row.id, username: row.username, email: row.email, name: row.name, role: row.role } });
         }
         const { rows } = await db.query(
-            'INSERT INTO amr_users (email, name, role, password_hash) VALUES ($1,$2,$3,$4) RETURNING id,email,name,role',
-            [email, name, role, hash]
+            'INSERT INTO amr_users (username, email, name, role, password_hash) VALUES ($1,$2,$3,$4,$5) RETURNING id,username,email,name,role',
+            [username, email, name, role, hash]
         );
         res.status(201).json({ success: true, data: rows[0] });
     } catch (e) {
+        if (e.code === '23505') return res.status(409).json({ error: 'Username already exists' });
         console.error('[auth]', e.message);
         res.status(500).json({ error: 'Internal server error' });
     }
@@ -157,6 +159,7 @@ router.post('/google/exchange', async (req, res) => {
                 });
             } else {
                 user = req.db.fileDb.create('amr_users', {
+                    username:  userInfo.email,
                     email:     userInfo.email,
                     name:      userInfo.name,
                     role:      'staff',
@@ -177,20 +180,21 @@ router.post('/google/exchange', async (req, res) => {
                 );
             } else {
                 const { rows: r } = await db.query(
-                    `INSERT INTO amr_users (email, name, role, google_id, picture, is_active)
-                     VALUES ($1,$2,'staff',$3,$4,true) RETURNING *`,
-                    [userInfo.email, userInfo.name, userInfo.id, userInfo.picture]
+                    `INSERT INTO amr_users (username, email, name, role, google_id, picture, is_active)
+                     VALUES ($1,$2,$3,'staff',$4,$5,true) RETURNING *`,
+                    [userInfo.email, userInfo.email, userInfo.name, userInfo.id, userInfo.picture]
                 );
                 user = r[0];
             }
         }
 
         const safe = {
-            id:      user.id,
-            email:   user.email,
-            name:    user.name || userInfo.name,
-            role:    user.role,
-            picture: userInfo.picture,
+            id:       user.id,
+            username: user.username,
+            email:    user.email,
+            name:     user.name || userInfo.name,
+            role:     user.role,
+            picture:  userInfo.picture,
         };
         res.json({
             success: true,
