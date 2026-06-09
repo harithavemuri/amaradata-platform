@@ -22,7 +22,7 @@ exports.handler = async () => {
         user,
         password,
         max:                    2,
-        connectionTimeoutMillis: 15000,
+        connectionTimeoutMillis: 60000,
     });
 
     const schema = fs.readFileSync(

@@ -482,7 +482,7 @@ Resources:
       Environment:
         Variables:
           DB_MASTER_SECRET_NAME: !Sub '/${Tenant}/aurora/master-password'
-          DB_MASTER_USER: postgres
+          DB_MASTER_USER: amararoot
 
   # ── SES — domain identity for amaradata.com ────────────────────────────────────
   # Verifies the entire amaradata.com domain so any @amaradata.com address can send.
