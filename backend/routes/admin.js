@@ -57,7 +57,7 @@ router.get('/users', async (req, res) => {
 router.post('/users', async (req, res) => {
     const { email, name, role = 'staff', password } = req.body;
     const username = req.body.username || email;  // default username to email
-    if (!username || !name) return res.status(400).json({ error: 'username and name are required' });
+    if (!email || !name) return res.status(400).json({ error: 'email and name are required' });
     if (!VALID_ROLES.includes(role)) return res.status(400).json({ error: `role must be one of: ${VALID_ROLES.join(', ')}` });
 
     try {
@@ -65,12 +65,12 @@ router.post('/users', async (req, res) => {
         if (req.db.mode === 'nondb') {
             const existing = req.db.fileDb.find('amr_users').filter(u => u.username === username);
             if (existing.length) return res.status(409).json({ error: 'Username already exists' });
-            const row = req.db.fileDb.create('amr_users', { username, email: email || username, name, role, password_hash, is_active: true });
+            const row = req.db.fileDb.create('amr_users', { username, email, name, role, password_hash, is_active: true });
             return res.status(201).json({ success: true, data: _safeUser(row) });
         }
         const { rows } = await db.query(
             'INSERT INTO amr_users (username,email,name,role,password_hash) VALUES ($1,$2,$3,$4,$5) RETURNING id,username,email,name,role,is_active,created_at',
-            [username, email || username, name, role, password_hash]
+            [username, email, name, role, password_hash]
         );
         res.status(201).json({ success: true, data: rows[0] });
     } catch (e) {

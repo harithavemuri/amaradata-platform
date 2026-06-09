@@ -8,7 +8,7 @@ const ADMIN = {
 
 async function loginAdmin(page) {
     await page.goto('/login');
-    await page.fill('#email',    ADMIN.email);
+    await page.fill('#username', ADMIN.email);
     await page.fill('#password', ADMIN.password);
     await page.click('button.btn-primary');
     await page.waitForURL('**/dashboard', { timeout: 5_000 });

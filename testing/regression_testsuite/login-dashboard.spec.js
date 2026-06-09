@@ -12,7 +12,7 @@ const ADMIN = {
 // Helper: logs in via the UI form and waits for /dashboard
 async function loginAdmin(page) {
     await page.goto('/login');
-    await page.fill('#email',    ADMIN.email);
+    await page.fill('#username', ADMIN.email);
     await page.fill('#password', ADMIN.password);
     await page.click('button.btn-primary');
     await page.waitForURL('**/dashboard', { timeout: 5_000 });
@@ -33,20 +33,20 @@ test.describe('Login page', () => {
         await expect(page.locator('.logo-sub')).toHaveText('Platform Console');
     });
 
-    test('email field, password field and Sign In button are present', async ({ page }) => {
-        await expect(page.locator('#email')).toBeVisible();
+    test('username field, password field and Sign In button are present', async ({ page }) => {
+        await expect(page.locator('#username')).toBeVisible();
         await expect(page.locator('#password')).toBeVisible();
         await expect(page.locator('button.btn-primary')).toHaveText('Sign In');
     });
 
     test('empty form submission shows required-fields error', async ({ page }) => {
         await page.click('button.btn-primary');
-        await expect(page.locator('#errMsg')).toHaveText('Email and password are required');
+        await expect(page.locator('#errMsg')).toHaveText('Username and password are required');
         await expect(page.url()).not.toContain('/dashboard');
     });
 
     test('wrong password shows error and stays on login', async ({ page }) => {
-        await page.fill('#email',    ADMIN.email);
+        await page.fill('#username', ADMIN.email);
         await page.fill('#password', 'wrong-password-xyz');
         await page.click('button.btn-primary');
 
@@ -55,8 +55,8 @@ test.describe('Login page', () => {
         await expect(page.url()).not.toContain('/dashboard');
     });
 
-    test('unknown email shows error and stays on login', async ({ page }) => {
-        await page.fill('#email',    'nobody@doesnotexist.com');
+    test('unknown username shows error and stays on login', async ({ page }) => {
+        await page.fill('#username', 'nobody@doesnotexist.com');
         await page.fill('#password', 'somepassword');
         await page.click('button.btn-primary');
 
@@ -65,7 +65,7 @@ test.describe('Login page', () => {
     });
 
     test('Enter key in form triggers login', async ({ page }) => {
-        await page.fill('#email',    ADMIN.email);
+        await page.fill('#username', ADMIN.email);
         await page.fill('#password', ADMIN.password);
         await page.keyboard.press('Enter');
 
@@ -79,7 +79,7 @@ test.describe('Login page', () => {
 test.describe('Admin login flow', () => {
     test('admin credentials → success message → redirect to /dashboard', async ({ page }) => {
         await page.goto('/login');
-        await page.fill('#email',    ADMIN.email);
+        await page.fill('#username', ADMIN.email);
         await page.fill('#password', ADMIN.password);
         await page.click('button.btn-primary');
 
@@ -256,7 +256,7 @@ test.describe('Logout — post-logout navigation guards', () => {
 
         // Should be on the login page (either redirected or served login.html)
         await expect(page).toHaveURL(/\/login/);
-        await expect(page.locator('#email')).toBeVisible();
+        await expect(page.locator('#username')).toBeVisible();
         await expect(page.locator('#password')).toBeVisible();
         await expect(page.locator('button.btn-primary')).toHaveText('Sign In');
     });
@@ -272,7 +272,7 @@ test.describe('Logout — post-logout navigation guards', () => {
 
         // Clicking the Sign In button without credentials should show an error, not /dashboard
         await page.click('button.btn-primary');
-        await expect(page.locator('#errMsg')).toHaveText('Email and password are required');
+        await expect(page.locator('#errMsg')).toHaveText('Username and password are required');
         await expect(page.url()).not.toContain('/dashboard');
     });
 
@@ -282,7 +282,7 @@ test.describe('Logout — post-logout navigation guards', () => {
         await page.waitForURL('**/login', { timeout: 5_000 });
 
         // Sign in again with the same credentials
-        await page.fill('#email',    ADMIN.email);
+        await page.fill('#username', ADMIN.email);
         await page.fill('#password', ADMIN.password);
         await page.click('button.btn-primary');
         await page.waitForURL('**/dashboard', { timeout: 5_000 });
