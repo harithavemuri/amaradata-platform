@@ -583,5 +583,1490 @@
     "label": "A",
     "description": "",
     "is_system": false
+  },
+  {
+    "id": 66,
+    "created_at": "2026-06-08T04:55:09.905Z",
+    "updated_at": "2026-06-08T04:55:09.905Z",
+    "name": "test_role_mqqlydrqe",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 67,
+    "created_at": "2026-06-08T04:55:10.605Z",
+    "updated_at": "2026-06-08T04:55:10.791Z",
+    "name": "test_role_mq_qlyx_k__k",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 68,
+    "created_at": "2026-06-08T04:55:10.776Z",
+    "updated_at": "2026-06-08T04:55:10.776Z",
+    "name": "custom_role_mqqlzyjmbn",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 69,
+    "created_at": "2026-06-08T04:55:10.780Z",
+    "updated_at": "2026-06-08T04:55:10.780Z",
+    "name": "dup_role_mqqlzdexj",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 70,
+    "created_at": "2026-06-08T04:56:05.591Z",
+    "updated_at": "2026-06-08T04:56:05.591Z",
+    "name": "test_role_mqqnclukdn",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 71,
+    "created_at": "2026-06-08T04:56:06.263Z",
+    "updated_at": "2026-06-08T04:56:06.462Z",
+    "name": "test_role_mq_qn_v_a__b",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 72,
+    "created_at": "2026-06-08T04:56:06.446Z",
+    "updated_at": "2026-06-08T04:56:06.446Z",
+    "name": "custom_role_mqqnmqpc",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 73,
+    "created_at": "2026-06-08T04:56:06.452Z",
+    "updated_at": "2026-06-08T04:56:06.452Z",
+    "name": "dup_role_mqqnhxgb",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 74,
+    "created_at": "2026-06-08T05:48:02.497Z",
+    "updated_at": "2026-06-08T05:48:02.497Z",
+    "name": "test_role_mqshydgmv",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 75,
+    "created_at": "2026-06-08T05:48:03.345Z",
+    "updated_at": "2026-06-08T05:48:03.583Z",
+    "name": "test_role_mq_shz_u__jo",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 76,
+    "created_at": "2026-06-08T05:48:03.567Z",
+    "updated_at": "2026-06-08T05:48:03.567Z",
+    "name": "custom_role_mqshzcixl",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 77,
+    "created_at": "2026-06-08T05:48:03.571Z",
+    "updated_at": "2026-06-08T05:48:03.571Z",
+    "name": "dup_role_mqshzhftv",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 78,
+    "created_at": "2026-06-08T05:48:42.529Z",
+    "updated_at": "2026-06-08T05:48:42.529Z",
+    "name": "test_role_mqsitamvuj",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 79,
+    "created_at": "2026-06-08T05:48:43.704Z",
+    "updated_at": "2026-06-08T05:48:44.011Z",
+    "name": "test_role_mq_siu_whtw_",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 80,
+    "created_at": "2026-06-08T05:48:43.972Z",
+    "updated_at": "2026-06-08T05:48:43.972Z",
+    "name": "custom_role_mqsiudaakaa",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 81,
+    "created_at": "2026-06-08T05:48:43.983Z",
+    "updated_at": "2026-06-08T05:48:43.983Z",
+    "name": "dup_role_mqsiudkesy",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 82,
+    "created_at": "2026-06-08T05:49:18.693Z",
+    "updated_at": "2026-06-08T05:49:18.693Z",
+    "name": "test_role_mqsjluoy",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 83,
+    "created_at": "2026-06-08T05:49:19.725Z",
+    "updated_at": "2026-06-08T05:49:19.989Z",
+    "name": "test_role_mq_sjlyhuzcb",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 84,
+    "created_at": "2026-06-08T05:49:19.972Z",
+    "updated_at": "2026-06-08T05:49:19.972Z",
+    "name": "custom_role_mqsjmccq",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 85,
+    "created_at": "2026-06-08T05:49:19.977Z",
+    "updated_at": "2026-06-08T05:49:19.977Z",
+    "name": "dup_role_mqsjmiwe",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 86,
+    "created_at": "2026-06-08T05:50:06.089Z",
+    "updated_at": "2026-06-08T05:50:06.089Z",
+    "name": "test_role_mqsklqeodx",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 87,
+    "created_at": "2026-06-08T05:50:07.235Z",
+    "updated_at": "2026-06-08T05:50:07.569Z",
+    "name": "test_role_mq_skmm__xvh",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 88,
+    "created_at": "2026-06-08T05:50:07.544Z",
+    "updated_at": "2026-06-08T05:50:07.544Z",
+    "name": "custom_role_mqskmusxqvr",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 89,
+    "created_at": "2026-06-08T05:50:07.549Z",
+    "updated_at": "2026-06-08T05:50:07.549Z",
+    "name": "dup_role_mqskmuywml",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 90,
+    "created_at": "2026-06-08T05:50:54.524Z",
+    "updated_at": "2026-06-08T05:50:54.524Z",
+    "name": "test_role_mqslnthes",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 91,
+    "created_at": "2026-06-08T05:50:55.620Z",
+    "updated_at": "2026-06-08T05:50:55.922Z",
+    "name": "test_role_mq_slny_n_s_",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 92,
+    "created_at": "2026-06-08T05:50:55.905Z",
+    "updated_at": "2026-06-08T05:50:55.905Z",
+    "name": "custom_role_mqsloxgjj",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 93,
+    "created_at": "2026-06-08T05:50:55.909Z",
+    "updated_at": "2026-06-08T05:50:55.909Z",
+    "name": "dup_role_mqslobamjq",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 94,
+    "created_at": "2026-06-08T05:51:36.326Z",
+    "updated_at": "2026-06-08T05:51:36.326Z",
+    "name": "test_role_mqsmjcyaem",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 95,
+    "created_at": "2026-06-08T05:51:39.565Z",
+    "updated_at": "2026-06-08T05:51:39.928Z",
+    "name": "test_role_mq_smluxbv_h",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 96,
+    "created_at": "2026-06-08T05:51:39.902Z",
+    "updated_at": "2026-06-08T05:51:39.902Z",
+    "name": "custom_role_mqsmmas",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 97,
+    "created_at": "2026-06-08T05:51:39.910Z",
+    "updated_at": "2026-06-08T05:51:39.910Z",
+    "name": "dup_role_mqsmmhw",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 98,
+    "created_at": "2026-06-08T05:52:30.023Z",
+    "updated_at": "2026-06-08T05:52:30.023Z",
+    "name": "test_role_mqsnosavhj",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 99,
+    "created_at": "2026-06-08T05:52:40.382Z",
+    "updated_at": "2026-06-08T05:52:41.335Z",
+    "name": "test_role_mq_snwrvzg__",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 100,
+    "created_at": "2026-06-08T05:52:41.281Z",
+    "updated_at": "2026-06-08T05:52:41.281Z",
+    "name": "custom_role_mqsnxhngm",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 101,
+    "created_at": "2026-06-08T05:52:41.297Z",
+    "updated_at": "2026-06-08T05:52:41.297Z",
+    "name": "dup_role_mqsnxhjtsb",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 102,
+    "created_at": "2026-06-08T05:53:49.034Z",
+    "updated_at": "2026-06-08T05:53:49.034Z",
+    "name": "test_role_mqspdqzmykb",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 103,
+    "created_at": "2026-06-08T05:54:04.248Z",
+    "updated_at": "2026-06-08T05:54:05.238Z",
+    "name": "test_role_mq_sppg_pic_",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 104,
+    "created_at": "2026-06-08T05:54:05.156Z",
+    "updated_at": "2026-06-08T05:54:05.156Z",
+    "name": "custom_role_mqspqqr",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 105,
+    "created_at": "2026-06-08T05:54:05.178Z",
+    "updated_at": "2026-06-08T05:54:05.178Z",
+    "name": "dup_role_mqspqghvjb",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 106,
+    "created_at": "2026-06-08T05:55:24.424Z",
+    "updated_at": "2026-06-08T05:55:24.424Z",
+    "name": "test_role_mqsrfdtffx",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 107,
+    "created_at": "2026-06-08T05:55:26.893Z",
+    "updated_at": "2026-06-08T05:55:27.128Z",
+    "name": "test_role_mq_srh_mg_rv",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 108,
+    "created_at": "2026-06-08T05:55:27.113Z",
+    "updated_at": "2026-06-08T05:55:27.113Z",
+    "name": "custom_role_mqsrhfqbbm",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 109,
+    "created_at": "2026-06-08T05:55:27.117Z",
+    "updated_at": "2026-06-08T05:55:27.117Z",
+    "name": "dup_role_mqsrhfuops",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 110,
+    "created_at": "2026-06-08T05:56:35.101Z",
+    "updated_at": "2026-06-08T05:56:35.488Z",
+    "name": "test_role_mq_ssxw_j__t",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 111,
+    "created_at": "2026-06-08T05:56:35.459Z",
+    "updated_at": "2026-06-08T05:56:35.459Z",
+    "name": "custom_role_mqssyhvnj",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 112,
+    "created_at": "2026-06-08T05:56:35.467Z",
+    "updated_at": "2026-06-08T05:56:35.467Z",
+    "name": "dup_role_mqssyeuiqe",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 113,
+    "created_at": "2026-06-08T05:57:35.725Z",
+    "updated_at": "2026-06-08T05:57:35.725Z",
+    "name": "test_role_mqsuoidi",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 114,
+    "created_at": "2026-06-08T05:59:32.659Z",
+    "updated_at": "2026-06-08T05:59:32.659Z",
+    "name": "test_role_mqswqwhegq",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 115,
+    "created_at": "2026-06-08T05:59:33.660Z",
+    "updated_at": "2026-06-08T05:59:33.908Z",
+    "name": "test_role_mq_swro_u___",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 116,
+    "created_at": "2026-06-08T05:59:33.888Z",
+    "updated_at": "2026-06-08T05:59:33.888Z",
+    "name": "custom_role_mqswrulqfja",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 117,
+    "created_at": "2026-06-08T05:59:33.892Z",
+    "updated_at": "2026-06-08T05:59:33.892Z",
+    "name": "dup_role_mqswruqsc",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 118,
+    "created_at": "2026-06-08T06:00:09.232Z",
+    "updated_at": "2026-06-08T06:00:09.232Z",
+    "name": "test_role_mqsxjdrlq",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 119,
+    "created_at": "2026-06-08T06:00:10.193Z",
+    "updated_at": "2026-06-08T06:00:10.447Z",
+    "name": "test_role_mq_sxjv_u___",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 120,
+    "created_at": "2026-06-08T06:00:10.433Z",
+    "updated_at": "2026-06-08T06:00:10.433Z",
+    "name": "custom_role_mqsxkq",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 121,
+    "created_at": "2026-06-08T06:00:10.437Z",
+    "updated_at": "2026-06-08T06:00:10.437Z",
+    "name": "dup_role_mqsxkvsewq",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 122,
+    "created_at": "2026-06-08T06:00:58.558Z",
+    "updated_at": "2026-06-08T06:00:58.558Z",
+    "name": "test_role_mqsyljkssr",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 123,
+    "created_at": "2026-06-08T06:00:59.461Z",
+    "updated_at": "2026-06-08T06:00:59.771Z",
+    "name": "test_role_mq_sylvk_cus",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 124,
+    "created_at": "2026-06-08T06:00:59.749Z",
+    "updated_at": "2026-06-08T06:00:59.749Z",
+    "name": "custom_role_mqsymmrl",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 125,
+    "created_at": "2026-06-08T06:00:59.754Z",
+    "updated_at": "2026-06-08T06:00:59.754Z",
+    "name": "dup_role_mqsymrrjq",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 126,
+    "created_at": "2026-06-08T06:01:54.720Z",
+    "updated_at": "2026-06-08T06:01:54.720Z",
+    "name": "test_role_mqszsilfni",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 127,
+    "created_at": "2026-06-08T06:01:55.835Z",
+    "updated_at": "2026-06-08T06:01:56.143Z",
+    "name": "test_role_mq_sztdkck__",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 128,
+    "created_at": "2026-06-08T06:01:56.122Z",
+    "updated_at": "2026-06-08T06:01:56.122Z",
+    "name": "custom_role_mqsztljcpr",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 129,
+    "created_at": "2026-06-08T06:01:56.127Z",
+    "updated_at": "2026-06-08T06:01:56.127Z",
+    "name": "dup_role_mqsztlosivi",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 130,
+    "created_at": "2026-06-08T06:03:09.724Z",
+    "updated_at": "2026-06-08T06:03:09.724Z",
+    "name": "test_role_mqteeflkb",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 131,
+    "created_at": "2026-06-08T06:03:10.629Z",
+    "updated_at": "2026-06-08T06:03:10.886Z",
+    "name": "test_role_mq_t_f__q_wq",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 132,
+    "created_at": "2026-06-08T06:03:10.869Z",
+    "updated_at": "2026-06-08T06:03:10.869Z",
+    "name": "custom_role_mqtfuzmec",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 133,
+    "created_at": "2026-06-08T06:03:10.874Z",
+    "updated_at": "2026-06-08T06:03:10.874Z",
+    "name": "dup_role_mqtfzrj",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 134,
+    "created_at": "2026-06-08T06:03:46.667Z",
+    "updated_at": "2026-06-08T06:03:46.667Z",
+    "name": "test_role_mqtwud",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 135,
+    "created_at": "2026-06-08T06:03:47.558Z",
+    "updated_at": "2026-06-08T06:03:47.804Z",
+    "name": "test_role_mq_t__kvwva_",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 136,
+    "created_at": "2026-06-08T06:03:47.788Z",
+    "updated_at": "2026-06-08T06:03:47.788Z",
+    "name": "custom_role_mqtrdsio",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 137,
+    "created_at": "2026-06-08T06:03:47.794Z",
+    "updated_at": "2026-06-08T06:03:47.794Z",
+    "name": "dup_role_mqtringgq",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 138,
+    "created_at": "2026-06-08T06:04:35.270Z",
+    "updated_at": "2026-06-08T06:04:35.270Z",
+    "name": "test_role_mqtecbski",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 139,
+    "created_at": "2026-06-08T06:04:36.215Z",
+    "updated_at": "2026-06-08T06:04:36.215Z",
+    "name": "test_role_mq_t___jgjy_",
+    "label": "Test Role",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 140,
+    "created_at": "2026-06-08T06:05:48.955Z",
+    "updated_at": "2026-06-08T06:05:48.955Z",
+    "name": "test_role_mqttfjjy",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 141,
+    "created_at": "2026-06-08T06:06:07.938Z",
+    "updated_at": "2026-06-08T06:06:08.185Z",
+    "name": "test_role_mq_t__wffaky",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 142,
+    "created_at": "2026-06-08T06:06:08.164Z",
+    "updated_at": "2026-06-08T06:06:08.164Z",
+    "name": "custom_role_mqtpcn",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 143,
+    "created_at": "2026-06-08T06:06:08.168Z",
+    "updated_at": "2026-06-08T06:06:08.168Z",
+    "name": "dup_role_mqtujq",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 144,
+    "created_at": "2026-06-08T06:06:18.345Z",
+    "updated_at": "2026-06-08T06:06:18.345Z",
+    "name": "test_role_mqtfxilm",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 145,
+    "created_at": "2026-06-08T06:06:19.472Z",
+    "updated_at": "2026-06-08T06:06:19.801Z",
+    "name": "test_role_mq_t_gsrflso",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 146,
+    "created_at": "2026-06-08T06:06:19.762Z",
+    "updated_at": "2026-06-08T06:06:19.762Z",
+    "name": "custom_role_mqthvim",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 147,
+    "created_at": "2026-06-08T06:06:19.784Z",
+    "updated_at": "2026-06-08T06:06:19.784Z",
+    "name": "dup_role_mqthgowl",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 148,
+    "created_at": "2026-06-08T06:07:05.731Z",
+    "updated_at": "2026-06-08T06:07:05.731Z",
+    "name": "test_role_mqtghrkjec",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 149,
+    "created_at": "2026-06-08T06:07:06.602Z",
+    "updated_at": "2026-06-08T06:07:06.890Z",
+    "name": "test_role_mq_t_h_zfocz",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 150,
+    "created_at": "2026-06-08T06:07:06.871Z",
+    "updated_at": "2026-06-08T06:07:06.871Z",
+    "name": "custom_role_mqthdfjhk",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 151,
+    "created_at": "2026-06-08T06:07:06.876Z",
+    "updated_at": "2026-06-08T06:07:06.876Z",
+    "name": "dup_role_mqthdlrkr",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 152,
+    "created_at": "2026-06-08T06:08:54.514Z",
+    "updated_at": "2026-06-08T06:08:54.514Z",
+    "name": "test_role_mqtsfindpo",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 153,
+    "created_at": "2026-06-08T06:08:55.441Z",
+    "updated_at": "2026-06-08T06:08:55.705Z",
+    "name": "test_role_mq_t_t___cre",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 154,
+    "created_at": "2026-06-08T06:08:55.683Z",
+    "updated_at": "2026-06-08T06:08:55.683Z",
+    "name": "custom_role_mqttbzba",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 155,
+    "created_at": "2026-06-08T06:08:55.689Z",
+    "updated_at": "2026-06-08T06:08:55.689Z",
+    "name": "dup_role_mqttce",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 156,
+    "created_at": "2026-06-08T06:09:24.853Z",
+    "updated_at": "2026-06-08T06:09:24.853Z",
+    "name": "test_role_mqtfubmiw",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 157,
+    "created_at": "2026-06-08T06:09:26.304Z",
+    "updated_at": "2026-06-08T06:09:26.695Z",
+    "name": "test_role_mq_t_gyirkft",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 158,
+    "created_at": "2026-06-08T06:09:26.672Z",
+    "updated_at": "2026-06-08T06:09:26.672Z",
+    "name": "custom_role_mqthtxh",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 159,
+    "created_at": "2026-06-08T06:09:26.679Z",
+    "updated_at": "2026-06-08T06:09:26.679Z",
+    "name": "dup_role_mqthzlzso",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 160,
+    "created_at": "2026-06-08T06:09:58.276Z",
+    "updated_at": "2026-06-08T06:09:58.276Z",
+    "name": "test_role_mqtampejha",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 161,
+    "created_at": "2026-06-08T06:09:59.135Z",
+    "updated_at": "2026-06-08T06:09:59.395Z",
+    "name": "test_role_mq_ta_ak_nqb",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 162,
+    "created_at": "2026-06-08T06:09:59.370Z",
+    "updated_at": "2026-06-08T06:09:59.370Z",
+    "name": "custom_role_mqtah",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 163,
+    "created_at": "2026-06-08T06:09:59.379Z",
+    "updated_at": "2026-06-08T06:09:59.379Z",
+    "name": "dup_role_mqtahaeus",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 164,
+    "created_at": "2026-06-08T06:11:26.519Z",
+    "updated_at": "2026-06-08T06:11:26.519Z",
+    "name": "test_role_mqtcptcly",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 165,
+    "created_at": "2026-06-08T06:11:28.637Z",
+    "updated_at": "2026-06-08T06:11:28.932Z",
+    "name": "test_role_mq_tc_cl_ua_",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 166,
+    "created_at": "2026-06-08T06:11:28.911Z",
+    "updated_at": "2026-06-08T06:11:28.911Z",
+    "name": "custom_role_mqtckcbvkv",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 167,
+    "created_at": "2026-06-08T06:11:28.916Z",
+    "updated_at": "2026-06-08T06:11:28.916Z",
+    "name": "dup_role_mqtckhojs",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 168,
+    "created_at": "2026-06-08T06:43:07.371Z",
+    "updated_at": "2026-06-08T06:43:07.371Z",
+    "name": "test_role_mqugsfk",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 169,
+    "created_at": "2026-06-08T06:43:09.282Z",
+    "updated_at": "2026-06-08T06:43:09.908Z",
+    "name": "test_role_mq_ugtwabr_a",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 170,
+    "created_at": "2026-06-08T06:43:09.811Z",
+    "updated_at": "2026-06-08T06:43:09.811Z",
+    "name": "custom_role_mquguaxvtrv",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 171,
+    "created_at": "2026-06-08T06:43:09.870Z",
+    "updated_at": "2026-06-08T06:43:09.870Z",
+    "name": "dup_role_mqugublnvrp",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 172,
+    "created_at": "2026-06-08T06:44:17.185Z",
+    "updated_at": "2026-06-08T06:44:17.545Z",
+    "name": "test_role_mq_uiaam_wmw",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 173,
+    "created_at": "2026-06-08T06:44:17.491Z",
+    "updated_at": "2026-06-08T06:44:17.491Z",
+    "name": "custom_role_mquiajd",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 174,
+    "created_at": "2026-06-08T06:44:17.507Z",
+    "updated_at": "2026-06-08T06:44:17.507Z",
+    "name": "dup_role_mquiajgre",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 175,
+    "created_at": "2026-06-08T06:45:20.487Z",
+    "updated_at": "2026-06-08T06:45:21.048Z",
+    "name": "test_role_mq_ujn_ye_ni",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 176,
+    "created_at": "2026-06-08T06:45:21.005Z",
+    "updated_at": "2026-06-08T06:45:21.005Z",
+    "name": "custom_role_mqujnjh",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 177,
+    "created_at": "2026-06-08T06:45:21.016Z",
+    "updated_at": "2026-06-08T06:45:21.016Z",
+    "name": "dup_role_mqujnjlhxkc",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 178,
+    "created_at": "2026-06-08T06:46:01.363Z",
+    "updated_at": "2026-06-08T06:46:01.363Z",
+    "name": "test_role_mqukiocywr",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 179,
+    "created_at": "2026-06-08T06:46:33.491Z",
+    "updated_at": "2026-06-08T06:46:33.491Z",
+    "name": "test_role_mqulgnqg",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 180,
+    "created_at": "2026-06-08T06:46:35.436Z",
+    "updated_at": "2026-06-08T06:46:35.933Z",
+    "name": "test_role_mq_ul_ywy_j_",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 181,
+    "created_at": "2026-06-08T06:46:35.887Z",
+    "updated_at": "2026-06-08T06:46:35.887Z",
+    "name": "custom_role_mqulbayb",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 182,
+    "created_at": "2026-06-08T06:46:35.900Z",
+    "updated_at": "2026-06-08T06:46:35.900Z",
+    "name": "dup_role_mqulbovvd",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 183,
+    "created_at": "2026-06-08T06:47:40.606Z",
+    "updated_at": "2026-06-08T06:47:40.606Z",
+    "name": "test_role_mqumndjik",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 184,
+    "created_at": "2026-06-08T06:47:43.036Z",
+    "updated_at": "2026-06-08T06:47:43.771Z",
+    "name": "test_role_mq_ump_ebi_u",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 185,
+    "created_at": "2026-06-08T06:47:43.720Z",
+    "updated_at": "2026-06-08T06:47:43.720Z",
+    "name": "custom_role_mqumpnlmaaw",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 186,
+    "created_at": "2026-06-08T06:47:43.738Z",
+    "updated_at": "2026-06-08T06:47:43.738Z",
+    "name": "dup_role_mqumpnyxu",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 187,
+    "created_at": "2026-06-08T06:48:55.044Z",
+    "updated_at": "2026-06-08T06:48:55.044Z",
+    "name": "test_role_mquoouub",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 188,
+    "created_at": "2026-06-08T06:48:56.813Z",
+    "updated_at": "2026-06-08T06:48:57.436Z",
+    "name": "test_role_mq_uoa_woqo_",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 189,
+    "created_at": "2026-06-08T06:48:57.387Z",
+    "updated_at": "2026-06-08T06:48:57.387Z",
+    "name": "custom_role_mquoahtdmu",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 190,
+    "created_at": "2026-06-08T06:48:57.401Z",
+    "updated_at": "2026-06-08T06:48:57.401Z",
+    "name": "dup_role_mquoaimtub",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 191,
+    "created_at": "2026-06-08T06:54:36.552Z",
+    "updated_at": "2026-06-08T06:54:36.552Z",
+    "name": "test_role_mquvkyu",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 192,
+    "created_at": "2026-06-08T06:54:38.707Z",
+    "updated_at": "2026-06-08T06:54:39.416Z",
+    "name": "test_role_mq_uvluyz___",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 193,
+    "created_at": "2026-06-08T06:54:39.385Z",
+    "updated_at": "2026-06-08T06:54:39.385Z",
+    "name": "custom_role_mquvmdvfus",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 194,
+    "created_at": "2026-06-08T06:54:39.398Z",
+    "updated_at": "2026-06-08T06:54:39.398Z",
+    "name": "dup_role_mquvmeaasi",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 195,
+    "created_at": "2026-06-08T06:55:39.215Z",
+    "updated_at": "2026-06-08T06:55:39.215Z",
+    "name": "test_role_mquwwjrifo",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 196,
+    "created_at": "2026-06-08T06:55:41.533Z",
+    "updated_at": "2026-06-08T06:55:42.332Z",
+    "name": "test_role_mq_uwyc_cz_v",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 197,
+    "created_at": "2026-06-08T06:55:42.301Z",
+    "updated_at": "2026-06-08T06:55:42.301Z",
+    "name": "custom_role_mquwyxjnaa",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 198,
+    "created_at": "2026-06-08T06:55:42.308Z",
+    "updated_at": "2026-06-08T06:55:42.308Z",
+    "name": "dup_role_mquwyxrgpx",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 199,
+    "created_at": "2026-06-08T06:56:31.542Z",
+    "updated_at": "2026-06-08T06:56:31.542Z",
+    "name": "test_role_mquyxemnm",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 200,
+    "created_at": "2026-06-08T06:56:33.561Z",
+    "updated_at": "2026-06-08T06:56:34.133Z",
+    "name": "test_role_mq_uy_hc_yp_",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 201,
+    "created_at": "2026-06-08T06:56:34.107Z",
+    "updated_at": "2026-06-08T06:56:34.107Z",
+    "name": "custom_role_mquywocey",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 202,
+    "created_at": "2026-06-08T06:56:34.112Z",
+    "updated_at": "2026-06-08T06:56:34.112Z",
+    "name": "dup_role_mquywtsawa",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 203,
+    "created_at": "2026-06-08T06:58:19.618Z",
+    "updated_at": "2026-06-08T06:58:19.618Z",
+    "name": "test_role_mqvcbead",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 204,
+    "created_at": "2026-06-08T06:58:21.605Z",
+    "updated_at": "2026-06-08T06:58:22.288Z",
+    "name": "test_role_mq_v_dul_yzq",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 205,
+    "created_at": "2026-06-08T06:58:22.249Z",
+    "updated_at": "2026-06-08T06:58:22.249Z",
+    "name": "custom_role_mqveckbuk",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 206,
+    "created_at": "2026-06-08T06:58:22.261Z",
+    "updated_at": "2026-06-08T06:58:22.261Z",
+    "name": "dup_role_mqvecuqouh",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 207,
+    "created_at": "2026-06-08T07:05:51.374Z",
+    "updated_at": "2026-06-08T07:05:51.374Z",
+    "name": "test_role_mqvawef",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 208,
+    "created_at": "2026-06-08T07:05:52.064Z",
+    "updated_at": "2026-06-08T07:05:52.485Z",
+    "name": "test_role_mq_va_fhfldi",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 209,
+    "created_at": "2026-06-08T07:05:52.463Z",
+    "updated_at": "2026-06-08T07:05:52.463Z",
+    "name": "custom_role_mqvaqhvu",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 210,
+    "created_at": "2026-06-08T07:05:52.471Z",
+    "updated_at": "2026-06-08T07:05:52.471Z",
+    "name": "dup_role_mqvaqprjc",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 211,
+    "created_at": "2026-06-08T07:06:14.297Z",
+    "updated_at": "2026-06-08T07:06:14.297Z",
+    "name": "test_role_mqvaillh",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 212,
+    "created_at": "2026-06-08T07:06:14.999Z",
+    "updated_at": "2026-06-08T07:06:15.716Z",
+    "name": "test_role_mq_vaj_ijs_x",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 213,
+    "created_at": "2026-06-08T07:06:15.681Z",
+    "updated_at": "2026-06-08T07:06:15.681Z",
+    "name": "custom_role_mqvajncau",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 214,
+    "created_at": "2026-06-08T07:06:15.692Z",
+    "updated_at": "2026-06-08T07:06:15.692Z",
+    "name": "dup_role_mqvajnqmwq",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 215,
+    "created_at": "2026-06-08T07:13:10.453Z",
+    "updated_at": "2026-06-08T07:13:10.453Z",
+    "name": "test_role_mqvjfotsi",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 216,
+    "created_at": "2026-06-08T07:13:11.870Z",
+    "updated_at": "2026-06-08T07:13:12.464Z",
+    "name": "test_role_mq_vjgs_tcds",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 217,
+    "created_at": "2026-06-08T07:13:12.437Z",
+    "updated_at": "2026-06-08T07:13:12.437Z",
+    "name": "custom_role_mqvjhbjdw",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 218,
+    "created_at": "2026-06-08T07:13:12.444Z",
+    "updated_at": "2026-06-08T07:13:12.444Z",
+    "name": "dup_role_mqvjhn",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 219,
+    "created_at": "2026-06-08T18:00:31.310Z",
+    "updated_at": "2026-06-08T18:00:31.310Z",
+    "name": "test_role_mqinxhnd",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 220,
+    "created_at": "2026-06-08T18:00:33.091Z",
+    "updated_at": "2026-06-08T18:00:33.411Z",
+    "name": "test_role_mq_inyv_bqqs",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 221,
+    "created_at": "2026-06-08T18:00:33.393Z",
+    "updated_at": "2026-06-08T18:00:33.393Z",
+    "name": "custom_role_mqinzhpxu",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 222,
+    "created_at": "2026-06-08T18:00:33.398Z",
+    "updated_at": "2026-06-08T18:00:33.398Z",
+    "name": "dup_role_mqinzniwe",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 223,
+    "created_at": "2026-06-08T18:01:34.356Z",
+    "updated_at": "2026-06-08T18:01:34.356Z",
+    "name": "test_role_mqipasdlp",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 224,
+    "created_at": "2026-06-08T18:01:42.664Z",
+    "updated_at": "2026-06-08T18:01:43.578Z",
+    "name": "test_role_mq_ipgjgq_ad",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 225,
+    "created_at": "2026-06-08T18:01:43.526Z",
+    "updated_at": "2026-06-08T18:01:43.526Z",
+    "name": "custom_role_mqiphgsn",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 226,
+    "created_at": "2026-06-08T18:01:43.541Z",
+    "updated_at": "2026-06-08T18:01:43.541Z",
+    "name": "dup_role_mqiphwi",
+    "label": "A",
+    "description": "",
+    "is_system": false
+  },
+  {
+    "id": 227,
+    "created_at": "2026-06-09T01:53:37.741Z",
+    "updated_at": "2026-06-09T01:53:37.741Z",
+    "name": "test_role_mqzkcliogi",
+    "label": "Test Role",
+    "description": "Custom role",
+    "is_system": false
+  },
+  {
+    "id": 228,
+    "created_at": "2026-06-09T01:53:42.420Z",
+    "updated_at": "2026-06-09T01:53:43.948Z",
+    "name": "test_role_mq_zkg_g__wi",
+    "label": "Updated Label",
+    "description": "New desc",
+    "is_system": false
+  },
+  {
+    "id": 229,
+    "created_at": "2026-06-09T01:53:43.896Z",
+    "updated_at": "2026-06-09T01:53:43.896Z",
+    "name": "custom_role_mqzkhbqeyih",
+    "label": "Custom Role",
+    "description": "For testing",
+    "is_system": false
+  },
+  {
+    "id": 230,
+    "created_at": "2026-06-09T01:53:43.917Z",
+    "updated_at": "2026-06-09T01:53:43.917Z",
+    "name": "dup_role_mqzkhdmwhv",
+    "label": "A",
+    "description": "",
+    "is_system": false
   }
 ]

@@ -1,4 +1,8 @@
-import { testDb } from './test-db-config.js';
+import { afterAll }     from 'vitest';
+import { createRequire } from 'module';
+import { testDb }        from './test-db-config.js';
+
+const _require = createRequire(import.meta.url);
 
 if (!testDb.database.endsWith('_test')) {
     throw new Error(
@@ -21,3 +25,19 @@ process.env.GOOGLE_CLIENT_ID     = 'test-client-id';
 process.env.GOOGLE_CLIENT_SECRET = 'test-client-secret';
 process.env.GOOGLE_REDIRECT_URI  = 'http://localhost/callback';
 process.env.FRONTEND_URL         = 'http://localhost';
+
+// Close pg connection pools after each test file so the worker process can exit cleanly.
+// Without this the open pool handles keep the event loop alive and Vitest kills the
+// worker with SIGKILL, producing "Worker exited unexpectedly".
+// createRequire guarantees we get the same CJS module instance (same pool objects) that
+// the test file used — dynamic ESM import() resolves through the ESM registry which may
+// or may not be the same instance on all Node.js versions.
+afterAll(async () => {
+    try {
+        const db = _require('../../backend/db.js');
+        if (db?.writePool) await db.writePool.end();
+        if (db?.readPool)  await db.readPool.end();
+    } catch {
+        // pool never opened in this worker (e.g. nondb-only test file) — safe to ignore
+    }
+});
