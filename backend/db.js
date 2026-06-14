@@ -4,7 +4,18 @@ if (process.env.NONDB_MODE === 'true') {
     return;
 }
 
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+
+// Return NUMERIC/DECIMAL (OID 1700) and FLOAT4/FLOAT8 (OID 700/701) as JS numbers, not strings.
+// pg returns numeric columns as strings by default to avoid float precision loss,
+// but our routes store fixed-precision values (2 dp) that tests compare as numbers.
+const parseFloat_ = v => v === null ? null : parseFloat(v);
+types.setTypeParser(1700, parseFloat_); // NUMERIC / DECIMAL
+types.setTypeParser(700,  parseFloat_); // FLOAT4
+types.setTypeParser(701,  parseFloat_); // FLOAT8
+// Return DATE as "YYYY-MM-DD" string instead of a Date object so GraphQL
+// String fields don't fall back to String(dateObj) (locale-dependent garbage).
+types.setTypeParser(1082, v => v);      // DATE
 
 const base = {
     host:              process.env.AMRD_DB_HOST || 'localhost',

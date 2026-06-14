@@ -1,8 +1,8 @@
 [
   {
     "id": 1,
-    "created_at": "2026-05-26T16:35:28.768Z",
-    "updated_at": "2026-05-26T16:35:28.779Z",
+    "created_at": "2026-06-13T08:41:35.298Z",
+    "updated_at": "2026-06-13T08:41:35.316Z",
     "invoice_number": "AMR-2026-0001",
     "tenant_id": 1,
     "period_year": null,
@@ -16,12 +16,12 @@
     "total_amount": 47200,
     "notes": null,
     "created_by": 901,
-    "paid_at": "2026-05-26T16:35:28.779Z"
+    "paid_at": "2026-06-13T08:41:35.316Z"
   },
   {
     "id": 2,
-    "created_at": "2026-05-26T16:35:28.785Z",
-    "updated_at": "2026-05-26T16:35:28.789Z",
+    "created_at": "2026-06-13T08:41:35.347Z",
+    "updated_at": "2026-06-13T08:41:35.362Z",
     "invoice_number": "AMR-2026-0002",
     "tenant_id": 1,
     "period_year": null,
@@ -39,8 +39,8 @@
   },
   {
     "id": 3,
-    "created_at": "2026-05-26T16:35:30.923Z",
-    "updated_at": "2026-05-26T16:35:30.981Z",
+    "created_at": "2026-06-13T08:41:37.051Z",
+    "updated_at": "2026-06-13T08:41:37.211Z",
     "invoice_number": "AMR-2026-0003",
     "tenant_id": 2,
     "period_year": null,
@@ -54,12 +54,12 @@
     "total_amount": 5900,
     "notes": null,
     "created_by": 901,
-    "paid_at": "2026-05-26T16:35:30.980Z"
+    "paid_at": "2026-06-13T08:41:37.210Z"
   },
   {
     "id": 4,
-    "created_at": "2026-05-26T16:35:30.944Z",
-    "updated_at": "2026-05-26T16:35:30.944Z",
+    "created_at": "2026-06-13T08:41:37.098Z",
+    "updated_at": "2026-06-13T08:41:37.098Z",
     "invoice_number": "AMR-2026-0004",
     "tenant_id": 2,
     "period_year": null,
@@ -76,8 +76,8 @@
   },
   {
     "id": 5,
-    "created_at": "2026-05-26T16:35:30.949Z",
-    "updated_at": "2026-05-26T16:35:30.949Z",
+    "created_at": "2026-06-13T08:41:37.125Z",
+    "updated_at": "2026-06-13T08:41:37.125Z",
     "invoice_number": "AMR-2026-0005",
     "tenant_id": 2,
     "period_year": null,
@@ -94,8 +94,8 @@
   },
   {
     "id": 6,
-    "created_at": "2026-05-26T16:35:30.953Z",
-    "updated_at": "2026-05-26T16:35:30.953Z",
+    "created_at": "2026-06-13T08:41:37.133Z",
+    "updated_at": "2026-06-13T08:41:37.133Z",
     "invoice_number": "AMR-2026-0006",
     "tenant_id": 2,
     "period_year": null,
@@ -112,8 +112,8 @@
   },
   {
     "id": 7,
-    "created_at": "2026-05-26T16:35:30.958Z",
-    "updated_at": "2026-05-26T16:35:30.958Z",
+    "created_at": "2026-06-13T08:41:37.143Z",
+    "updated_at": "2026-06-13T08:41:37.143Z",
     "invoice_number": "AMR-2026-0007",
     "tenant_id": 2,
     "period_year": null,
@@ -130,8 +130,8 @@
   },
   {
     "id": 8,
-    "created_at": "2026-05-26T16:35:30.964Z",
-    "updated_at": "2026-05-26T16:35:30.964Z",
+    "created_at": "2026-06-13T08:41:37.162Z",
+    "updated_at": "2026-06-13T08:41:37.162Z",
     "invoice_number": "AMR-2026-0008",
     "tenant_id": 2,
     "period_year": null,
@@ -148,8 +148,8 @@
   },
   {
     "id": 9,
-    "created_at": "2026-05-26T16:35:30.965Z",
-    "updated_at": "2026-05-26T16:35:30.965Z",
+    "created_at": "2026-06-13T08:41:37.165Z",
+    "updated_at": "2026-06-13T08:41:37.165Z",
     "invoice_number": "AMR-2026-0009",
     "tenant_id": 2,
     "period_year": null,
@@ -166,8 +166,8 @@
   },
   {
     "id": 10,
-    "created_at": "2026-05-26T16:35:30.986Z",
-    "updated_at": "2026-05-26T16:35:30.990Z",
+    "created_at": "2026-06-13T08:41:37.218Z",
+    "updated_at": "2026-06-13T08:41:37.229Z",
     "invoice_number": "AMR-2026-0010",
     "tenant_id": 2,
     "period_year": null,
@@ -185,8 +185,8 @@
   },
   {
     "id": 11,
-    "created_at": "2026-05-26T16:35:30.994Z",
-    "updated_at": "2026-05-26T16:35:30.997Z",
+    "created_at": "2026-06-13T08:41:37.244Z",
+    "updated_at": "2026-06-13T08:41:37.263Z",
     "invoice_number": "AMR-2026-0011",
     "tenant_id": 2,
     "period_year": null,
@@ -204,8 +204,8 @@
   },
   {
     "id": 12,
-    "created_at": "2026-05-26T16:35:31.001Z",
-    "updated_at": "2026-05-26T16:35:31.005Z",
+    "created_at": "2026-06-13T08:41:37.309Z",
+    "updated_at": "2026-06-13T08:41:37.317Z",
     "invoice_number": "AMR-2026-0012",
     "tenant_id": 2,
     "period_year": null,

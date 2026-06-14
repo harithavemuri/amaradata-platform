@@ -1,0 +1,16 @@
+{
+  "table": "group_tenant",
+  "description": "Maps a group to a tenant with the role that group holds in that tenant (mirrors rohas-group's group_project table)",
+  "columns": [
+    { "name": "id",          "type": "serial",    "primaryKey": true },
+    { "name": "group_id",    "type": "integer",   "notNull": true, "references": "amr_groups.id" },
+    { "name": "tenant_id",   "type": "integer",   "notNull": true, "references": "tenants.id" },
+    { "name": "role_id",     "type": "integer",   "notNull": true, "references": "amr_roles.id" },
+    { "name": "assigned_at", "type": "timestamp", "notNull": true },
+    { "name": "created_at",  "type": "timestamp", "notNull": true },
+    { "name": "updated_at",  "type": "timestamp", "notNull": true }
+  ],
+  "constraints": [
+    { "type": "UNIQUE", "columns": ["group_id", "tenant_id", "role_id"] }
+  ]
+}

@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import app from '../../server.js';
-import { uid, auth } from './helpers.js';
+import { uid, auth, assertJson } from './helpers.js';
 
 describe('Metrics routes', () => {
     let tenantId;
@@ -18,14 +18,15 @@ describe('Metrics routes', () => {
         it('without auth → 401', async () => {
             const res = await request(app).post('/api/metrics')
                 .send({ tenant_id: 1, period_year: 2025, period_month: 1 });
+            assertJson(res);
             expect(res.status).toBe(401);
-            expect(res.headers['content-type']).toMatch(/json/);
         });
 
         it('missing tenant_id → 400', async () => {
             const res = await request(app).post('/api/metrics')
                 .set(auth('staff'))
                 .send({ period_year: 2025, period_month: 1 });
+            assertJson(res);
             expect(res.status).toBe(400);
             expect(res.body).toHaveProperty('error');
         });
@@ -34,6 +35,7 @@ describe('Metrics routes', () => {
             const res = await request(app).post('/api/metrics')
                 .set(auth('staff'))
                 .send({ tenant_id: tenantId, period_month: 1 });
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
@@ -41,6 +43,7 @@ describe('Metrics routes', () => {
             const res = await request(app).post('/api/metrics')
                 .set(auth('staff'))
                 .send({ tenant_id: tenantId, period_year: 2025 });
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
@@ -48,6 +51,7 @@ describe('Metrics routes', () => {
             const res = await request(app).post('/api/metrics')
                 .set(auth('staff'))
                 .send({ tenant_id: tenantId, period_year: 2025, period_month: 1 });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.success).toBe(true);
             expect(res.body.data).toMatchObject({
@@ -75,6 +79,7 @@ describe('Metrics routes', () => {
                     rental_income:     120000,
                     active_properties: 15,
                 });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.data.sales_count).toBe(10);
             expect(res.body.data.sales_value).toBe(500000);
@@ -87,6 +92,7 @@ describe('Metrics routes', () => {
             const res = await request(app).post('/api/metrics')
                 .set(auth('staff'))
                 .send({ ...body, sales_count: 5, sales_value: 9999 });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.data.sales_count).toBe(5);
             expect(res.body.data.sales_value).toBe(9999);
@@ -96,6 +102,7 @@ describe('Metrics routes', () => {
             const res = await request(app).post('/api/metrics')
                 .set(auth('staff'))
                 .send({ tenant_id: tenantId, period_year: 2025, period_month: 4 });
+            assertJson(res);
             expect(res.status).toBe(201);
         });
     });

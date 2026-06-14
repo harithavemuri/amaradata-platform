@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import app from '../../server.js';
-import { uid, auth } from './helpers.js';
+import { uid, auth, assertJson } from './helpers.js';
 
 describe('Subscriptions routes', () => {
     let tenantId;
@@ -25,14 +25,15 @@ describe('Subscriptions routes', () => {
         it('without auth → 401', async () => {
             const res = await request(app).post('/api/subscriptions/plans')
                 .send({ name: 'Plan A' });
+            assertJson(res);
             expect(res.status).toBe(401);
-            expect(res.headers['content-type']).toMatch(/json/);
         });
 
         it('with staff role → 403', async () => {
             const res = await request(app).post('/api/subscriptions/plans')
                 .set(auth('staff'))
                 .send({ name: 'Plan A' });
+            assertJson(res);
             expect(res.status).toBe(403);
         });
 
@@ -40,6 +41,7 @@ describe('Subscriptions routes', () => {
             const res = await request(app).post('/api/subscriptions/plans')
                 .set(auth('admin'))
                 .send({ description: 'No name' });
+            assertJson(res);
             expect(res.status).toBe(400);
             expect(res.body).toHaveProperty('error');
         });
@@ -48,6 +50,7 @@ describe('Subscriptions routes', () => {
             const res = await request(app).post('/api/subscriptions/plans')
                 .set(auth('admin'))
                 .send({ name: `Growth ${uid()}` });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.success).toBe(true);
             expect(res.body.data).toMatchObject({
@@ -72,6 +75,7 @@ describe('Subscriptions routes', () => {
                     min_monthly_fee: 10000,
                     currency_code:   'USD',
                 });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.data.hourly_rate).toBe(1500);
             expect(res.body.data.currency_code).toBe('USD');
@@ -83,6 +87,7 @@ describe('Subscriptions routes', () => {
         it('without auth → 401', async () => {
             const res = await request(app).post('/api/subscriptions')
                 .send({ tenant_id: 1, plan_id: 1, effective_from: '2025-01-01' });
+            assertJson(res);
             expect(res.status).toBe(401);
         });
 
@@ -90,6 +95,7 @@ describe('Subscriptions routes', () => {
             const res = await request(app).post('/api/subscriptions')
                 .set(auth('staff'))
                 .send({ tenant_id: tenantId, plan_id: planId, effective_from: '2025-01-01' });
+            assertJson(res);
             expect(res.status).toBe(403);
         });
 
@@ -97,6 +103,7 @@ describe('Subscriptions routes', () => {
             const res = await request(app).post('/api/subscriptions')
                 .set(auth('admin'))
                 .send({ plan_id: planId, effective_from: '2025-01-01' });
+            assertJson(res);
             expect(res.status).toBe(400);
             expect(res.body).toHaveProperty('error');
         });
@@ -105,6 +112,7 @@ describe('Subscriptions routes', () => {
             const res = await request(app).post('/api/subscriptions')
                 .set(auth('admin'))
                 .send({ tenant_id: tenantId, effective_from: '2025-01-01' });
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
@@ -112,6 +120,7 @@ describe('Subscriptions routes', () => {
             const res = await request(app).post('/api/subscriptions')
                 .set(auth('admin'))
                 .send({ tenant_id: tenantId, plan_id: planId });
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
@@ -119,6 +128,7 @@ describe('Subscriptions routes', () => {
             const res = await request(app).post('/api/subscriptions')
                 .set(auth('admin'))
                 .send({ tenant_id: tenantId, plan_id: planId, effective_from: '2025-01-01' });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.success).toBe(true);
             expect(res.body.data).toMatchObject({ tenant_id: tenantId, plan_id: planId });
@@ -137,6 +147,7 @@ describe('Subscriptions routes', () => {
             const res = await request(app).post('/api/subscriptions')
                 .set(auth('admin'))
                 .send({ tenant_id: tid, plan_id: planId, effective_from: '2025-06-01' });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.data.effective_to).toBeNull();
         });

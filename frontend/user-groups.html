@@ -14,24 +14,27 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const root = window.__amrd.renderSidebar('User Groups');
 
-    let groups   = [];
-    let allUsers = [];
-    let allRoles = [];
-    let editId   = null;
+    let groups     = [];
+    let allUsers   = [];
+    let allRoles   = [];
+    let allTenants = [];
+    let editId     = null;
     let viewGroupId = null;
 
     // ── load ─────────────────────────────────────────────────────────────────
     async function loadAll() {
         root.innerHTML = '<p style="color:#94a3b8;padding:20px">Loading…</p>';
         try {
-            const [gRes, uRes, rRes] = await Promise.all([
+            const [gRes, uRes, rRes, tRes] = await Promise.all([
                 window.__amrd.apiFetch('/api/admin/user-groups'),
                 window.__amrd.apiFetch('/api/admin/users'),
                 window.__amrd.apiFetch('/api/admin/roles'),
+                window.__amrd.apiFetch('/api/tenants'),
             ]);
-            groups   = gRes.data || [];
-            allUsers = uRes.data || [];
-            allRoles = rRes.data || [];
+            groups     = gRes.data  || [];
+            allUsers   = uRes.data  || [];
+            allRoles   = rRes.data  || [];
+            allTenants = tRes.data  || [];
             render();
         } catch (e) {
             root.innerHTML = `<p style="color:#dc2626;padding:20px">Failed to load: ${e.message}</p>`;
@@ -42,54 +45,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     function groupModal(show, g = {}) {
         editId = g.id || null;
         document.getElementById('gmTitle').textContent = editId ? 'Edit Group' : 'New Group';
-        document.getElementById('gmName').value = g.name || '';
+        document.getElementById('gmName').value = g.name        || '';
         document.getElementById('gmDesc').value = g.description || '';
-        document.getElementById('gmRole').value = g.role || '';
-        document.getElementById('gmErr').textContent  = '';
-
-        // Show member list when editing
-        const memberSection = document.getElementById('gmMemberSection');
-        if (editId && g.members) {
-            const members = g.members || [];
-            memberSection.innerHTML = `
-                <div style="margin-top:6px;border-top:1px solid #f1f5f9;padding-top:14px">
-                    <div style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">
-                        Members (${members.length})
-                    </div>
-                    ${members.length ? members.map(m => `
-                        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f8fafc">
-                            <div>
-                                <div style="font-weight:600;font-size:13px;color:${m.is_active!==false?'#0f172a':'#94a3b8'}">${m.name}</div>
-                                <div style="font-size:11px;color:#64748b">${m.email}</div>
-                            </div>
-                            <button class="amrd-btn amrd-btn-sm" style="background:#fee2e2;color:#dc2626;flex-shrink:0"
-                                onclick="modalRemoveMember(${g.id},${m.id})">Remove</button>
-                        </div>`).join('')
-                    : '<p style="color:#94a3b8;font-size:13px;margin:4px 0">No members yet.</p>'}
-                </div>`;
-            memberSection.style.display = 'block';
-        } else {
-            memberSection.style.display = 'none';
-            memberSection.innerHTML = '';
-        }
-
+        document.getElementById('gmErr').textContent = '';
         document.getElementById('groupModal').style.display = show ? 'flex' : 'none';
     }
 
     async function saveGroup() {
         const name        = document.getElementById('gmName').value.trim();
         const description = document.getElementById('gmDesc').value.trim();
-        const role        = document.getElementById('gmRole').value || null;
         const errEl       = document.getElementById('gmErr');
         if (!name) { errEl.textContent = 'Name is required'; return; }
         try {
             if (editId) {
                 await window.__amrd.apiFetch(`/api/admin/user-groups/${editId}`, {
-                    method: 'PUT', body: JSON.stringify({ name, description, role }),
+                    method: 'PUT', body: JSON.stringify({ name, description }),
                 });
             } else {
                 await window.__amrd.apiFetch('/api/admin/user-groups', {
-                    method: 'POST', body: JSON.stringify({ name, description, role }),
+                    method: 'POST', body: JSON.stringify({ name, description }),
                 });
             }
             groupModal(false);
@@ -99,7 +73,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function deleteGroup(id) {
-        if (!confirm('Delete this group and remove all members?')) return;
+        if (!confirm('Delete this group? All member assignments and tenant assignments will also be removed.')) return;
         try {
             await window.__amrd.apiFetch(`/api/admin/user-groups/${id}`, { method: 'DELETE' });
             if (viewGroupId == id) memberPanel(false);
@@ -107,53 +81,97 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (e) { alert(e.message); }
     }
 
-    // ── members panel ────────────────────────────────────────────────────────
+    // ── detail panel ─────────────────────────────────────────────────────────
     function memberPanel(show, groupId) {
         viewGroupId = groupId || null;
         if (!show) { document.getElementById('memberPanel').style.display = 'none'; return; }
         const g = groups.find(g => g.id == groupId);
         document.getElementById('memberPanelTitle').textContent = g?.name || '';
         document.getElementById('memberPanel').style.display = 'flex';
-        renderMembers(g);
+        renderPanel(g);
     }
 
     function roleBadge(role) {
         if (!role) return '';
         const colours = {
-            site_admin:'#7c3aed;background:#ede9fe', admin:'#1d4ed8;background:#dbeafe',
-            sales_manager:'#0D9488;background:#ccfbf1', billing:'#d97706;background:#fef3c7', staff:'#64748b;background:#f1f5f9',
+            site_admin:    '#7c3aed;background:#ede9fe',
+            admin:         '#1d4ed8;background:#dbeafe',
+            sales_manager: '#0D9488;background:#ccfbf1',
+            billing:       '#d97706;background:#fef3c7',
+            staff:         '#64748b;background:#f1f5f9',
         };
         const c = colours[role] || '64748b;background:#f1f5f9';
         return `<span class="amrd-badge" style="color:${c}">${role.replace(/_/g,' ')}</span>`;
     }
 
-    function renderMembers(g) {
-        const members    = g?.members || [];
-        const nonMembers = allUsers.filter(u => !members.some(m => m.id == u.id) && u.is_active);
+    function renderPanel(g) {
+        if (!g) return;
+        const members    = g.members    || [];
+        const tenantAssn = g.tenant_assignments || [];
+        const nonMembers = allUsers.filter(u => !members.some(m => m.id == u.id) && u.is_active !== false);
+        const assignedTenantRolePairs = new Set(tenantAssn.map(a => `${a.tenant_id}:${a.role_id}`));
+        const availTenants = allTenants;
 
-        const groupRole = g?.role;
-        const roleNote  = groupRole
-            ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#15803d">
-                   Members of this group inherit role: ${roleBadge(groupRole)}
-               </div>`
-            : `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#64748b">
-                   No role assigned to this group. <a href="#" onclick="openEditGroup(${g?.id});return false" style="color:#0D9488">Edit group</a> to set one.
-               </div>`;
+        // Members section
+        const membersHtml = `
+            <div style="margin-bottom:20px">
+                <div style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">
+                    Members (${members.length})
+                </div>
+                ${members.length ? members.map(m => `
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f1f5f9">
+                        <div>
+                            <div style="font-weight:600;font-size:13px;color:${m.is_active!==false?'#0f172a':'#94a3b8'}">${m.name}</div>
+                            <div style="font-size:11px;color:#64748b">${m.email} · ${(m.role||'').replace(/_/g,' ')}</div>
+                        </div>
+                        <button class="amrd-btn amrd-btn-sm" style="background:#fee2e2;color:#dc2626;flex-shrink:0"
+                            onclick="removeMember(${g.id},${m.id})">Remove</button>
+                    </div>`).join('')
+                : '<p style="color:#94a3b8;font-size:13px;margin:6px 0">No members yet.</p>'}
+                <div style="margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9;display:flex;gap:6px">
+                    <select id="addMemberSelect" style="flex:1">
+                        <option value="">— Add a user —</option>
+                        ${nonMembers.map(u => `<option value="${u.id}">${u.name} (${u.email})</option>`).join('')}
+                    </select>
+                    <button class="amrd-btn amrd-btn-primary amrd-btn-sm" onclick="addMember()">Add</button>
+                </div>
+            </div>`;
 
-        document.getElementById('memberList').innerHTML = roleNote + (members.length
-            ? members.map(m => `
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;">
-                    <div>
-                        <div style="font-weight:600;font-size:13px;color:${m.is_active?'#0f172a':'#94a3b8'}">${m.name}</div>
-                        <div style="font-size:11px;color:#64748b">${m.email} · direct: ${(m.role||'').replace(/_/g,' ')}</div>
+        // Tenant assignments section
+        const tenantHtml = `
+            <div style="border-top:2px solid #f1f5f9;padding-top:16px">
+                <div style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">
+                    Tenant Assignments (${tenantAssn.length})
+                </div>
+                <div style="font-size:11px;color:#64748b;margin-bottom:10px">
+                    Members of this group inherit the assigned role within each tenant listed below.
+                </div>
+                ${tenantAssn.length ? tenantAssn.map(a => `
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f8fafc">
+                        <div>
+                            <div style="font-weight:600;font-size:13px;color:#0f172a">${a.tenant_name || a.tenant_id}</div>
+                            <div style="font-size:11px;margin-top:2px">${roleBadge(a.role)} <span style="color:#94a3b8">${a.role_label || ''}</span></div>
+                        </div>
+                        <button class="amrd-btn amrd-btn-sm" style="background:#fee2e2;color:#dc2626;flex-shrink:0"
+                            onclick="removeTenantAssn(${g.id},${a.id})">Remove</button>
+                    </div>`).join('')
+                : '<p style="color:#94a3b8;font-size:13px;margin:6px 0">No tenant assignments yet.</p>'}
+                <div style="margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9">
+                    <div style="display:flex;gap:6px;margin-bottom:6px">
+                        <select id="addTenantSelect" style="flex:1">
+                            <option value="">— Tenant —</option>
+                            ${availTenants.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
+                        </select>
+                        <select id="addRoleSelect" style="flex:1">
+                            <option value="">— Role —</option>
+                            ${allRoles.map(r => `<option value="${r.id}">${r.label}</option>`).join('')}
+                        </select>
                     </div>
-                    <button class="amrd-btn amrd-btn-sm" style="background:#fee2e2;color:#dc2626" onclick="removeMember(${g.id},${m.id})">Remove</button>
-                </div>`).join('')
-            : '<p style="color:#94a3b8;font-size:13px;margin:12px 0">No members yet.</p>');
+                    <button class="amrd-btn amrd-btn-primary amrd-btn-sm" style="width:100%" onclick="addTenantAssn(${g.id})">Assign Tenant + Role</button>
+                </div>
+            </div>`;
 
-        document.getElementById('addMemberSelect').innerHTML =
-            `<option value="">— Add a user —</option>` +
-            nonMembers.map(u => `<option value="${u.id}">${u.name} (${u.email})</option>`).join('');
+        document.getElementById('panelContent').innerHTML = membersHtml + tenantHtml;
     }
 
     async function addMember() {
@@ -176,17 +194,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (e) { alert(e.message); }
     }
 
-    async function modalRemoveMember(groupId, userId) {
+    async function addTenantAssn(groupId) {
+        const tenantId = document.getElementById('addTenantSelect').value;
+        const roleId   = document.getElementById('addRoleSelect').value;
+        if (!tenantId || !roleId) { alert('Select both a tenant and a role.'); return; }
         try {
-            await window.__amrd.apiFetch(`/api/admin/user-groups/${groupId}/members/${userId}`, { method: 'DELETE' });
+            await window.__amrd.apiFetch(`/api/admin/user-groups/${groupId}/tenants`, {
+                method: 'POST', body: JSON.stringify({ tenant_id: parseInt(tenantId), role_id: parseInt(roleId) }),
+            });
             await loadAll();
-            // Refresh the modal with updated group data
-            const updated = groups.find(g => g.id == groupId);
-            if (updated) groupModal(true, updated);
+            memberPanel(true, viewGroupId);
         } catch (e) { alert(e.message); }
     }
 
-    // ── render ────────────────────────────────────────────────────────────────
+    async function removeTenantAssn(groupId, gtId) {
+        if (!confirm('Remove this tenant assignment?')) return;
+        try {
+            await window.__amrd.apiFetch(`/api/admin/user-groups/${groupId}/tenants/${gtId}`, { method: 'DELETE' });
+            await loadAll();
+            memberPanel(true, viewGroupId);
+        } catch (e) { alert(e.message); }
+    }
+
+    // ── main render ───────────────────────────────────────────────────────────
     function render() {
         root.innerHTML = `
         <div class="amrd-flex-row">
@@ -199,47 +229,51 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 ${groups.length === 0
                     ? '<div class="amrd-card"><p style="color:#94a3b8;text-align:center">No groups yet.</p></div>'
-                    : groups.map(g => `
-                    <div class="amrd-card" style="cursor:pointer;transition:box-shadow .15s;margin-bottom:12px"
-                         onclick="viewMembers(${g.id})">
-                        <div style="display:flex;justify-content:space-between;align-items:flex-start">
-                            <div>
-                                <div style="font-weight:700;font-size:14px;color:#0f172a;margin-bottom:4px">${g.name}</div>
-                                <div style="font-size:12px;color:#64748b">${g.description || '—'}</div>
-                                <div style="margin-top:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-                                    <span class="amrd-badge" style="background:#dbeafe;color:#1d4ed8">${g.member_count || 0} member${(g.member_count||0)!==1?'s':''}</span>
-                                    ${g.role ? `<span style="font-size:11px;color:#64748b">Role: ${roleBadge(g.role)}</span>` : '<span style="font-size:11px;color:#94a3b8;font-style:italic">No role</span>'}
-                                    ${g.is_active ? '' : '<span class="amrd-badge amrd-badge-cancelled">Inactive</span>'}
+                    : groups.map(g => {
+                        const assns = g.tenant_assignments || [];
+                        return `
+                        <div class="amrd-card" style="cursor:pointer;transition:box-shadow .15s;margin-bottom:12px"
+                             onclick="viewMembers(${g.id})">
+                            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                                <div style="flex:1;min-width:0">
+                                    <div style="font-weight:700;font-size:14px;color:${g.is_active!==false?'#0f172a':'#94a3b8'};margin-bottom:3px">
+                                        ${g.name}
+                                        ${g.is_active===false ? '<span class="amrd-badge amrd-badge-cancelled" style="margin-left:6px">Inactive</span>' : ''}
+                                    </div>
+                                    <div style="font-size:12px;color:#64748b;margin-bottom:6px">${g.description || '—'}</div>
+                                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                                        <span class="amrd-badge" style="background:#dbeafe;color:#1d4ed8">${g.member_count || 0} member${(g.member_count||0)!==1?'s':''}</span>
+                                        ${assns.length
+                                            ? assns.map(a => `<span style="font-size:11px;color:#64748b">${a.tenant_name}: ${roleBadge(a.role)}</span>`).join('')
+                                            : '<span style="font-size:11px;color:#94a3b8;font-style:italic">No tenant assignments</span>'
+                                        }
+                                    </div>
+                                </div>
+                                <div onclick="event.stopPropagation()" style="display:flex;gap:6px;flex-shrink:0;margin-left:10px">
+                                    <button class="amrd-btn amrd-btn-sm amrd-btn-ghost" onclick="openEditGroup(${g.id})">Edit</button>
+                                    <button class="amrd-btn amrd-btn-sm" style="background:#fee2e2;color:#dc2626" onclick="deleteGroup(${g.id})">Delete</button>
                                 </div>
                             </div>
-                            <div onclick="event.stopPropagation()" style="display:flex;gap:6px">
-                                <button class="amrd-btn amrd-btn-sm amrd-btn-ghost" onclick="openEditGroup(${g.id})">Edit</button>
-                                <button class="amrd-btn amrd-btn-sm" style="background:#fee2e2;color:#dc2626" onclick="deleteGroup(${g.id})">Delete</button>
-                            </div>
-                        </div>
-                    </div>`).join('')
+                        </div>`;
+                    }).join('')
                 }
             </div>
 
-            <!-- Members panel -->
-            <div id="memberPanel" class="amrd-side-panel" style="display:none;flex-direction:column;width:340px;flex-shrink:0">
-                <div class="amrd-card" style="flex:1">
+            <!-- Detail panel -->
+            <div id="memberPanel" class="amrd-side-panel" style="display:none;flex-direction:column;width:360px;flex-shrink:0">
+                <div class="amrd-card" style="flex:1;overflow-y:auto">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
                         <h3 id="memberPanelTitle" style="margin:0;font-size:14px;font-weight:700"></h3>
                         <button class="amrd-btn amrd-btn-sm amrd-btn-ghost" onclick="closeMembers()">✕</button>
                     </div>
-                    <div id="memberList"></div>
-                    <div style="margin-top:14px;padding-top:14px;border-top:1px solid #f1f5f9">
-                        <select id="addMemberSelect" style="margin-bottom:8px"></select>
-                        <button class="amrd-btn amrd-btn-primary amrd-btn-sm" style="width:100%" onclick="addMember()">Add Member</button>
-                    </div>
+                    <div id="panelContent"></div>
                 </div>
             </div>
         </div>
 
         <!-- Group Modal -->
         <div id="groupModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center">
-            <div style="background:#fff;border-radius:12px;padding:28px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+            <div style="background:#fff;border-radius:12px;padding:28px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
                 <h3 id="gmTitle" style="margin:0 0 20px;font-size:16px;color:#0f172a"></h3>
                 <div id="gmErr" style="color:#dc2626;font-size:13px;margin-bottom:10px"></div>
                 <div class="amrd-form-row full"><div>
@@ -250,14 +284,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <label>Description</label>
                     <input id="gmDesc" type="text" placeholder="Optional description">
                 </div></div>
-                <div class="amrd-form-row full"><div>
-                    <label>Role <span style="color:#94a3b8;font-weight:400">(role conferred on all members)</span></label>
-                    <select id="gmRole">
-                        <option value="">— No role —</option>
-                        ${allRoles.map(r => `<option value="${r.name}">${r.label}</option>`).join('')}
-                    </select>
-                </div></div>
-                <div id="gmMemberSection" style="display:none"></div>
                 <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
                     <button class="amrd-btn amrd-btn-ghost" onclick="closeGroupModal()">Cancel</button>
                     <button class="amrd-btn amrd-btn-primary" onclick="saveGroup()">Save</button>
@@ -274,7 +300,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.closeMembers      = () => memberPanel(false);
         window.addMember         = addMember;
         window.removeMember      = removeMember;
-        window.modalRemoveMember = modalRemoveMember;
+        window.addTenantAssn     = addTenantAssn;
+        window.removeTenantAssn  = removeTenantAssn;
 
         if (viewGroupId) memberPanel(true, viewGroupId);
     }

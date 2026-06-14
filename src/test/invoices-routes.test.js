@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import app from '../../server.js';
-import { uid, auth } from './helpers.js';
+import { uid, auth, assertJson } from './helpers.js';
 
 describe('Invoices routes', () => {
     let tenantId;
@@ -30,14 +30,15 @@ describe('Invoices routes', () => {
         it('without auth → 401', async () => {
             const res = await request(app).post('/api/invoices')
                 .send({ tenant_id: 1, issue_date: '2025-01-01', due_date: '2025-01-31' });
+            assertJson(res);
             expect(res.status).toBe(401);
-            expect(res.headers['content-type']).toMatch(/json/);
         });
 
         it('with staff role → 403', async () => {
             const res = await request(app).post('/api/invoices')
                 .set(auth('staff'))
                 .send({ tenant_id: 1, issue_date: '2025-01-01', due_date: '2025-01-31' });
+            assertJson(res);
             expect(res.status).toBe(403);
         });
 
@@ -45,6 +46,7 @@ describe('Invoices routes', () => {
             const res = await request(app).post('/api/invoices')
                 .set(auth('admin'))
                 .send({ issue_date: '2025-01-01', due_date: '2025-01-31' });
+            assertJson(res);
             expect(res.status).toBe(400);
             expect(res.body).toHaveProperty('error');
         });
@@ -53,6 +55,7 @@ describe('Invoices routes', () => {
             const res = await request(app).post('/api/invoices')
                 .set(auth('admin'))
                 .send({ tenant_id: tenantId, due_date: '2025-01-31' });
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
@@ -64,6 +67,7 @@ describe('Invoices routes', () => {
                     issue_date: '2025-02-01',
                     due_date:   '2025-02-28',
                 });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.success).toBe(true);
             expect(res.body.data.total_amount).toBe(0);
@@ -83,6 +87,7 @@ describe('Invoices routes', () => {
                         { description: 'Support',  amount: 2000  },
                     ],
                 });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.data.subtotal).toBe(12000);
             expect(res.body.data.tax_amount).toBeCloseTo(2160, 1);
@@ -95,6 +100,7 @@ describe('Invoices routes', () => {
         it('without auth → 401', async () => {
             const res = await request(app).patch(`/api/invoices/${invoiceId}/status`)
                 .send({ status: 'sent' });
+            assertJson(res);
             expect(res.status).toBe(401);
         });
 
@@ -102,6 +108,7 @@ describe('Invoices routes', () => {
             const res = await request(app).patch(`/api/invoices/${invoiceId}/status`)
                 .set(auth('admin'))
                 .send({ status: 'invalid-status' });
+            assertJson(res);
             expect(res.status).toBe(400);
             expect(res.body).toHaveProperty('error');
         });
@@ -110,6 +117,7 @@ describe('Invoices routes', () => {
             const res = await request(app).patch('/api/invoices/99999/status')
                 .set(auth('admin'))
                 .send({ status: 'sent' });
+            assertJson(res);
             expect(res.status).toBe(404);
         });
 
@@ -117,6 +125,7 @@ describe('Invoices routes', () => {
             const res = await request(app).patch(`/api/invoices/${invoiceId}/status`)
                 .set(auth('admin'))
                 .send({ status: 'sent' });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
             expect(res.body.data.status).toBe('sent');
@@ -126,6 +135,7 @@ describe('Invoices routes', () => {
             const res = await request(app).patch(`/api/invoices/${invoiceId}/status`)
                 .set(auth('admin'))
                 .send({ status: 'paid' });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.data.status).toBe('paid');
             expect(res.body.data.paid_at).toBeTruthy();
@@ -140,6 +150,7 @@ describe('Invoices routes', () => {
                 const res = await request(app).patch(`/api/invoices/${id}/status`)
                     .set(auth('admin'))
                     .send({ status });
+                assertJson(res);
                 expect(res.status).toBe(200);
                 expect(res.body.data.status).toBe(status);
             }

@@ -1,10 +1,11 @@
 {
   "tables": [
-    "amr_users",
     "amr_roles",
-    "amr_user_groups",
-    "amr_user_group_members",
+    "amr_users",
+    "amr_groups",
+    "amr_group_members",
     "tenants",
+    "group_tenant",
     "subscription_plans",
     "tenant_subscriptions",
     "billing_metrics",

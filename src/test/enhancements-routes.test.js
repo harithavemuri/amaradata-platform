@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import app from '../../server.js';
-import { uid, auth } from './helpers.js';
+import { uid, auth, assertJson } from './helpers.js';
 
 describe('Enhancements routes', () => {
     let tenantId;
@@ -25,14 +25,15 @@ describe('Enhancements routes', () => {
         it('without auth → 401', async () => {
             const res = await request(app).post('/api/enhancements')
                 .send({ tenant_id: 1, title: 'X' });
+            assertJson(res);
             expect(res.status).toBe(401);
-            expect(res.headers['content-type']).toMatch(/json/);
         });
 
         it('with staff role → 403', async () => {
             const res = await request(app).post('/api/enhancements')
                 .set(auth('staff'))
                 .send({ tenant_id: 1, title: 'X' });
+            assertJson(res);
             expect(res.status).toBe(403);
         });
 
@@ -40,6 +41,7 @@ describe('Enhancements routes', () => {
             const res = await request(app).post('/api/enhancements')
                 .set(auth('admin'))
                 .send({ title: 'No tenant' });
+            assertJson(res);
             expect(res.status).toBe(400);
             expect(res.body).toHaveProperty('error');
         });
@@ -48,6 +50,7 @@ describe('Enhancements routes', () => {
             const res = await request(app).post('/api/enhancements')
                 .set(auth('admin'))
                 .send({ tenant_id: tenantId });
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
@@ -55,6 +58,7 @@ describe('Enhancements routes', () => {
             const res = await request(app).post('/api/enhancements')
                 .set(auth('admin'))
                 .send({ tenant_id: tenantId, title: 'New Feature', billing_type: 'milestone', milestone_amount: 5000 });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.success).toBe(true);
             expect(res.body.data).toMatchObject({
@@ -69,6 +73,7 @@ describe('Enhancements routes', () => {
             const res = await request(app).post('/api/enhancements')
                 .set(auth('admin'))
                 .send({ tenant_id: tenantId, title: 'Fix crash', item_type: 'bug', is_billable: false });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.data.item_type).toBe('bug');
             expect(res.body.data.is_billable).toBe(false);
@@ -79,6 +84,7 @@ describe('Enhancements routes', () => {
     describe('PUT /api/enhancements/:id', () => {
         it('without auth → 401', async () => {
             const res = await request(app).put('/api/enhancements/1').send({ title: 'X' });
+            assertJson(res);
             expect(res.status).toBe(401);
         });
 
@@ -86,6 +92,7 @@ describe('Enhancements routes', () => {
             const res = await request(app).put('/api/enhancements/99999')
                 .set(auth('admin'))
                 .send({ title: 'X' });
+            assertJson(res);
             expect(res.status).toBe(404);
         });
 
@@ -93,6 +100,7 @@ describe('Enhancements routes', () => {
             const res = await request(app).put(`/api/enhancements/${enhancementId}`)
                 .set(auth('admin'))
                 .send({ title: 'Updated Title', status: 'in_progress', actual_hours: 3 });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
             expect(res.body.data.title).toBe('Updated Title');
@@ -105,6 +113,7 @@ describe('Enhancements routes', () => {
         it('without auth → 401', async () => {
             const res = await request(app).post('/api/enhancements/import')
                 .send({ tenant_id: tenantId, rows: [] });
+            assertJson(res);
             expect(res.status).toBe(401);
         });
 
@@ -112,6 +121,7 @@ describe('Enhancements routes', () => {
             const res = await request(app).post('/api/enhancements/import')
                 .set(auth('admin'))
                 .send({ rows: [{ issue_id: 1 }] });
+            assertJson(res);
             expect(res.status).toBe(400);
             expect(res.body).toHaveProperty('error');
         });
@@ -120,6 +130,7 @@ describe('Enhancements routes', () => {
             const res = await request(app).post('/api/enhancements/import')
                 .set(auth('admin'))
                 .send({ tenant_id: tenantId, rows: [] });
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
@@ -130,6 +141,7 @@ describe('Enhancements routes', () => {
                     tenant_id: tenantId,
                     rows: [{ notes: 'no id here' }, { notes: 'also no id' }],
                 });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.data.skipped).toBe(2);
             expect(res.body.data.inserted).toBe(0);
@@ -147,6 +159,7 @@ describe('Enhancements routes', () => {
                         { issue_id: issueId2, notes: 'Fixed login bug',  item_type: 'bug',         is_billable: false, fixed: 'No' },
                     ],
                 });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.data.inserted).toBe(2);
             expect(res.body.data.updated).toBe(0);
@@ -166,6 +179,7 @@ describe('Enhancements routes', () => {
                     tenant_id: tenantId,
                     rows: [{ issue_id: issueId, notes: 'Updated notes', item_type: 'enhancement', is_billable: true, fixed: 'Yes' }],
                 });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.data.updated).toBe(1);
             expect(res.body.data.inserted).toBe(0);
@@ -184,6 +198,7 @@ describe('Enhancements routes', () => {
                     tenant_name: tenantName,
                     rows: [{ issue_id: issueId, notes: 'Via name', item_type: 'bug', is_billable: false, fixed: 'No' }],
                 });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.data.inserted).toBe(1);
         });
@@ -200,6 +215,7 @@ describe('Enhancements routes', () => {
                         { issue_id: base + 2, notes: 'Pending', item_type: 'enhancement', is_billable: true,  fixed: 'No' },
                     ],
                 });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.data.inserted).toBe(3);
         });

@@ -13,13 +13,7 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import app from '../../../server.js';
-
-function assertJson(res) {
-    const ct = res.headers['content-type'] || '';
-    expect(ct, `Expected JSON content-type but got: "${ct}"`).toMatch(/application\/json/);
-    const text = JSON.stringify(res.body);
-    expect(text, 'Response body must not contain HTML').not.toContain('<!DOCTYPE');
-}
+import { assertJson } from '../helpers.js';
 
 describe('Auth routes — always return JSON, never HTML', () => {
     it('POST /api/auth/login with bad credentials → 401 JSON', async () => {

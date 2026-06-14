@@ -1,13 +1,15 @@
 {
   "name": "amaradata-platform",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "AmaraData SaaS platform — tenant management and billing",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
     "dev:nondb": "NONDB_MODE=true nodemon server.js",
-    "test": "vitest run",
+    "test": "vitest run && vitest run --config vitest.config.nondb.js && vitest run --config testing/unittests/vitest.config.js",
+    "test:db": "vitest run",
+    "test:nondb": "vitest run --config vitest.config.nondb.js",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:unittests": "vitest run --config testing/unittests/vitest.config.js",

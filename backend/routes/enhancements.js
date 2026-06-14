@@ -2,6 +2,17 @@ const router = require('express').Router();
 const db     = require('../db');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 
+// GET /api/enhancements
+router.get('/', async (req, res) => {
+    try {
+        if (req.db.mode === 'nondb') {
+            return res.json({ success: true, data: req.db.fileDb.find('enhancements') });
+        }
+        const { rows } = await db.query('SELECT * FROM enhancements ORDER BY created_at DESC');
+        res.json({ success: true, data: rows });
+    } catch (e) { console.error('[enhancements]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+});
+
 // POST /api/enhancements
 router.post('/', requireAdmin, async (req, res) => {
     const { tenant_id, title, description, billing_type, estimated_hours,

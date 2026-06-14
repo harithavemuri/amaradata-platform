@@ -6,6 +6,42 @@ const { sign, signRefresh, verifyRefresh, requireAuth } = require('../middleware
 const GoogleOAuth                         = require('../auth/google-auth');
 const { sendEmail }                       = require('../services/ses');
 
+// Role priority — lower number = higher privilege
+const ROLE_PRIORITY = { site_admin: 1, admin: 2, sales_manager: 3, billing: 4, staff: 5 };
+
+function effectiveRole(directRole, groupRoleNames) {
+    const all = [directRole, ...groupRoleNames].filter(Boolean);
+    if (!all.length) return 'staff';
+    return all.sort((a, b) => (ROLE_PRIORITY[a] || 99) - (ROLE_PRIORITY[b] || 99))[0];
+}
+
+async function resolveEffectiveRole(user, dbMode, fileDb) {
+    if (dbMode === 'nondb') {
+        const memberships  = fileDb.find('amr_group_members').filter(m => m.user_id == user.id);
+        const groups       = fileDb.find('amr_groups');
+        const groupTenants = fileDb.find('group_tenant');
+        const roles        = fileDb.find('amr_roles');
+        const groupIds     = new Set(
+            memberships
+                .filter(m => groups.find(g => g.id == m.group_id && g.is_active !== false))
+                .map(m => m.group_id)
+        );
+        const groupRoles = groupTenants
+            .filter(gt => groupIds.has(gt.group_id))
+            .map(gt => roles.find(r => r.id == gt.role_id)?.name)
+            .filter(Boolean);
+        return effectiveRole(user.role, groupRoles);
+    }
+    const { rows } = await db.query(`
+        SELECT DISTINCT r.name FROM amr_group_members m
+        JOIN amr_groups g    ON g.id = m.group_id AND g.is_active = true
+        JOIN group_tenant gt ON gt.group_id = g.id
+        JOIN amr_roles r     ON r.id = gt.role_id
+        WHERE m.user_id = $1
+    `, [user.id]).catch(() => ({ rows: [] }));
+    return effectiveRole(user.role, rows.map(r => r.name));
+}
+
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;
@@ -13,11 +49,12 @@ router.post('/login', async (req, res) => {
     try {
         let user;
         if (req.db.mode === 'nondb') {
-            const users = req.db.fileDb.find('amr_users').filter(u => u.username === username && u.is_active);
+            const uLower = username.toLowerCase();
+            const users = req.db.fileDb.find('amr_users').filter(u => u.username?.toLowerCase() === uLower && u.is_active);
             user = users[0];
         } else {
             const { rows } = await db.query(
-                'SELECT * FROM amr_users WHERE username = $1 AND is_active = true', [username]
+                'SELECT * FROM amr_users WHERE lower(username) = lower($1) AND is_active = true', [username]
             );
             user = rows[0];
         }
@@ -31,7 +68,8 @@ router.post('/login', async (req, res) => {
             await db.query('UPDATE amr_users SET last_login_at = NOW() WHERE id = $1', [user.id]);
         }
 
-        const safe = { id: user.id, username: user.username, email: user.email, name: user.name, role: user.role };
+        const role = await resolveEffectiveRole(user, req.db.mode, req.db.fileDb);
+        const safe = { id: user.id, username: user.username, email: user.email, name: user.name, role };
         res.json({ success: true, token: sign(safe), refresh_token: signRefresh(safe), user: safe });
     } catch (e) {
         console.error('[auth]', e.message);
@@ -65,7 +103,8 @@ router.post('/create-user', async (req, res) => {
     try {
         const hash = await bcrypt.hash(password, 12);
         if (req.db.mode === 'nondb') {
-            const existing = req.db.fileDb.find('amr_users').filter(u => u.username === username);
+            const uLower = username.toLowerCase();
+            const existing = req.db.fileDb.find('amr_users').filter(u => u.username?.toLowerCase() === uLower);
             if (existing.length) return res.status(409).json({ error: 'Username already exists' });
             const row = req.db.fileDb.create('amr_users', {
                 username, email, name, role, password_hash: hash, is_active: true,
@@ -149,7 +188,8 @@ router.post('/google/exchange', async (req, res) => {
 
         let user;
         if (req.db.mode === 'nondb') {
-            const existing = req.db.fileDb.find('amr_users').filter(u => u.email === userInfo.email);
+            const emailLower = userInfo.email.toLowerCase();
+            const existing = req.db.fileDb.find('amr_users').filter(u => u.email?.toLowerCase() === emailLower);
             if (existing.length) {
                 user = existing[0];
                 req.db.fileDb.update('amr_users', user.id, {
@@ -170,7 +210,7 @@ router.post('/google/exchange', async (req, res) => {
             }
         } else {
             const { rows } = await db.query(
-                'SELECT * FROM amr_users WHERE email = $1 AND is_active = true', [userInfo.email]
+                'SELECT * FROM amr_users WHERE lower(email) = lower($1) AND is_active = true', [userInfo.email]
             );
             if (rows.length) {
                 user = rows[0];
@@ -188,12 +228,13 @@ router.post('/google/exchange', async (req, res) => {
             }
         }
 
+        const role = await resolveEffectiveRole(user, req.db.mode, req.db.fileDb);
         const safe = {
             id:       user.id,
             username: user.username,
             email:    user.email,
             name:     user.name || userInfo.name,
-            role:     user.role,
+            role,
             picture:  userInfo.picture,
         };
         res.json({
@@ -218,9 +259,10 @@ router.post('/forgot-password', async (req, res) => {
     try {
         let user;
         if (req.db.mode === 'nondb') {
-            user = req.db.fileDb.find('amr_users').find(u => u.email === email && u.is_active !== false);
+            const emailLower = email.toLowerCase();
+            user = req.db.fileDb.find('amr_users').find(u => u.email?.toLowerCase() === emailLower && u.is_active !== false);
         } else {
-            const { rows } = await db.query('SELECT * FROM amr_users WHERE email = $1 AND is_active = true', [email]);
+            const { rows } = await db.query('SELECT * FROM amr_users WHERE lower(email) = lower($1) AND is_active = true', [email]);
             user = rows[0];
         }
 

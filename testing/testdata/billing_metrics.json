@@ -1,8 +1,8 @@
 [
   {
     "id": 1,
-    "created_at": "2026-05-26T16:35:28.756Z",
-    "updated_at": "2026-05-26T16:35:28.761Z",
+    "created_at": "2026-06-13T08:41:35.278Z",
+    "updated_at": "2026-06-13T08:41:35.287Z",
     "tenant_id": 1,
     "period_year": 2025,
     "period_month": 1,
@@ -11,12 +11,12 @@
     "rental_units": 0,
     "rental_income": 0,
     "active_properties": 0,
-    "collected_at": "2026-05-26T16:35:28.760Z"
+    "collected_at": "2026-06-13T08:41:35.287Z"
   },
   {
     "id": 2,
-    "created_at": "2026-05-26T16:35:33.257Z",
-    "updated_at": "2026-05-26T16:35:33.257Z",
+    "created_at": "2026-06-13T08:41:43.602Z",
+    "updated_at": "2026-06-13T08:41:43.602Z",
     "tenant_id": 12,
     "period_year": 2025,
     "period_month": 6,
@@ -25,12 +25,12 @@
     "rental_units": 0,
     "rental_income": 0,
     "active_properties": 0,
-    "collected_at": "2026-05-26T16:35:33.257Z"
+    "collected_at": "2026-06-13T08:41:43.602Z"
   },
   {
     "id": 3,
-    "created_at": "2026-05-26T16:35:33.263Z",
-    "updated_at": "2026-05-26T16:35:33.263Z",
+    "created_at": "2026-06-13T08:41:43.610Z",
+    "updated_at": "2026-06-13T08:41:43.610Z",
     "tenant_id": 12,
     "period_year": 2025,
     "period_month": 7,
@@ -39,12 +39,12 @@
     "rental_units": 8,
     "rental_income": 120000,
     "active_properties": 22,
-    "collected_at": "2026-05-26T16:35:33.263Z"
+    "collected_at": "2026-06-13T08:41:43.610Z"
   },
   {
     "id": 4,
-    "created_at": "2026-05-26T16:35:33.271Z",
-    "updated_at": "2026-05-26T16:35:33.275Z",
+    "created_at": "2026-06-13T08:41:43.620Z",
+    "updated_at": "2026-06-13T08:41:43.627Z",
     "tenant_id": 12,
     "period_year": 2025,
     "period_month": 8,
@@ -53,12 +53,12 @@
     "rental_units": 3,
     "rental_income": 0,
     "active_properties": 0,
-    "collected_at": "2026-05-26T16:35:33.275Z"
+    "collected_at": "2026-06-13T08:41:43.626Z"
   },
   {
     "id": 5,
-    "created_at": "2026-05-26T16:35:33.280Z",
-    "updated_at": "2026-05-26T16:35:33.280Z",
+    "created_at": "2026-06-13T08:41:43.638Z",
+    "updated_at": "2026-06-13T08:41:43.638Z",
     "tenant_id": 12,
     "period_year": 2025,
     "period_month": 9,
@@ -67,12 +67,12 @@
     "rental_units": 0,
     "rental_income": 0,
     "active_properties": 0,
-    "collected_at": "2026-05-26T16:35:33.280Z"
+    "collected_at": "2026-06-13T08:41:43.637Z"
   },
   {
     "id": 6,
-    "created_at": "2026-05-26T16:35:33.284Z",
-    "updated_at": "2026-05-26T16:35:33.284Z",
+    "created_at": "2026-06-13T08:41:43.645Z",
+    "updated_at": "2026-06-13T08:41:43.645Z",
     "tenant_id": 12,
     "period_year": 2025,
     "period_month": 10,
@@ -81,12 +81,12 @@
     "rental_units": 0,
     "rental_income": 0,
     "active_properties": 0,
-    "collected_at": "2026-05-26T16:35:33.284Z"
+    "collected_at": "2026-06-13T08:41:43.645Z"
   },
   {
     "id": 7,
-    "created_at": "2026-05-26T16:35:33.288Z",
-    "updated_at": "2026-05-26T16:35:33.288Z",
+    "created_at": "2026-06-13T08:41:43.655Z",
+    "updated_at": "2026-06-13T08:41:43.655Z",
     "tenant_id": 12,
     "period_year": 2025,
     "period_month": 11,
@@ -95,6 +95,6 @@
     "rental_units": 0,
     "rental_income": 0,
     "active_properties": 0,
-    "collected_at": "2026-05-26T16:35:33.288Z"
+    "collected_at": "2026-06-13T08:41:43.655Z"
   }
 ]

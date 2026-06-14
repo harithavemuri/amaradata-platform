@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import app from '../../../server.js';
-import { uid, auth } from '../helpers.js';
+import { uid, auth, assertJson } from '../helpers.js';
 
 /**
  * End-to-end invoice lifecycle: tenant → plan → metrics → invoice → status transitions → enhancement → re-subscription.
@@ -38,6 +38,7 @@ describe('Invoice lifecycle — end-to-end workflow', () => {
         const res = await request(app).post('/api/subscriptions')
             .set(auth('admin'))
             .send({ tenant_id: tenantId, plan_id: planId, effective_from: '2025-01-01' });
+        assertJson(res);
         expect(res.status).toBe(201);
         expect(res.body.data.tenant_id).toBe(tenantId);
         expect(res.body.data.plan_id).toBe(planId);
@@ -54,6 +55,7 @@ describe('Invoice lifecycle — end-to-end workflow', () => {
                 rental_units: 10, rental_income: 200000,
                 active_properties: 35,
             });
+        assertJson(res);
         expect(res.status).toBe(201);
         expect(res.body.data.sales_count).toBe(20);
         expect(res.body.data.sales_value).toBe(1000000);
@@ -67,6 +69,7 @@ describe('Invoice lifecycle — end-to-end workflow', () => {
                 tenant_id: tenantId, period_year: 2025, period_month: 1,
                 sales_count: 22, sales_value: 1100000,
             });
+        assertJson(res);
         expect(res.status).toBe(201);
         expect(res.body.data.sales_count).toBe(22);
     });
@@ -84,6 +87,7 @@ describe('Invoice lifecycle — end-to-end workflow', () => {
                     { description: 'Support hours (10h)',   amount: 15000 },
                 ],
             });
+        assertJson(res);
         expect(res.status).toBe(201);
         invoiceId = res.body.data.id;
         expect(res.body.data.subtotal).toBe(40000);
@@ -98,6 +102,7 @@ describe('Invoice lifecycle — end-to-end workflow', () => {
         const res = await request(app).patch(`/api/invoices/${invoiceId}/status`)
             .set(auth('admin'))
             .send({ status: 'sent' });
+        assertJson(res);
         expect(res.status).toBe(200);
         expect(res.body.data.status).toBe('sent');
     });
@@ -106,6 +111,7 @@ describe('Invoice lifecycle — end-to-end workflow', () => {
         const res = await request(app).patch(`/api/invoices/${invoiceId}/status`)
             .set(auth('admin'))
             .send({ status: 'paid' });
+        assertJson(res);
         expect(res.status).toBe(200);
         expect(res.body.data.status).toBe('paid');
         expect(res.body.data.paid_at).toBeTruthy();
@@ -119,6 +125,7 @@ describe('Invoice lifecycle — end-to-end workflow', () => {
         const res = await request(app).patch(`/api/invoices/${inv.body.data.id}/status`)
             .set(auth('admin'))
             .send({ status: 'overdue' });
+        assertJson(res);
         expect(res.status).toBe(200);
         expect(res.body.data.status).toBe('overdue');
     });
@@ -135,6 +142,7 @@ describe('Invoice lifecycle — end-to-end workflow', () => {
                 item_type:        'enhancement',
                 is_billable:      true,
             });
+        assertJson(res);
         expect(res.status).toBe(201);
         enhancementId = res.body.data.id;
         expect(res.body.data.status).toBe('scoped');
@@ -145,6 +153,7 @@ describe('Invoice lifecycle — end-to-end workflow', () => {
         const res = await request(app).put(`/api/enhancements/${enhancementId}`)
             .set(auth('admin'))
             .send({ status: 'in_progress', actual_hours: 0 });
+        assertJson(res);
         expect(res.status).toBe(200);
         expect(res.body.data.status).toBe('in_progress');
     });
@@ -153,6 +162,7 @@ describe('Invoice lifecycle — end-to-end workflow', () => {
         const res = await request(app).put(`/api/enhancements/${enhancementId}`)
             .set(auth('admin'))
             .send({ status: 'delivered', actual_hours: 28, delivered_at: '2025-04-01T00:00:00.000Z' });
+        assertJson(res);
         expect(res.status).toBe(200);
         expect(res.body.data.status).toBe('delivered');
         expect(res.body.data.actual_hours).toBe(28);
@@ -162,6 +172,7 @@ describe('Invoice lifecycle — end-to-end workflow', () => {
         const res = await request(app).post('/api/enhancements')
             .set(auth('admin'))
             .send({ tenant_id: tenantId, title: 'Login timeout bug', item_type: 'bug', is_billable: false });
+        assertJson(res);
         expect(res.status).toBe(201);
         expect(res.body.data.item_type).toBe('bug');
         expect(res.body.data.is_billable).toBe(false);
@@ -177,6 +188,7 @@ describe('Invoice lifecycle — end-to-end workflow', () => {
         const res = await request(app).post('/api/subscriptions')
             .set(auth('admin'))
             .send({ tenant_id: tenantId, plan_id: plan2.body.data.id, effective_from: '2025-07-01' });
+        assertJson(res);
         expect(res.status).toBe(201);
         expect(res.body.data.plan_id).toBe(plan2.body.data.id);
         expect(res.body.data.effective_to).toBeNull();
@@ -189,12 +201,14 @@ describe('Invoice lifecycle — end-to-end workflow', () => {
                 name: 'Prospective Client', email: 'prospect@newco.com',
                 message: 'Interested in the platform.', company: 'NewCo Ltd',
             });
+        assertJson(res);
         expect(res.status).toBe(201);
         expect(res.body.ref_number).toMatch(/^REF-\d{8}-\d{4}$/);
     });
 
     it('8b. contact submission appears in admin list', async () => {
         const res = await request(app).get('/api/contact').set(auth('staff'));
+        assertJson(res);
         expect(res.status).toBe(200);
         const entry = res.body.data.find(d => d.email === 'prospect@newco.com');
         expect(entry).toBeTruthy();
@@ -206,6 +220,7 @@ describe('Invoice lifecycle — end-to-end workflow', () => {
         const res = await request(app).post('/api/admin/users')
             .set(auth('siteAdmin'))
             .send({ email: `staff-${uid()}@t.com`, name: 'Sales Person', role: 'sales_manager' });
+        assertJson(res);
         expect(res.status).toBe(201);
         expect(res.body.data.role).toBe('sales_manager');
         expect(res.body.data).not.toHaveProperty('password_hash');
@@ -227,6 +242,7 @@ describe('Invoice lifecycle — end-to-end workflow', () => {
             .post(`/api/admin/user-groups/${groupId}/members`)
             .set(auth('siteAdmin'))
             .send({ user_id: userId });
+        assertJson(res);
         expect([200, 201]).toContain(res.status);
     });
 });

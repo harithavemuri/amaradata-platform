@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { expect } from 'vitest';
 
 const SECRET = 'test-jwt-secret-32-chars-minimum!!';
 
@@ -11,3 +12,10 @@ export const tokens = {
 };
 
 export const auth = (role = 'admin') => ({ Authorization: `Bearer ${tokens[role]()}` });
+
+export function assertJson(res) {
+    const ct = res.headers['content-type'] || '';
+    expect(ct, `Expected JSON content-type but got: "${ct}"`).toMatch(/application\/json/);
+    const text = JSON.stringify(res.body);
+    expect(text, 'Response body must not contain HTML').not.toContain('<!DOCTYPE');
+}

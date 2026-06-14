@@ -2,6 +2,17 @@ const router = require('express').Router();
 const db     = require('../db');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 
+// GET /api/invoices
+router.get('/', async (req, res) => {
+    try {
+        if (req.db.mode === 'nondb') {
+            return res.json({ success: true, data: req.db.fileDb.find('invoices') });
+        }
+        const { rows } = await db.query('SELECT * FROM invoices ORDER BY issue_date DESC');
+        res.json({ success: true, data: rows });
+    } catch (e) { console.error('[invoices]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+});
+
 // POST /api/invoices  (generate invoice from billing metrics)
 router.post('/', requireAdmin, async (req, res) => {
     const { tenant_id, period_year, period_month, issue_date, due_date, notes, line_items = [] } = req.body;
@@ -25,7 +36,7 @@ router.post('/', requireAdmin, async (req, res) => {
             for (let i = 0; i < line_items.length; i++) {
                 const l = line_items[i];
                 req.db.fileDb.create('invoice_line_items', {
-                    invoice_id: inv.id, billing_type: l.billing_type, description: l.description,
+                    invoice_id: inv.id, billing_type: l.billing_type||'service', description: l.description,
                     quantity: l.quantity||1, unit_price: l.unit_price||0, amount: l.amount||0, sort_order: i,
                 });
             }
@@ -45,7 +56,7 @@ router.post('/', requireAdmin, async (req, res) => {
             await db.query(
                 `INSERT INTO invoice_line_items (invoice_id,billing_type,description,quantity,unit_price,amount,sort_order)
                  VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-                [inv.id, l.billing_type, l.description, l.quantity||1, l.unit_price||0, l.amount||0, i]
+                [inv.id, l.billing_type||'service', l.description, l.quantity||1, l.unit_price||0, l.amount||0, i]
             );
         }
         res.status(201).json({ success: true, data: inv });

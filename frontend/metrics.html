@@ -16,16 +16,31 @@
         const fmt  = v => new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Number(v));
         const now  = new Date();
 
-        async function load(year, month) {
+        let _myTenants    = [];
+        let _currentTenantId = '';
+
+        const tr = await window.__amrd.apiFetch('/api/tenants/mine');
+        _myTenants = tr.data || [];
+
+        function tenantSelect(selected) {
+            if (!_myTenants.length) return '';
+            return `<select onchange="setTenantFilter(this.value)" style="padding:4px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;background:#fff">
+                <option value="">All Tenants</option>
+                ${_myTenants.map(t => `<option value="${t.id}"${selected==t.id?' selected':''}>${t.name}</option>`).join('')}
+            </select>`;
+        }
+
+        async function load(year, month, tenantId = _currentTenantId) {
             const gql = await window.__amrd.gqlFetch(
-                `query($year: Int, $month: Int) {
-                    billingMetrics(year: $year, month: $month) { id tenant_id tenant_name period_year period_month sales_count sales_value rental_units rental_income active_properties collected_at }
-                    tenants { id name }
+                `query($year: Int, $month: Int, $tenant_id: ID) {
+                    billingMetrics(year: $year, month: $month, tenant_id: $tenant_id) { id tenant_id tenant_name period_year period_month sales_count sales_value rental_units rental_income active_properties collected_at }
                 }`,
-                { year, month }
+                { year, month, tenant_id: tenantId || null }
             );
-            const metrics = gql?.billingMetrics || [];
-            const tenants = gql?.tenants        || [];
+            const metrics  = gql?.billingMetrics || [];
+            const viewTenants = tenantId
+                ? _myTenants.filter(t => t.id == tenantId)
+                : _myTenants;
 
             root.innerHTML = `
                 <div style="display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap">
@@ -38,15 +53,16 @@
                         <input id="f-month" type="number" min="1" max="12" value="${month}" style="width:70px;margin-left:8px">
                     </div>
                     <button class="amrd-btn amrd-btn-primary amrd-btn-sm" onclick="reload()">Load</button>
+                    ${tenantSelect(tenantId)}
                     <div style="flex:1"></div>
-                    <button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="openManual(${JSON.stringify(tenants)})">+ Manual Entry</button>
+                    ${window.__amrd.isReadOnly() ? '' : `<button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="openManual()">+ Manual Entry</button>`}
                 </div>
                 <div class="amrd-card" style="padding:0">
                     <div class="amrd-table-wrap">
                     <table class="amrd-table">
                         <thead><tr><th>Tenant</th><th>Sales (count)</th><th>Sales Value</th><th>Rental Units</th><th>Rental Income</th><th>Active Props</th><th>Collected</th></tr></thead>
                         <tbody>
-                            ${tenants.map(t => {
+                            ${viewTenants.map(t => {
                                 const m = metrics.find(x => x.tenant_id === t.id);
                                 if (!m) return `<tr><td>${t.name}</td><td colspan="6" style="color:#94a3b8;font-style:italic">No data for this period</td></tr>`;
                                 return `<tr>
@@ -56,7 +72,7 @@
                                     <td>${m.rental_units}</td>
                                     <td>${fmt(m.rental_income)}</td>
                                     <td>${m.active_properties}</td>
-                                    <td style="color:#94a3b8;font-size:11px">${m.collected_at?.slice(0,10)}</td>
+                                    <td style="color:#94a3b8;font-size:11px">${m.collected_at ? new Date(m.collected_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '—'}</td>
                                 </tr>`;
                             }).join('') || '<tr><td colspan="7" style="color:#94a3b8;text-align:center;padding:24px">No tenants configured</td></tr>'}
                         </tbody>
@@ -66,7 +82,8 @@
                 <div id="form-slot"></div>`;
         }
 
-        function openManual(tenants) {
+        function openManual() {
+            if (window.__amrd.isReadOnly()) return;
             const now  = new Date();
             const slot = document.getElementById('form-slot');
             slot.innerHTML = `
@@ -76,7 +93,7 @@
                         <div><label>Tenant *</label>
                             <select id="f-tenant">
                                 <option value="">-- Select --</option>
-                                ${tenants.map(t=>`<option value="${t.id}">${t.name}</option>`).join('')}
+                                ${_myTenants.map(t=>`<option value="${t.id}">${t.name}</option>`).join('')}
                             </select>
                         </div>
                         <div><label>Year *</label><input id="f-year2" type="number" value="${now.getFullYear()}"></div>
@@ -125,12 +142,13 @@
         function reload() {
             const y = parseInt(document.getElementById('f-year')?.value  || now.getFullYear());
             const m = parseInt(document.getElementById('f-month')?.value || now.getMonth() + 1);
-            load(y, m);
+            load(y, m, _currentTenantId);
         }
 
-        window.reload     = reload;
-        window.openManual = openManual;
-        window.saveMetric = saveMetric;
+        window.reload          = reload;
+        window.openManual      = openManual;
+        window.saveMetric      = saveMetric;
+        window.setTenantFilter = (t) => { _currentTenantId = t; reload(); };
 
         await load(now.getFullYear(), now.getMonth() + 1);
     });

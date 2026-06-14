@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import app from '../../../server.js';
-import { uid, auth } from '../helpers.js';
+import { uid, auth, assertJson } from '../helpers.js';
 
 describe('Enhancements API', () => {
     let tenantId;
@@ -25,14 +25,15 @@ describe('Enhancements API', () => {
         it('no auth → 401 JSON', async () => {
             const res = await request(app).post('/api/enhancements')
                 .send({ tenant_id: 1, title: 'Test' });
+            assertJson(res);
             expect(res.status).toBe(401);
-            expect(res.headers['content-type']).toMatch(/json/);
         });
 
         it('staff role → 403', async () => {
             const res = await request(app).post('/api/enhancements')
                 .set(auth('staff'))
                 .send({ tenant_id: tenantId, title: 'Test' });
+            assertJson(res);
             expect(res.status).toBe(403);
         });
 
@@ -40,6 +41,7 @@ describe('Enhancements API', () => {
             const res = await request(app).post('/api/enhancements')
                 .set(auth('admin'))
                 .send({ title: 'No Tenant' });
+            assertJson(res);
             expect(res.status).toBe(400);
             expect(res.body).toHaveProperty('error');
         });
@@ -48,6 +50,7 @@ describe('Enhancements API', () => {
             const res = await request(app).post('/api/enhancements')
                 .set(auth('admin'))
                 .send({ tenant_id: tenantId });
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
@@ -55,6 +58,7 @@ describe('Enhancements API', () => {
             const res = await request(app).post('/api/enhancements')
                 .set(auth('admin'))
                 .send({ tenant_id: tenantId, title: 'Minimal Enhancement' });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.success).toBe(true);
             expect(res.body.data.billing_type).toBe('hourly');
@@ -75,6 +79,7 @@ describe('Enhancements API', () => {
                     item_type: 'enhancement',
                     is_billable: true,
                 });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.data.billing_type).toBe('milestone');
             expect(res.body.data.milestone_amount).toBe(75000);
@@ -89,6 +94,7 @@ describe('Enhancements API', () => {
                     item_type: 'bug',
                     is_billable: false,
                 });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.data.item_type).toBe('bug');
             expect(res.body.data.is_billable).toBe(false);
@@ -104,6 +110,7 @@ describe('Enhancements API', () => {
                     estimated_hours: 40,
                     hourly_rate: 1200,
                 });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.data.estimated_hours).toBe(40);
             expect(res.body.data.hourly_rate).toBe(1200);
@@ -113,6 +120,7 @@ describe('Enhancements API', () => {
             const res = await request(app).post('/api/enhancements')
                 .set(auth('siteAdmin'))
                 .send({ tenant_id: tenantId, title: 'SA Enhancement' });
+            assertJson(res);
             expect(res.status).toBe(201);
         });
     });
@@ -122,6 +130,7 @@ describe('Enhancements API', () => {
         it('no auth → 401', async () => {
             const res = await request(app).put(`/api/enhancements/${enhancementId}`)
                 .send({ title: 'Updated' });
+            assertJson(res);
             expect(res.status).toBe(401);
         });
 
@@ -129,6 +138,7 @@ describe('Enhancements API', () => {
             const res = await request(app).put(`/api/enhancements/${enhancementId}`)
                 .set(auth('staff'))
                 .send({ title: 'Updated' });
+            assertJson(res);
             expect(res.status).toBe(403);
         });
 
@@ -136,6 +146,7 @@ describe('Enhancements API', () => {
             const res = await request(app).put('/api/enhancements/99999')
                 .set(auth('admin'))
                 .send({ title: 'Ghost' });
+            assertJson(res);
             expect(res.status).toBe(404);
         });
 
@@ -143,6 +154,7 @@ describe('Enhancements API', () => {
             const res = await request(app).put(`/api/enhancements/${enhancementId}`)
                 .set(auth('admin'))
                 .send({ title: 'Updated Title', status: 'in_progress' });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
             expect(res.body.data.title).toBe('Updated Title');
@@ -153,6 +165,7 @@ describe('Enhancements API', () => {
             const res = await request(app).put(`/api/enhancements/${enhancementId}`)
                 .set(auth('admin'))
                 .send({ actual_hours: 18 });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.data.actual_hours).toBe(18);
         });
@@ -162,6 +175,7 @@ describe('Enhancements API', () => {
             const res = await request(app).put(`/api/enhancements/${enhancementId}`)
                 .set(auth('admin'))
                 .send({ status: 'delivered', delivered_at: deliveredAt });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.data.status).toBe('delivered');
         });

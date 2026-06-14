@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import app from '../../../server.js';
-import { uid, auth } from '../helpers.js';
+import { uid, auth, assertJson } from '../helpers.js';
 
 describe('Invoices API', () => {
     let tenantId;
@@ -30,14 +30,15 @@ describe('Invoices API', () => {
         it('no auth → 401 JSON', async () => {
             const res = await request(app).post('/api/invoices')
                 .send({ tenant_id: 1, issue_date: '2025-01-01', due_date: '2025-01-31' });
+            assertJson(res);
             expect(res.status).toBe(401);
-            expect(res.headers['content-type']).toMatch(/json/);
         });
 
         it('staff role → 403', async () => {
             const res = await request(app).post('/api/invoices')
                 .set(auth('staff'))
                 .send({ tenant_id: 1, issue_date: '2025-01-01', due_date: '2025-01-31' });
+            assertJson(res);
             expect(res.status).toBe(403);
         });
 
@@ -45,6 +46,7 @@ describe('Invoices API', () => {
             const res = await request(app).post('/api/invoices')
                 .set(auth('admin'))
                 .send({ issue_date: '2025-01-01', due_date: '2025-01-31' });
+            assertJson(res);
             expect(res.status).toBe(400);
             expect(res.body).toHaveProperty('error');
         });
@@ -53,6 +55,7 @@ describe('Invoices API', () => {
             const res = await request(app).post('/api/invoices')
                 .set(auth('admin'))
                 .send({ tenant_id: tenantId, due_date: '2025-01-31' });
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
@@ -60,6 +63,7 @@ describe('Invoices API', () => {
             const res = await request(app).post('/api/invoices')
                 .set(auth('admin'))
                 .send({ tenant_id: tenantId, issue_date: '2025-01-01' });
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
@@ -67,6 +71,7 @@ describe('Invoices API', () => {
             const res = await request(app).post('/api/invoices')
                 .set(auth('admin'))
                 .send({ tenant_id: tenantId, issue_date: '2025-02-01', due_date: '2025-02-28' });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.success).toBe(true);
             expect(res.body.data.total_amount).toBe(0);
@@ -78,6 +83,7 @@ describe('Invoices API', () => {
             const res = await request(app).post('/api/invoices')
                 .set(auth('admin'))
                 .send({ tenant_id: tenantId, issue_date: '2025-03-01', due_date: '2025-03-31' });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.data.invoice_number).toMatch(/^AMR-/);
         });
@@ -94,6 +100,7 @@ describe('Invoices API', () => {
                         { description: 'Support',  amount: 2000  },
                     ],
                 });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.data.subtotal).toBe(12000);
             expect(res.body.data.tax_amount).toBeCloseTo(2160, 1);
@@ -109,6 +116,7 @@ describe('Invoices API', () => {
                     due_date:   '2025-05-31',
                     line_items: [{ description: 'One item', amount: 50000 }],
                 });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.data.subtotal).toBe(50000);
             expect(res.body.data.tax_amount).toBeCloseTo(9000, 1);
@@ -122,6 +130,8 @@ describe('Invoices API', () => {
                 request(app).post('/api/invoices').set(auth('admin'))
                     .send({ tenant_id: tenantId, issue_date: '2025-06-01', due_date: '2025-06-30' }),
             ]);
+            assertJson(r1);
+            assertJson(r2);
             expect(r1.body.data.invoice_number).not.toBe(r2.body.data.invoice_number);
         });
     });
@@ -131,6 +141,7 @@ describe('Invoices API', () => {
         it('no auth → 401', async () => {
             const res = await request(app).patch(`/api/invoices/${invoiceId}/status`)
                 .send({ status: 'sent' });
+            assertJson(res);
             expect(res.status).toBe(401);
         });
 
@@ -138,6 +149,7 @@ describe('Invoices API', () => {
             const res = await request(app).patch(`/api/invoices/${invoiceId}/status`)
                 .set(auth('admin'))
                 .send({ status: 'bad-status' });
+            assertJson(res);
             expect(res.status).toBe(400);
             expect(res.body).toHaveProperty('error');
         });
@@ -146,6 +158,7 @@ describe('Invoices API', () => {
             const res = await request(app).patch('/api/invoices/99999/status')
                 .set(auth('admin'))
                 .send({ status: 'sent' });
+            assertJson(res);
             expect(res.status).toBe(404);
         });
 
@@ -153,6 +166,7 @@ describe('Invoices API', () => {
             const res = await request(app).patch(`/api/invoices/${invoiceId}/status`)
                 .set(auth('admin'))
                 .send({ status: 'sent' });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
             expect(res.body.data.status).toBe('sent');
@@ -162,6 +176,7 @@ describe('Invoices API', () => {
             const res = await request(app).patch(`/api/invoices/${invoiceId}/status`)
                 .set(auth('admin'))
                 .send({ status: 'paid' });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.data.status).toBe('paid');
             expect(res.body.data.paid_at).toBeTruthy();
@@ -174,6 +189,7 @@ describe('Invoices API', () => {
             const res = await request(app).patch(`/api/invoices/${inv.body.data.id}/status`)
                 .set(auth('admin'))
                 .send({ status });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.data.status).toBe(status);
         });

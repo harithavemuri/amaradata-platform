@@ -27,7 +27,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('fEmail').value     = user.email    || '';
         document.getElementById('fEmail').disabled  = !!editId;
         document.getElementById('fName').value      = user.name     || '';
-        document.getElementById('fRole').value      = user.role     || 'staff';
         document.getElementById('fActive').checked  = user.is_active !== false;
         document.getElementById('fPassword').value  = '';
         document.getElementById('modalErr').textContent = '';
@@ -37,14 +36,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function saveUser() {
         const email    = document.getElementById('fEmail').value.trim();
         const name     = document.getElementById('fName').value.trim();
-        const role     = document.getElementById('fRole').value;
         const is_active= document.getElementById('fActive').checked;
         const password = document.getElementById('fPassword').value;
         const errEl    = document.getElementById('modalErr');
 
         if (!name || (!editId && !email)) { errEl.textContent = 'Name and email are required'; return; }
 
-        const body = editId ? { name, role, is_active } : { email, name, role };
+        const body = editId ? { name, is_active } : { email, name };
         if (password) body.password = password;
 
         try {
@@ -91,10 +89,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const groupItems = groups.length
             ? groups.map(g => `
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9">
-                    <div>
-                        <div style="font-weight:600;font-size:13px">${g.name}</div>
-                        ${g.role ? `<div style="font-size:11px;color:#64748b;margin-top:2px">Confers: ${roleBadge(g.role)}</div>` : '<div style="font-size:11px;color:#94a3b8">No role assigned</div>'}
-                    </div>
+                    <div style="font-weight:600;font-size:13px">${g.name}</div>
                     <button class="amrd-btn amrd-btn-sm" style="background:#fee2e2;color:#dc2626"
                         onclick="removeFromGroup(${g.id},${u.id})">Remove</button>
                 </div>`).join('')
@@ -103,17 +98,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         const nonMemberGroups = availableGroups.filter(g => !groups.some(ug => ug.id === g.id));
 
         document.getElementById('userPanelBody').innerHTML = `
-            <div style="margin-bottom:16px">
-                <div style="font-size:12px;color:#64748b;margin-bottom:4px">Direct Role</div>
-                ${roleBadge(u.role)}
-            </div>
             <div style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Group Memberships</div>
+            <div style="font-size:11px;color:#64748b;margin-bottom:10px">
+                Roles are assigned per tenant in each group's settings.
+            </div>
             <div id="groupItemList">${groupItems}</div>
             <div style="margin-top:14px;padding-top:14px;border-top:1px solid #f1f5f9">
                 <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px">Add to Group</div>
                 <select id="addGroupSelect" style="margin-bottom:8px">
                     <option value="">— Select a group —</option>
-                    ${nonMemberGroups.map(g => `<option value="${g.id}">${g.name}${g.role ? ' ('+g.role.replace(/_/g,' ')+')' : ''}</option>`).join('')}
+                    ${nonMemberGroups.map(g => `<option value="${g.id}">${g.name}</option>`).join('')}
                 </select>
                 <button class="amrd-btn amrd-btn-primary amrd-btn-sm" style="width:100%" onclick="addToGroup(${u.id})">Add to Group</button>
             </div>`;
@@ -183,7 +177,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="amrd-table-wrap">
                 <table class="amrd-table" id="usersTable">
                     <thead><tr>
-                        <th>Name</th><th>Email</th><th>Direct Role</th><th>Groups</th><th>Status</th><th>Last Login</th><th>Actions</th>
+                        <th>Name</th><th>Email</th><th>Groups</th><th>Status</th><th>Last Login</th><th>Actions</th>
                     </tr></thead>
                     <tbody id="usersTbody"></tbody>
                 </table>
@@ -211,11 +205,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div style="background:#fff;border-radius:12px;padding:28px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,.3);">
                 <h3 id="modalTitle" style="margin:0 0 20px;font-size:16px;color:#0f172a;"></h3>
                 <div id="modalErr" style="color:#dc2626;font-size:13px;margin-bottom:12px;"></div>
-                <div class="amrd-form-row">
+                <div class="amrd-form-row full">
                     <div><label>Name *</label><input id="fName" type="text" placeholder="Full name"></div>
-                    <div><label>Role</label>
-                        <select id="fRole">${availableRoles.map(r => `<option value="${r.name}">${r.label}</option>`).join('')}</select>
-                    </div>
                 </div>
                 <div class="amrd-form-row full">
                     <div><label>Email *</label><input id="fEmail" type="email" placeholder="user@amaradata.com"></div>
@@ -262,10 +253,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ? groups.map(g => `<span class="amrd-badge" style="background:#dbeafe;color:#1d4ed8;margin-right:4px;cursor:pointer" onclick="openUserPanel(${u.id})">${g.name}</span>`).join('')
                 : '<span style="color:#94a3b8;font-size:12px">—</span>';
             return `
-            <tr data-search="${(u.name + u.email + u.role + groups.map(g=>g.name).join(' ')).toLowerCase()}">
+            <tr data-search="${(u.name + u.email + groups.map(g=>g.name).join(' ')).toLowerCase()}">
                 <td style="font-weight:600;cursor:pointer;color:#0D9488" onclick="openUserPanel(${u.id})">${u.name}</td>
                 <td style="color:#64748b">${u.email}</td>
-                <td>${roleBadge(u.role)}</td>
                 <td>${groupBadges}</td>
                 <td><span class="amrd-badge ${u.is_active ? 'amrd-badge-active' : 'amrd-badge-cancelled'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
                 <td style="color:#64748b;font-size:12px">${fmt(u.last_login_at)}</td>

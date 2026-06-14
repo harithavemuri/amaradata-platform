@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import app from '../../server.js';
-import { uid, auth } from './helpers.js';
+import { uid, auth, assertJson } from './helpers.js';
 
 describe('Tenants routes', () => {
     let tenantId;
@@ -19,14 +19,15 @@ describe('Tenants routes', () => {
         it('without auth → 401', async () => {
             const res = await request(app).post('/api/tenants')
                 .send({ name: 'X', slug: 'x' });
+            assertJson(res);
             expect(res.status).toBe(401);
-            expect(res.headers['content-type']).toMatch(/json/);
         });
 
         it('with staff role → 403', async () => {
             const res = await request(app).post('/api/tenants')
                 .set(auth('staff'))
                 .send({ name: 'X', slug: 'x' });
+            assertJson(res);
             expect(res.status).toBe(403);
         });
 
@@ -34,6 +35,7 @@ describe('Tenants routes', () => {
             const res = await request(app).post('/api/tenants')
                 .set(auth('admin'))
                 .send({ slug: 'no-name' });
+            assertJson(res);
             expect(res.status).toBe(400);
             expect(res.body).toHaveProperty('error');
         });
@@ -42,6 +44,7 @@ describe('Tenants routes', () => {
             const res = await request(app).post('/api/tenants')
                 .set(auth('admin'))
                 .send({ name: 'No Slug' });
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
@@ -53,6 +56,7 @@ describe('Tenants routes', () => {
                     name: 'ACME Corp', slug, contact_email: 'acme@example.com',
                     status: 'active', site_url: 'https://acme.example.com',
                 });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.success).toBe(true);
             expect(res.body.data).toMatchObject({ slug, status: 'active' });
@@ -63,6 +67,7 @@ describe('Tenants routes', () => {
             const res = await request(app).post('/api/tenants')
                 .set(auth('siteAdmin'))
                 .send({ name: 'SA Tenant', slug: `sa-${uid()}` });
+            assertJson(res);
             expect(res.status).toBe(201);
         });
     });
@@ -71,6 +76,7 @@ describe('Tenants routes', () => {
     describe('PUT /api/tenants/:id', () => {
         it('without auth → 401', async () => {
             const res = await request(app).put('/api/tenants/1').send({ name: 'X' });
+            assertJson(res);
             expect(res.status).toBe(401);
         });
 
@@ -78,6 +84,7 @@ describe('Tenants routes', () => {
             const res = await request(app).put(`/api/tenants/${tenantId}`)
                 .set(auth('staff'))
                 .send({ name: 'Updated' });
+            assertJson(res);
             expect(res.status).toBe(403);
         });
 
@@ -85,6 +92,7 @@ describe('Tenants routes', () => {
             const res = await request(app).put('/api/tenants/99999')
                 .set(auth('admin'))
                 .send({ name: 'Updated' });
+            assertJson(res);
             expect(res.status).toBe(404);
         });
 
@@ -92,6 +100,7 @@ describe('Tenants routes', () => {
             const res = await request(app).put(`/api/tenants/${tenantId}`)
                 .set(auth('admin'))
                 .send({ name: 'Updated Name', status: 'suspended' });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
             expect(res.body.data.name).toBe('Updated Name');

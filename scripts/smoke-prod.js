@@ -42,6 +42,12 @@ async function get(path, token) {
     return { status: res.status, ok: res.ok, json };
 }
 
+async function getHtml(path) {
+    const res = await fetch(`${BASE}${path}`, { headers: { 'Accept': 'text/html' } });
+    const text = await res.text().catch(() => '');
+    return { status: res.status, ok: res.ok, contentType: res.headers.get('content-type') || '', text };
+}
+
 // ─── test runner ──────────────────────────────────────────────────────────────
 
 let pass = 0, fail = 0;
@@ -65,6 +71,7 @@ async function main() {
     const health = await get('/health');
     check('GET /health → 200', health.status === 200, `HTTP ${health.status}`);
     check('/health returns { ok: true }', health.json?.ok === true, JSON.stringify(health.json));
+    check('/health returns version string', typeof health.json?.version === 'string' && health.json.version.length > 0, health.json?.version);
 
     // ── 2. site-config ───────────────────────────────────────────────────────
     const sc = await get('/api/site-config');
@@ -74,11 +81,47 @@ async function main() {
     // ── 3. login ──────────────────────────────────────────────────────────────
     const login = await post('/api/auth/login', { username: USERNAME, password: PASS });
     check('POST /api/auth/login → 200', login.status === 200, `HTTP ${login.status}`);
-    const token = login.json?.data?.token;
+    const token = login.json?.token;
     check('Login returns access token', !!token);
     if (!token) { printResults(); process.exit(1); }
 
-    // ── 4. read-only API endpoints ────────────────────────────────────────────
+    // ── 4. admin health page (HTML) ───────────────────────────────────────────
+    const ahPage = await getHtml('/admin-health');
+    check('GET /admin-health → 200',       ahPage.status === 200, `HTTP ${ahPage.status}`);
+    check('/admin-health returns HTML',    ahPage.contentType.includes('text/html'), ahPage.contentType.split(';')[0]);
+    check('/admin-health contains <body>', ahPage.text.includes('<body>'), ahPage.text.length > 0 ? 'has content' : 'empty');
+
+    // ── 5. admin health API — version matrix + table data ─────────────────────
+    const ah = await get('/api/admin/health', token);
+    check('GET /api/admin/health → 200', ah.status === 200, `HTTP ${ah.status}`);
+    if (ah.status === 200) {
+        const v = ah.json?.data?.versions;
+        check('/api/admin/health has api version',  typeof v?.api === 'string' && v.api.length > 0, v?.api);
+        check('/api/admin/health has ui version',   typeof v?.ui === 'string'  && v.ui.length  > 0, v?.ui);
+        check('/api/admin/health has db version',   typeof v?.db === 'string'  && v.db.length  > 0, v?.db);
+        check('/health and admin/health api versions match', v?.api === health.json?.version,
+            `health=${health.json?.version} admin=${v?.api}`);
+        if (VERBOSE) console.log('     versions:', JSON.stringify(v));
+
+        // Reference/config tables must have data; transaction tables are allowed to be empty
+        const tables = ah.json?.data?.tables || {};
+        const TRANSACTION_TABLES = new Set([
+            'invoices', 'invoice_line_items', 'billing_metrics', 'payments',
+            'enhancements', 'contact_submissions', 'tenant_subscriptions',
+            'amr_group_members', 'group_tenant', 'amr_password_reset_tokens',
+            // groups are admin-created, may be empty in a fresh environment
+            'amr_groups',
+            // deprecated — tables remain in schema but are intentionally empty
+            'amr_user_groups', 'amr_user_group_members',
+        ]);
+        for (const [table, n] of Object.entries(tables)) {
+            if (TRANSACTION_TABLES.has(table)) continue;
+            check(`Table ${table} has data`, n > 0, `rows=${n}`);
+        }
+        if (VERBOSE) console.log('     tables:', JSON.stringify(tables));
+    }
+
+    // ── 6. read-only API endpoints ────────────────────────────────────────────
 
     const ENDPOINTS = [
         { path: '/api/tenants',              label: 'GET /api/tenants' },
@@ -105,17 +148,7 @@ async function main() {
         }
     }
 
-    // ── 5. table existence spot-check via admin stats ─────────────────────────
-    // Hit db-migrate-style checks by looking at the /api/admin/user-groups response
-    const ugr = await get('/api/admin/user-groups', token);
-    check('amr_user_groups table exists (no 500)', ugr.status !== 500,
-        ugr.status === 500 ? (ugr.json?.error || 'table missing?') : `HTTP ${ugr.status}`);
-
-    const rolesR = await get('/api/admin/roles', token);
-    check('amr_roles table exists (no 500)', rolesR.status !== 500,
-        rolesR.status === 500 ? (rolesR.json?.error || 'table missing?') : `HTTP ${rolesR.status}`);
-
-    // ── 6. Content-Type guard (CloudFront CustomErrorResponses check) ─────────
+    // ── 7. Content-Type guard (CloudFront CustomErrorResponses check) ─────────
     for (const path of ['/api/tenants', '/api/admin/users']) {
         const res = await fetch(`${BASE}${path}`, {
             headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json;v=1' },

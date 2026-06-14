@@ -182,6 +182,11 @@ Resources:
     Type: AWS::Serverless::HttpApi
     Properties:
       StageName: !Ref Env
+      Tags:
+        tenant:      !Ref Tenant
+        application: !Ref TagApplication
+        project:     !Ref TagProject
+        component:   shared
       CorsConfiguration:
         AllowOrigins:
           - !Ref FrontendUrl
@@ -448,6 +453,11 @@ Resources:
       DBInstanceClass: db.serverless
       Engine: aurora-postgresql
       PubliclyAccessible: false
+      Tags:
+        - { Key: tenant,      Value: !Ref Tenant }
+        - { Key: application, Value: !Ref TagApplication }
+        - { Key: project,     Value: !Ref TagProject }
+        - { Key: component,   Value: shared }
 
   DBInitFn:
     Type: AWS::Serverless::Function
@@ -567,6 +577,11 @@ Resources:
       Type: String
       Value: !Ref SesFromEmail
       Description: Verified SES sender email — shared across all tenant stacks
+      Tags:
+        tenant:      !Ref Tenant
+        application: !Ref TagApplication
+        project:     !Ref TagProject
+        component:   shared
 
 Outputs:
   AppUrl:

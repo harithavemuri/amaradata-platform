@@ -14,8 +14,9 @@
     document.addEventListener('DOMContentLoaded', async () => {
         const root = window.__amrd.renderSidebar('Enhancements');
 
-        let _tenants = [];
-        let _filter  = { status: '', source: '', item_type: '' };
+        let _tenants   = [];
+        let _myTenants = [];
+        let _filter    = { status: '', source: '', item_type: '', tenant_id: '' };
 
         // ── helpers ──────────────────────────────────────────────────────────
         function badge(text, color) {
@@ -40,19 +41,18 @@
         // ── load & render ────────────────────────────────────────────────────
         async function load() {
             const gql = await window.__amrd.gqlFetch(
-                `query($status: String, $source: String, $item_type: String) {
-                    enhancements(status: $status, source: $source, item_type: $item_type) {
+                `query($status: String, $source: String, $item_type: String, $tenant_id: ID) {
+                    enhancements(status: $status, source: $source, item_type: $item_type, tenant_id: $tenant_id) {
                         id tenant_id tenant_name title description billing_type status
                         estimated_hours actual_hours hourly_rate milestone_amount
                         delivered_at notes invoice_id
                         source issue_id site_name fixed item_type is_billable report_date
                     }
-                    tenants { id name }
                 }`,
-                { status: _filter.status || null, source: _filter.source || null, item_type: _filter.item_type || null }
+                { status: _filter.status || null, source: _filter.source || null, item_type: _filter.item_type || null, tenant_id: _filter.tenant_id || null }
             );
-            const rows    = gql?.enhancements || [];
-            _tenants      = gql?.tenants      || [];
+            const rows = gql?.enhancements || [];
+            _tenants   = _myTenants;
 
             const total      = rows.length;
             const billable   = rows.filter(r => r.is_billable).length;
@@ -81,9 +81,13 @@
                         ${[['','All Types'],['enhancement','Enhancements'],['bug','Bugs']]
                             .map(([v,l]) => `<button class="amrd-btn amrd-btn-${_filter.item_type===v?'primary':'ghost'} amrd-btn-sm" onclick="setFilter('item_type','${v}')">${l}</button>`).join('')}
                     </div>
+                    ${_myTenants.length ? `<select onchange="setFilter('tenant_id',this.value)" style="padding:4px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;background:#fff">
+                        <option value="">All Tenants</option>
+                        ${_myTenants.map(t => `<option value="${t.id}"${_filter.tenant_id==t.id?' selected':''}>${t.name}</option>`).join('')}
+                    </select>` : ''}
                     <div style="flex:1"></div>
-                    <button class="amrd-btn amrd-btn-ghost" onclick="toggleImport()">↑ Upload CSV</button>
-                    <button class="amrd-btn amrd-btn-primary" onclick="openForm(null)">+ Log Work</button>
+                    ${window.__amrd.isReadOnly() ? '' : '<button class="amrd-btn amrd-btn-ghost" onclick="toggleImport()">↑ Upload CSV</button>'}
+                    ${window.__amrd.isReadOnly() ? '' : '<button class="amrd-btn amrd-btn-primary" onclick="openForm(null)">+ Log Work</button>'}
                 </div>
 
                 <!-- csv import panel -->
@@ -136,7 +140,7 @@
                                 <td>${billBadge(e.is_billable)}</td>
                                 <td style="font-variant-numeric:tabular-nums">${billableAmount(e)}</td>
                                 <td>${statusBadge(e.status)}</td>
-                                <td><button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick='openForm(${JSON.stringify(e)})'>Edit</button></td>
+                                <td><button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick='openForm(${JSON.stringify(e)})'>${window.__amrd.isReadOnly() ? 'View' : 'Edit'}</button></td>
                             </tr>`).join('') || '<tr><td colspan="9" style="color:#94a3b8;text-align:center;padding:24px">No records</td></tr>'}
                         </tbody>
                     </table>
@@ -147,45 +151,51 @@
 
         // ── form ─────────────────────────────────────────────────────────────
         function openForm(e) {
+            if (!e && window.__amrd.isReadOnly()) return;
+            const ro  = window.__amrd.isReadOnly();
+            const dis = ro ? ' disabled' : '';
             const slot = document.getElementById('form-slot');
             slot.innerHTML = `
                 <div class="amrd-card" style="margin-top:16px">
-                    <h3>${e ? 'Edit' : 'Log'} Enhancement</h3>
+                    <h3>${ro ? 'View' : (e ? 'Edit' : 'Log')} Enhancement</h3>
                     <div class="amrd-form-row">
                         <div><label>Tenant *</label>
-                            <select id="f-tenant">
+                            <select id="f-tenant"${dis}>
                                 <option value="">-- Select --</option>
                                 ${_tenants.map(t => `<option value="${t.id}"${e?.tenant_id==t.id?' selected':''}>${t.name}</option>`).join('')}
                             </select>
                         </div>
                         <div><label>Billing Type</label>
-                            <select id="f-type">
+                            <select id="f-type"${dis}>
                                 ${['hourly','milestone','fixed'].map(t => `<option value="${t}"${e?.billing_type===t?' selected':''}>${t}</option>`).join('')}
                             </select>
                         </div>
                     </div>
-                    <div class="amrd-form-row full"><div><label>Title *</label><input id="f-title" value="${e?.title||''}"></div></div>
-                    <div class="amrd-form-row full"><div><label>Description</label><textarea id="f-desc" rows="2">${e?.description||''}</textarea></div></div>
+                    <div class="amrd-form-row full"><div><label>Title *</label><input id="f-title" value="${e?.title||''}"${dis}></div></div>
+                    <div class="amrd-form-row full"><div><label>Description</label><textarea id="f-desc" rows="2"${dis}>${e?.description||''}</textarea></div></div>
                     <div class="amrd-form-row">
-                        <div><label>Est. Hours</label><input id="f-ehours" type="number" step="0.5" value="${e?.estimated_hours||''}"></div>
-                        <div><label>Actual Hours</label><input id="f-ahours" type="number" step="0.5" value="${e?.actual_hours||''}"></div>
+                        <div><label>Est. Hours</label><input id="f-ehours" type="number" step="0.5" value="${e?.estimated_hours||''}"${dis}></div>
+                        <div><label>Actual Hours</label><input id="f-ahours" type="number" step="0.5" value="${e?.actual_hours||''}"${dis}></div>
                     </div>
                     <div class="amrd-form-row">
-                        <div><label>Hourly Rate</label><input id="f-rate" type="number" value="${e?.hourly_rate||''}"></div>
-                        <div><label>Milestone Amount</label><input id="f-mamount" type="number" value="${e?.milestone_amount||''}"></div>
+                        <div><label>Hourly Rate</label><input id="f-rate" type="number" value="${e?.hourly_rate||''}"${dis}></div>
+                        <div><label>Milestone Amount</label><input id="f-mamount" type="number" value="${e?.milestone_amount||''}"${dis}></div>
                     </div>
                     <div class="amrd-form-row">
                         <div><label>Status</label>
-                            <select id="f-status">
+                            <select id="f-status"${dis}>
                                 ${['scoped','in_progress','delivered','billed','cancelled'].map(s => `<option value="${s}"${e?.status===s?' selected':''}>${s}</option>`).join('')}
                             </select>
                         </div>
-                        <div><label>Delivered Date</label><input id="f-deliv" type="date" value="${e?.delivered_at?.slice(0,10)||''}"></div>
+                        <div><label>Delivered Date</label><input id="f-deliv" type="date" value="${e?.delivered_at?.slice(0,10)||''}"${dis}></div>
                     </div>
-                    <div class="amrd-form-row full"><div><label>Notes</label><textarea id="f-notes" rows="2">${e?.notes||''}</textarea></div></div>
+                    <div class="amrd-form-row full"><div><label>Notes</label><textarea id="f-notes" rows="2"${dis}>${e?.notes||''}</textarea></div></div>
                     <div style="margin-top:16px;display:flex;gap:10px">
-                        <button class="amrd-btn amrd-btn-primary" onclick="save(${e?.id||'null'})">Save</button>
-                        <button class="amrd-btn amrd-btn-ghost" onclick="document.getElementById('form-slot').innerHTML=''">Cancel</button>
+                        ${ro
+                            ? '<button class="amrd-btn amrd-btn-ghost" onclick="document.getElementById(\'form-slot\').innerHTML=\'\'">Close</button>'
+                            : `<button class="amrd-btn amrd-btn-primary" onclick="save(${e?.id||'null'})">Save</button>
+                               <button class="amrd-btn amrd-btn-ghost" onclick="document.getElementById('form-slot').innerHTML=''">Cancel</button>`
+                        }
                     </div>
                     <div id="save-err" style="color:#dc2626;font-size:13px;margin-top:8px"></div>
                 </div>`;
@@ -309,10 +319,14 @@
             return result;
         }
 
+        // ── init tenants ─────────────────────────────────────────────────────
+        const tr = await window.__amrd.apiFetch('/api/tenants/mine');
+        _myTenants = tr.data || [];
+
         // ── filter ───────────────────────────────────────────────────────────
-        window.setFilter = (key, val) => { _filter[key] = val; load(); };
-        window.openForm  = openForm;
-        window.save      = save;
+        window.setFilter    = (key, val) => { _filter[key] = val; load(); };
+        window.openForm     = openForm;
+        window.save         = save;
         window.toggleImport = toggleImport;
         window.importCsv    = importCsv;
 

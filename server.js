@@ -5,6 +5,7 @@ const cors      = require('cors');
 const nondbMode    = require('./backend/middleware/nondb-mode');
 const { requireAuth } = require('./backend/middleware/auth');
 const graphqlHandler  = require('./backend/graphql');
+const { version: APP_VERSION } = require('./package.json');
 
 const app  = express();
 const PORT = process.env.PORT || 9000;
@@ -74,7 +75,7 @@ app.get('/api/site-config', (_, res) => {
     });
 });
 
-app.get('/health', (_, res) => res.json({ ok: true, service: 'amaradata-platform', ts: new Date() }));
+app.get('/health', (_, res) => res.json({ ok: true, service: 'amaradata-platform', version: APP_VERSION, ts: new Date() }));
 
 // Ensure all unmatched /api/* routes return JSON — never HTML
 app.use('/api', (req, res) => res.status(404).json({ error: 'API endpoint not found' }));

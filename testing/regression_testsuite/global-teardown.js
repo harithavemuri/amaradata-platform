@@ -32,7 +32,16 @@ module.exports = async function globalTeardown() {
         removeEmptyDirs(RESULTS_DIR);
         console.log('[teardown] DB mode — cleanup complete.');
     } else {
-        rmSync(TEST_DATA_DIR, { recursive: true, force: true });
-        console.log('[teardown] playwright-testdata removed.');
+        try {
+            rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+            console.log('[teardown] playwright-testdata removed.');
+        } catch (err) {
+            // Windows can hold file locks briefly after Playwright exits — not a test failure
+            if (err.code === 'EPERM' || err.code === 'EBUSY') {
+                console.warn('[teardown] Could not remove playwright-testdata (file lock, safe to ignore):', err.message);
+            } else {
+                throw err;
+            }
+        }
     }
 };

@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "name": "Platform Admins",
+    "description": "Global administrators with full access to all tenants",
+    "is_active": true,
+    "created_at": "2026-01-01T05:00:00.000Z",
+    "updated_at": "2026-01-01T05:00:00.000Z"
+  },
+  {
+    "id": 2,
+    "name": "Tenant Admins",
+    "description": "Administrators for specific tenant projects",
+    "is_active": true,
+    "created_at": "2026-01-01T05:00:00.000Z",
+    "updated_at": "2026-01-01T05:00:00.000Z"
+  },
+  {
+    "id": 3,
+    "name": "Sales Team",
+    "description": "Sales staff managing tenant project pipelines",
+    "is_active": true,
+    "created_at": "2026-01-01T05:00:00.000Z",
+    "updated_at": "2026-01-01T05:00:00.000Z"
+  },
+  {
+    "id": 4,
+    "name": "Billing Team",
+    "description": "Billing and invoicing staff for tenant projects",
+    "is_active": true,
+    "created_at": "2026-01-01T05:00:00.000Z",
+    "updated_at": "2026-01-01T05:00:00.000Z"
+  },
+  {
+    "id": 5,
+    "name": "Staff",
+    "description": "Basic read-only platform access across all tenants",
+    "is_active": true,
+    "created_at": "2026-01-01T05:00:00.000Z",
+    "updated_at": "2026-01-01T05:00:00.000Z"
+  }
+]

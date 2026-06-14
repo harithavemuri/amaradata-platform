@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+  <title>System Health — AmaraData Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="/js/platform.js"></script>
+</head>
+<body>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const root = window.__amrd.renderSidebar('System Health');
+
+    async function load() {
+        root.innerHTML = '<p style="color:#94a3b8;padding:20px">Loading…</p>';
+        try {
+            const res  = await window.__amrd.apiFetch('/api/admin/health');
+            const data = res.data;
+            render(data);
+        } catch (e) {
+            root.innerHTML = `<p style="color:#dc2626;padding:20px">Failed to load health data: ${e.message}</p>`;
+        }
+    }
+
+    function badge(text, color) {
+        return `<span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600;background:${color}20;color:${color}">${text}</span>`;
+    }
+
+    function render(data) {
+        const { versions, environment, mode, tables } = data;
+        const modeColor  = mode === 'nondb' ? '#f59e0b' : '#22c55e';
+        const envColor   = environment === 'production' ? '#ef4444' : '#3b82f6';
+
+        const versionRows = [
+            { label: 'API Version',  value: versions.api,  note: '' },
+            { label: 'UI Version',   value: versions.ui,   note: '' },
+            { label: 'DB Schema',    value: versions.db,   note: versions.dbAppliedAt ? `applied ${new Date(versions.dbAppliedAt).toLocaleString()}` : '' },
+        ].map(r => `
+            <tr>
+                <td style="padding:10px 16px;color:#64748b;font-size:13px">${r.label}</td>
+                <td style="padding:10px 16px;font-weight:600;font-size:14px;font-family:monospace">${r.value}</td>
+                <td style="padding:10px 16px;color:#94a3b8;font-size:12px">${r.note}</td>
+            </tr>`).join('');
+
+        const tableRows = Object.entries(tables || {}).map(([t, n]) => `
+            <tr>
+                <td style="padding:8px 16px;color:#64748b;font-size:13px;font-family:monospace">${t}</td>
+                <td style="padding:8px 16px;font-weight:600;text-align:right;font-size:14px">${n !== null ? n.toLocaleString() : '<span style="color:#94a3b8">—</span>'}</td>
+            </tr>`).join('');
+
+        root.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+                <div style="display:flex;gap:10px;align-items:center">
+                    ${badge(environment, envColor)}
+                    ${badge(mode === 'nondb' ? 'NonDB mode' : 'DB mode', modeColor)}
+                </div>
+                <button onclick="load()" style="padding:6px 16px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#334155;font-size:13px;font-weight:600;cursor:pointer">↻ Refresh</button>
+            </div>
+
+            <div class="amrd-card" style="margin-bottom:20px">
+                <h3 style="margin:0 0 12px;font-size:14px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em">Versions</h3>
+                <table style="width:100%;border-collapse:collapse">
+                    <tbody>${versionRows}</tbody>
+                </table>
+            </div>
+
+            <div class="amrd-card">
+                <h3 style="margin:0 0 12px;font-size:14px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em">Table Row Counts</h3>
+                <table style="width:100%;border-collapse:collapse">
+                    <tbody>${tableRows}</tbody>
+                </table>
+            </div>`;
+    }
+
+    load();
+    // Expose for the Refresh button
+    window.load = load;
+});
+</script>
+</body>
+</html>

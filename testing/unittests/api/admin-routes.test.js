@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import app from '../../../server.js';
-import { uid, auth } from '../helpers.js';
+import { uid, auth, assertJson } from '../helpers.js';
 
 describe('Admin API', () => {
     let userId;
@@ -24,22 +24,25 @@ describe('Admin API', () => {
     describe('GET /api/admin/users', () => {
         it('no auth → 401 JSON', async () => {
             const res = await request(app).get('/api/admin/users');
+            assertJson(res);
             expect(res.status).toBe(401);
-            expect(res.headers['content-type']).toMatch(/json/);
         });
 
         it('admin role → 403 (site_admin required)', async () => {
             const res = await request(app).get('/api/admin/users').set(auth('admin'));
+            assertJson(res);
             expect(res.status).toBe(403);
         });
 
         it('staff role → 403', async () => {
             const res = await request(app).get('/api/admin/users').set(auth('staff'));
+            assertJson(res);
             expect(res.status).toBe(403);
         });
 
         it('site_admin → 200 with enriched users array', async () => {
             const res = await request(app).get('/api/admin/users').set(auth('siteAdmin'));
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
             expect(Array.isArray(res.body.data)).toBe(true);
@@ -47,6 +50,7 @@ describe('Admin API', () => {
 
         it('response users have groups array and no password_hash', async () => {
             const res = await request(app).get('/api/admin/users').set(auth('siteAdmin'));
+            assertJson(res);
             expect(res.status).toBe(200);
             const user = res.body.data[0];
             expect(user).toHaveProperty('groups');
@@ -59,6 +63,7 @@ describe('Admin API', () => {
         it('no auth → 401', async () => {
             const res = await request(app).post('/api/admin/users')
                 .send({ email: 'x@t.com', name: 'X' });
+            assertJson(res);
             expect(res.status).toBe(401);
         });
 
@@ -66,6 +71,7 @@ describe('Admin API', () => {
             const res = await request(app).post('/api/admin/users')
                 .set(auth('admin'))
                 .send({ email: 'x@t.com', name: 'X' });
+            assertJson(res);
             expect(res.status).toBe(403);
         });
 
@@ -73,6 +79,7 @@ describe('Admin API', () => {
             const res = await request(app).post('/api/admin/users')
                 .set(auth('siteAdmin'))
                 .send({ name: 'No Email', role: 'staff' });
+            assertJson(res);
             expect(res.status).toBe(400);
             expect(res.body).toHaveProperty('error');
         });
@@ -81,6 +88,7 @@ describe('Admin API', () => {
             const res = await request(app).post('/api/admin/users')
                 .set(auth('siteAdmin'))
                 .send({ email: 'noname@t.com' });
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
@@ -88,6 +96,7 @@ describe('Admin API', () => {
             const res = await request(app).post('/api/admin/users')
                 .set(auth('siteAdmin'))
                 .send({ email: 'r@t.com', name: 'R', role: 'overlord' });
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
@@ -96,6 +105,7 @@ describe('Admin API', () => {
             const res = await request(app).post('/api/admin/users')
                 .set(auth('siteAdmin'))
                 .send({ email, name: 'New User', role: 'billing', password: 'Secret1234' });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.success).toBe(true);
             expect(res.body.data.email).toBe(email);
@@ -111,6 +121,7 @@ describe('Admin API', () => {
             const res = await request(app).post('/api/admin/users')
                 .set(auth('siteAdmin'))
                 .send({ email, name: 'Second' });
+            assertJson(res);
             expect(res.status).toBe(409);
         });
 
@@ -118,6 +129,7 @@ describe('Admin API', () => {
             const res = await request(app).post('/api/admin/users')
                 .set(auth('siteAdmin'))
                 .send({ email: `role-${role}-${uid()}@t.com`, name: `Role ${role}`, role });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.data.role).toBe(role);
         });
@@ -128,6 +140,7 @@ describe('Admin API', () => {
             const res = await request(app).put('/api/admin/users/99999')
                 .set(auth('siteAdmin'))
                 .send({ name: 'Ghost' });
+            assertJson(res);
             expect(res.status).toBe(404);
         });
 
@@ -135,6 +148,7 @@ describe('Admin API', () => {
             const res = await request(app).put(`/api/admin/users/${userId}`)
                 .set(auth('siteAdmin'))
                 .send({ role: 'overlord' });
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
@@ -142,6 +156,7 @@ describe('Admin API', () => {
             const res = await request(app).put(`/api/admin/users/${userId}`)
                 .set(auth('siteAdmin'))
                 .send({ name: 'Renamed User', role: 'billing' });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
             expect(res.body.data.name).toBe('Renamed User');
@@ -152,6 +167,7 @@ describe('Admin API', () => {
             const res = await request(app).put(`/api/admin/users/${userId}`)
                 .set(auth('siteAdmin'))
                 .send({ is_active: false });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.data.is_active).toBe(false);
         });
@@ -164,6 +180,7 @@ describe('Admin API', () => {
                 .send({ email: `del-${uid()}@t.com`, name: 'To Delete' });
             const res = await request(app).delete(`/api/admin/users/${u.body.data.id}`)
                 .set(auth('siteAdmin'));
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
         });
@@ -171,6 +188,7 @@ describe('Admin API', () => {
         it('nonexistent user → 404', async () => {
             const res = await request(app).delete('/api/admin/users/99999')
                 .set(auth('siteAdmin'));
+            assertJson(res);
             expect(res.status).toBe(404);
         });
     });
@@ -179,6 +197,7 @@ describe('Admin API', () => {
     describe('GET /api/admin/user-groups', () => {
         it('site_admin → 200 with array', async () => {
             const res = await request(app).get('/api/admin/user-groups').set(auth('siteAdmin'));
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
             expect(Array.isArray(res.body.data)).toBe(true);
@@ -186,6 +205,7 @@ describe('Admin API', () => {
 
         it('admin role → 403', async () => {
             const res = await request(app).get('/api/admin/user-groups').set(auth('admin'));
+            assertJson(res);
             expect(res.status).toBe(403);
         });
     });
@@ -195,6 +215,7 @@ describe('Admin API', () => {
             const res = await request(app).post('/api/admin/user-groups')
                 .set(auth('siteAdmin'))
                 .send({ name: `NewGroup-${uid()}`, description: 'Desc' });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.success).toBe(true);
             expect(res.body.data).toHaveProperty('id');
@@ -204,6 +225,7 @@ describe('Admin API', () => {
             const res = await request(app).post('/api/admin/user-groups')
                 .set(auth('siteAdmin'))
                 .send({ description: 'No name' });
+            assertJson(res);
             expect(res.status).toBe(400);
         });
     });
@@ -217,6 +239,7 @@ describe('Admin API', () => {
                 .post(`/api/admin/user-groups/${groupId}/members`)
                 .set(auth('siteAdmin'))
                 .send({ user_id: u.body.data.id });
+            assertJson(res);
             expect([200, 201]).toContain(res.status);
         });
 
@@ -231,6 +254,7 @@ describe('Admin API', () => {
             const res = await request(app)
                 .delete(`/api/admin/user-groups/${groupId}/members/${u.body.data.id}`)
                 .set(auth('siteAdmin'));
+            assertJson(res);
             expect(res.status).toBe(200);
         });
     });
@@ -239,6 +263,7 @@ describe('Admin API', () => {
     describe('GET /api/admin/roles', () => {
         it('site_admin → 200 with roles array', async () => {
             const res = await request(app).get('/api/admin/roles').set(auth('siteAdmin'));
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(Array.isArray(res.body.data)).toBe(true);
         });
@@ -249,6 +274,7 @@ describe('Admin API', () => {
             const res = await request(app).post('/api/admin/roles')
                 .set(auth('siteAdmin'))
                 .send({ name: 'test_role', description: 'No label' });
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
@@ -256,6 +282,7 @@ describe('Admin API', () => {
             const res = await request(app).post('/api/admin/roles')
                 .set(auth('siteAdmin'))
                 .send({ name: 'Bad-Role!', label: 'Bad Role' });
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
@@ -264,6 +291,7 @@ describe('Admin API', () => {
             const res = await request(app).post('/api/admin/roles')
                 .set(auth('siteAdmin'))
                 .send({ name, label: 'Test Role', description: 'Custom role' });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.success).toBe(true);
             expect(res.body.data.name).toBe(name);

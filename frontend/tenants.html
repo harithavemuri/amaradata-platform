@@ -14,6 +14,13 @@
     document.addEventListener('DOMContentLoaded', async () => {
         const root = window.__amrd.renderSidebar('Tenants');
 
+        const fmtDate = d => {
+            if (!d && d !== 0) return '—';
+            const asNum = typeof d === 'number' ? d : (/^\d{9,12}$/.test(String(d)) ? Number(d) : NaN);
+            const date = isNaN(asNum) ? new Date(d) : new Date(asNum * 1000);
+            return isNaN(date.getTime()) ? '—' : date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+        };
+
         async function load() {
             const gql = await window.__amrd.gqlFetch(
                 `{ tenants { id name slug contact_name contact_email contact_phone status onboarded_at site_url } }`
@@ -22,7 +29,7 @@
             root.innerHTML = `
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
                     <span style="color:#64748b;font-size:13px">${tenants.length} tenant(s)</span>
-                    <button class="amrd-btn amrd-btn-primary" onclick="openForm()">+ Add Tenant</button>
+                    ${window.__amrd.isReadOnly() ? '' : '<button class="amrd-btn amrd-btn-primary" onclick="openForm()">+ Add Tenant</button>'}
                 </div>
                 <div class="amrd-card" style="padding:0">
                     <div class="amrd-table-wrap">
@@ -35,9 +42,9 @@
                                 <td>${t.contact_name || '—'}<br><span style="color:#64748b;font-size:11px">${t.contact_email || ''}</span></td>
                                 <td>${t.contact_phone || '—'}</td>
                                 <td><span class="amrd-badge amrd-badge-${t.status}">${t.status}</span></td>
-                                <td>${t.onboarded_at?.slice(0,10) || '—'}</td>
+                                <td>${fmtDate(t.onboarded_at)}</td>
                                 <td>${t.site_url ? `<a href="${t.site_url}" target="_blank" rel="noopener" style="color:#0D9488;font-size:12px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:4px">Open ↗</a>` : '<span style="color:#94a3b8">—</span>'}</td>
-                                <td><button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick='openForm(${JSON.stringify(t)})'>Edit</button></td>
+                                <td><button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick='openForm(${JSON.stringify(t)})'>${window.__amrd.isReadOnly() ? 'View' : 'Edit'}</button></td>
                             </tr>`).join('') || '<tr><td colspan="7" style="color:#94a3b8;text-align:center;padding:24px">No tenants yet</td></tr>'}
                         </tbody>
                     </table>
@@ -47,38 +54,44 @@
         }
 
         function openForm(t = null) {
+            if (!t && window.__amrd.isReadOnly()) return;
+            const ro  = window.__amrd.isReadOnly();
+            const dis = ro ? ' disabled' : '';
             const slot = document.getElementById('form-slot');
             slot.innerHTML = `
                 <div class="amrd-card">
-                    <h3>${t ? 'Edit Tenant' : 'New Tenant'}</h3>
+                    <h3>${ro ? 'View Tenant' : (t ? 'Edit Tenant' : 'New Tenant')}</h3>
                     <div class="amrd-form-row">
-                        <div><label>Name *</label><input id="f-name" value="${t?.name||''}"></div>
-                        <div><label>Slug *</label><input id="f-slug" value="${t?.slug||''}"></div>
+                        <div><label>Name *</label><input id="f-name" value="${t?.name||''}"${dis}></div>
+                        <div><label>Slug *</label><input id="f-slug" value="${t?.slug||''}"${dis}></div>
                     </div>
                     <div class="amrd-form-row">
-                        <div><label>Contact Name</label><input id="f-cname" value="${t?.contact_name||''}"></div>
-                        <div><label>Contact Email</label><input id="f-cemail" type="email" value="${t?.contact_email||''}"></div>
+                        <div><label>Contact Name</label><input id="f-cname" value="${t?.contact_name||''}"${dis}></div>
+                        <div><label>Contact Email</label><input id="f-cemail" type="email" value="${t?.contact_email||''}"${dis}></div>
                     </div>
                     <div class="amrd-form-row">
-                        <div><label>Phone</label><input id="f-phone" value="${t?.contact_phone||''}"></div>
+                        <div><label>Phone</label><input id="f-phone" value="${t?.contact_phone||''}"${dis}></div>
                         <div><label>Status</label>
-                            <select id="f-status">
+                            <select id="f-status"${dis}>
                                 ${['active','suspended','churned'].map(s=>`<option value="${s}"${t?.status===s?' selected':''}>${s}</option>`).join('')}
                             </select>
                         </div>
                     </div>
                     <div class="amrd-form-row">
-                        <div><label>Tax ID</label><input id="f-gstin" value="${t?.gstin||''}"></div>
-                        <div><label>National ID</label><input id="f-pan" value="${t?.pan||''}"></div>
+                        <div><label>Tax ID</label><input id="f-gstin" value="${t?.gstin||''}"${dis}></div>
+                        <div><label>National ID</label><input id="f-pan" value="${t?.pan||''}"${dis}></div>
                     </div>
                     <div class="amrd-form-row">
-                        <div><label>Onboarded Date</label><input id="f-onboard" type="date" value="${t?.onboarded_at?.slice(0,10)||''}"></div>
-                        <div><label>Site URL</label><input id="f-siteurl" type="url" placeholder="https://..." value="${t?.site_url||''}"></div>
+                        <div><label>Onboarded Date</label><input id="f-onboard" type="date" value="${t?.onboarded_at?.slice(0,10)||''}"${dis}></div>
+                        <div><label>Site URL</label><input id="f-siteurl" type="url" placeholder="https://..." value="${t?.site_url||''}"${dis}></div>
                     </div>
-                    <div class="amrd-form-row full"><div><label>Billing Address</label><textarea id="f-addr" rows="2">${t?.billing_address||''}</textarea></div></div>
+                    <div class="amrd-form-row full"><div><label>Billing Address</label><textarea id="f-addr" rows="2"${dis}>${t?.billing_address||''}</textarea></div></div>
                     <div style="margin-top:16px;display:flex;gap:10px">
-                        <button class="amrd-btn amrd-btn-primary" onclick="save(${t?.id||'null'})">Save</button>
-                        <button class="amrd-btn amrd-btn-ghost" onclick="document.getElementById('form-slot').innerHTML=''">Cancel</button>
+                        ${ro
+                            ? '<button class="amrd-btn amrd-btn-ghost" onclick="document.getElementById(\'form-slot\').innerHTML=\'\'">Close</button>'
+                            : `<button class="amrd-btn amrd-btn-primary" onclick="save(${t?.id||'null'})">Save</button>
+                               <button class="amrd-btn amrd-btn-ghost" onclick="document.getElementById('form-slot').innerHTML=''">Cancel</button>`
+                        }
                     </div>
                     <div id="save-err" style="color:#dc2626;font-size:13px;margin-top:8px"></div>
                 </div>`;

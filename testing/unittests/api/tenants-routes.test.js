@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import app from '../../../server.js';
-import { uid, auth } from '../helpers.js';
+import { uid, auth, assertJson } from '../helpers.js';
 
 describe('Tenants API', () => {
     let tenantId;
@@ -19,14 +19,15 @@ describe('Tenants API', () => {
         it('no auth → 401 JSON', async () => {
             const res = await request(app).post('/api/tenants')
                 .send({ name: 'X', slug: 'x' });
+            assertJson(res);
             expect(res.status).toBe(401);
-            expect(res.headers['content-type']).toMatch(/json/);
         });
 
         it('staff role → 403', async () => {
             const res = await request(app).post('/api/tenants')
                 .set(auth('staff'))
                 .send({ name: 'X', slug: 'x' });
+            assertJson(res);
             expect(res.status).toBe(403);
         });
 
@@ -34,6 +35,7 @@ describe('Tenants API', () => {
             const res = await request(app).post('/api/tenants')
                 .set(auth('admin'))
                 .send({ slug: 'no-name' });
+            assertJson(res);
             expect(res.status).toBe(400);
             expect(res.body).toHaveProperty('error');
         });
@@ -42,6 +44,7 @@ describe('Tenants API', () => {
             const res = await request(app).post('/api/tenants')
                 .set(auth('admin'))
                 .send({ name: 'No Slug' });
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
@@ -50,6 +53,7 @@ describe('Tenants API', () => {
             const res = await request(app).post('/api/tenants')
                 .set(auth('admin'))
                 .send({ name: 'Acme Corp', slug, status: 'active' });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.success).toBe(true);
             expect(res.body.data).toMatchObject({ slug, status: 'active' });
@@ -66,6 +70,7 @@ describe('Tenants API', () => {
                     status: 'active',
                     site_url: 'https://full.example.com',
                 });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.data.contact_email).toBe('full@example.com');
         });
@@ -74,6 +79,7 @@ describe('Tenants API', () => {
             const res = await request(app).post('/api/tenants')
                 .set(auth('siteAdmin'))
                 .send({ name: 'SA Tenant', slug: `sa-${uid()}` });
+            assertJson(res);
             expect(res.status).toBe(201);
         });
     });
@@ -82,6 +88,7 @@ describe('Tenants API', () => {
     describe('PUT /api/tenants/:id', () => {
         it('no auth → 401', async () => {
             const res = await request(app).put('/api/tenants/1').send({ name: 'X' });
+            assertJson(res);
             expect(res.status).toBe(401);
         });
 
@@ -89,6 +96,7 @@ describe('Tenants API', () => {
             const res = await request(app).put(`/api/tenants/${tenantId}`)
                 .set(auth('staff'))
                 .send({ name: 'Updated' });
+            assertJson(res);
             expect(res.status).toBe(403);
         });
 
@@ -96,6 +104,7 @@ describe('Tenants API', () => {
             const res = await request(app).put('/api/tenants/99999')
                 .set(auth('admin'))
                 .send({ name: 'Ghost' });
+            assertJson(res);
             expect(res.status).toBe(404);
         });
 
@@ -103,6 +112,7 @@ describe('Tenants API', () => {
             const res = await request(app).put(`/api/tenants/${tenantId}`)
                 .set(auth('admin'))
                 .send({ name: 'Renamed Corp', status: 'suspended' });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
             expect(res.body.data.name).toBe('Renamed Corp');
@@ -113,6 +123,7 @@ describe('Tenants API', () => {
             const res = await request(app).put(`/api/tenants/${tenantId}`)
                 .set(auth('siteAdmin'))
                 .send({ name: 'SA Updated' });
+            assertJson(res);
             expect(res.status).toBe(200);
         });
     });

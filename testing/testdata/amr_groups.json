@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "created_at": "2026-06-13T08:41:33.660Z",
+    "updated_at": "2026-06-13T08:41:33.660Z",
+    "name": "Group-mqc3wd051ieh",
+    "description": "",
+    "is_active": true
+  },
+  {
+    "id": 2,
+    "created_at": "2026-06-13T08:41:34.176Z",
+    "updated_at": "2026-06-13T08:41:34.176Z",
+    "name": "NewGroup-mqc3wdeju4el",
+    "description": "Desc",
+    "is_active": true
+  },
+  {
+    "id": 3,
+    "created_at": "2026-06-13T08:41:35.668Z",
+    "updated_at": "2026-06-13T08:41:35.668Z",
+    "name": "Sales Team mqc3wejwl7cb",
+    "description": "",
+    "is_active": true
+  }
+]

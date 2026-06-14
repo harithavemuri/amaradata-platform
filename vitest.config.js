@@ -7,7 +7,7 @@ export default defineConfig({
         pool:            'threads',
         maxWorkers:      1,
         fileParallelism: false,
-        exclude:         ['**/node_modules/**', '**/.aws-sam/**', '**/regression_testsuite/**', '**/*.spec.js'],
+        exclude:         ['**/node_modules/**', '**/.aws-sam/**', '**/regression_testsuite/**', '**/testing/unittests/**', '**/*.spec.js'],
         coverage: {
             provider: 'v8',
             exclude: [

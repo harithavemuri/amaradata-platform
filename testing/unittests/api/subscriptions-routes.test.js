@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import app from '../../../server.js';
-import { uid, auth } from '../helpers.js';
+import { uid, auth, assertJson } from '../helpers.js';
 
 describe('Subscriptions API', () => {
     let tenantId;
@@ -25,14 +25,15 @@ describe('Subscriptions API', () => {
         it('no auth → 401 JSON', async () => {
             const res = await request(app).post('/api/subscriptions/plans')
                 .send({ name: 'Basic' });
+            assertJson(res);
             expect(res.status).toBe(401);
-            expect(res.headers['content-type']).toMatch(/json/);
         });
 
         it('staff role → 403', async () => {
             const res = await request(app).post('/api/subscriptions/plans')
                 .set(auth('staff'))
                 .send({ name: 'Basic' });
+            assertJson(res);
             expect(res.status).toBe(403);
         });
 
@@ -40,6 +41,7 @@ describe('Subscriptions API', () => {
             const res = await request(app).post('/api/subscriptions/plans')
                 .set(auth('admin'))
                 .send({ sales_pct: 2.0 });
+            assertJson(res);
             expect(res.status).toBe(400);
             expect(res.body).toHaveProperty('error');
         });
@@ -48,6 +50,7 @@ describe('Subscriptions API', () => {
             const res = await request(app).post('/api/subscriptions/plans')
                 .set(auth('admin'))
                 .send({ name: `MinPlan-${uid()}` });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.success).toBe(true);
             expect(res.body.data.sales_pct).toBe(0);
@@ -62,6 +65,7 @@ describe('Subscriptions API', () => {
             const res = await request(app).post('/api/subscriptions/plans')
                 .set(auth('admin'))
                 .send({ name, sales_pct: 3.0, rental_pct: 1.5, hourly_rate: 1500, min_monthly_fee: 5000, currency_code: 'INR' });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.data.name).toBe(name);
             expect(res.body.data.sales_pct).toBe(3.0);
@@ -72,6 +76,7 @@ describe('Subscriptions API', () => {
             const res = await request(app).post('/api/subscriptions/plans')
                 .set(auth('siteAdmin'))
                 .send({ name: `SAPlan-${uid()}` });
+            assertJson(res);
             expect(res.status).toBe(201);
         });
     });
@@ -81,6 +86,7 @@ describe('Subscriptions API', () => {
         it('no auth → 401', async () => {
             const res = await request(app).post('/api/subscriptions')
                 .send({ tenant_id: 1, plan_id: 1, effective_from: '2025-01-01' });
+            assertJson(res);
             expect(res.status).toBe(401);
         });
 
@@ -88,6 +94,7 @@ describe('Subscriptions API', () => {
             const res = await request(app).post('/api/subscriptions')
                 .set(auth('staff'))
                 .send({ tenant_id: tenantId, plan_id: planId, effective_from: '2025-01-01' });
+            assertJson(res);
             expect(res.status).toBe(403);
         });
 
@@ -95,6 +102,7 @@ describe('Subscriptions API', () => {
             const res = await request(app).post('/api/subscriptions')
                 .set(auth('admin'))
                 .send({ plan_id: planId, effective_from: '2025-01-01' });
+            assertJson(res);
             expect(res.status).toBe(400);
             expect(res.body).toHaveProperty('error');
         });
@@ -103,6 +111,7 @@ describe('Subscriptions API', () => {
             const res = await request(app).post('/api/subscriptions')
                 .set(auth('admin'))
                 .send({ tenant_id: tenantId, effective_from: '2025-01-01' });
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
@@ -110,6 +119,7 @@ describe('Subscriptions API', () => {
             const res = await request(app).post('/api/subscriptions')
                 .set(auth('admin'))
                 .send({ tenant_id: tenantId, plan_id: planId });
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
@@ -122,6 +132,7 @@ describe('Subscriptions API', () => {
             const res = await request(app).post('/api/subscriptions')
                 .set(auth('admin'))
                 .send({ tenant_id: tid, plan_id: planId, effective_from: '2025-01-01' });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.success).toBe(true);
             expect(res.body.data.tenant_id).toBe(tid);
@@ -147,6 +158,7 @@ describe('Subscriptions API', () => {
             const res = await request(app).post('/api/subscriptions')
                 .set(auth('admin'))
                 .send({ tenant_id: tid, plan_id: plan2Id, effective_from: '2025-06-01' });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.data.plan_id).toBe(plan2Id);
             expect(res.body.data.effective_to).toBeNull();
@@ -164,6 +176,7 @@ describe('Subscriptions API', () => {
                     tenant_id: tid, plan_id: planId, effective_from: '2025-01-01',
                     custom_sales_pct: 1.75, custom_rental_pct: 0.8, notes: 'Negotiated rate',
                 });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.data.custom_sales_pct).toBe(1.75);
             expect(res.body.data.notes).toBe('Negotiated rate');

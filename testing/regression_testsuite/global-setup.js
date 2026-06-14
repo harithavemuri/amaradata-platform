@@ -11,10 +11,10 @@ const BASE_URL      = 'http://localhost:9001';
 const SETUP_KEY     = 'playwright-test-secret-32chars!!';
 
 const TABLES = [
-    'amr_password_reset_tokens', 'amr_user_group_members',
+    'amr_password_reset_tokens', 'amr_group_members',
     'contact_submissions', 'payments', 'invoice_line_items', 'billing_metrics',
     'tenant_subscriptions', 'invoices', 'enhancements',
-    'tenants', 'subscription_plans', 'amr_user_groups',
+    'tenants', 'subscription_plans', 'amr_groups',
     'amr_users', 'amr_roles',
 ];
 

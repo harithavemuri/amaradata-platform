@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import app from '../../../server.js';
-import { auth } from '../helpers.js';
+import { auth, assertJson } from '../helpers.js';
 
 describe('Contact API', () => {
     // ── POST /api/contact (public) ────────────────────────────────────────────
@@ -10,31 +10,35 @@ describe('Contact API', () => {
         it('missing name → 400 JSON', async () => {
             const res = await request(app).post('/api/contact')
                 .send({ email: 'a@b.com', message: 'Hello' });
+            assertJson(res);
             expect(res.status).toBe(400);
-            expect(res.headers['content-type']).toMatch(/json/);
             expect(res.body).toHaveProperty('error');
         });
 
         it('missing email → 400', async () => {
             const res = await request(app).post('/api/contact')
                 .send({ name: 'Alice', message: 'Hello' });
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
         it('missing message → 400', async () => {
             const res = await request(app).post('/api/contact')
                 .send({ name: 'Alice', email: 'a@b.com' });
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
         it('empty body → 400', async () => {
             const res = await request(app).post('/api/contact').send({});
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
         it('valid minimal → 201 with ref_number format REF-YYYYMMDD-####', async () => {
             const res = await request(app).post('/api/contact')
                 .send({ name: 'Alice', email: 'alice@example.com', message: 'Platform enquiry.' });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.success).toBe(true);
             expect(res.body.ref_number).toMatch(/^REF-\d{8}-\d{4}$/);
@@ -46,6 +50,7 @@ describe('Contact API', () => {
                     name: 'Bob', email: 'bob@corp.com', message: 'Enquiry.',
                     phone: '+91-9876543210', company: 'Corp Ltd',
                 });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body).toHaveProperty('ref_number');
         });
@@ -53,6 +58,7 @@ describe('Contact API', () => {
         it('no auth required — public endpoint', async () => {
             const res = await request(app).post('/api/contact')
                 .send({ name: 'Guest', email: 'guest@test.com', message: 'No auth needed.' });
+            assertJson(res);
             expect(res.status).toBe(201);
         });
 
@@ -63,6 +69,8 @@ describe('Contact API', () => {
                 request(app).post('/api/contact')
                     .send({ name: 'Y', email: 'y@t.com', message: 'Second.' }),
             ]);
+            assertJson(r1);
+            assertJson(r2);
             expect(r1.body.ref_number).not.toBe(r2.body.ref_number);
         });
     });
@@ -71,12 +79,13 @@ describe('Contact API', () => {
     describe('GET /api/contact', () => {
         it('no auth → 401 JSON', async () => {
             const res = await request(app).get('/api/contact');
+            assertJson(res);
             expect(res.status).toBe(401);
-            expect(res.headers['content-type']).toMatch(/json/);
         });
 
         it('staff auth → 200 with array', async () => {
             const res = await request(app).get('/api/contact').set(auth('staff'));
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
             expect(Array.isArray(res.body.data)).toBe(true);
@@ -84,6 +93,7 @@ describe('Contact API', () => {
 
         it('admin auth → 200', async () => {
             const res = await request(app).get('/api/contact').set(auth('admin'));
+            assertJson(res);
             expect(res.status).toBe(200);
         });
 
@@ -93,6 +103,7 @@ describe('Contact API', () => {
                 .send({ name: 'Charlie', email, message: 'List check.' });
 
             const res = await request(app).get('/api/contact').set(auth('staff'));
+            assertJson(res);
             expect(res.status).toBe(200);
             const entry = res.body.data.find(d => d.email === email);
             expect(entry).toBeTruthy();

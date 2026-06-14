@@ -32,6 +32,12 @@
             const unbilled   = enh.filter(e => e.status === 'delivered' && !e.invoice_id).length;
 
             const fmt = (v, currency) => new Intl.NumberFormat(undefined, currency ? { style: 'currency', currency, maximumFractionDigits: 0 } : { maximumFractionDigits: 0 }).format(Number(v));
+            const fmtDate = d => {
+                if (!d && d !== 0) return '—';
+                const asNum = typeof d === 'number' ? d : (/^\d{9,12}$/.test(String(d)) ? Number(d) : NaN);
+                const date = isNaN(asNum) ? new Date(d) : new Date(asNum * 1000);
+                return isNaN(date.getTime()) ? '—' : date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+            };
 
             root.innerHTML = `
                 <div class="amrd-stat-grid">
@@ -68,7 +74,7 @@
                                 <td><a href="/invoices">${i.invoice_number}</a></td>
                                 <td>${i.tenant_name}</td>
                                 <td>${fmt(i.total_amount, i.currency_code)}</td>
-                                <td>${i.due_date?.slice(0,10) || '—'}</td>
+                                <td>${fmtDate(i.due_date)}</td>
                                 <td><span class="amrd-badge amrd-badge-${i.status}">${i.status}</span></td>
                             </tr>`).join('') || '<tr><td colspan="5" style="color:#94a3b8;text-align:center">No invoices yet</td></tr>'}
                         </tbody>
@@ -87,7 +93,7 @@
                                 <td><a href="/tenants"><strong>${t.name}</strong></a></td>
                                 <td>${t.contact_email || '—'}</td>
                                 <td><span class="amrd-badge amrd-badge-${t.status}">${t.status}</span></td>
-                                <td>${t.onboarded_at?.slice(0,10) || '—'}</td>
+                                <td>${fmtDate(t.onboarded_at)}</td>
                             </tr>`).join('') || '<tr><td colspan="4" style="color:#94a3b8;text-align:center">No tenants yet</td></tr>'}
                         </tbody>
                     </table>

@@ -2,6 +2,19 @@ const router = require('express').Router();
 const db     = require('../db');
 const { requireAuth } = require('../middleware/auth');
 
+// GET /api/metrics
+router.get('/', async (req, res) => {
+    try {
+        if (req.db.mode === 'nondb') {
+            return res.json({ success: true, data: req.db.fileDb.find('billing_metrics') });
+        }
+        const { rows } = await db.query(
+            'SELECT * FROM billing_metrics ORDER BY period_year DESC, period_month DESC'
+        );
+        res.json({ success: true, data: rows });
+    } catch (e) { console.error('[metrics]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+});
+
 // POST /api/metrics  (manual upsert — normally done by collect-metrics job)
 router.post('/', requireAuth, async (req, res) => {
     const { tenant_id, period_year, period_month,

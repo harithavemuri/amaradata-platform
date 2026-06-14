@@ -8,10 +8,14 @@
 - [AmaraData Production Domain](project-amaradata-domain.md) — Production URL is https://amaradata.com (apex domain, not platform.amaradata.com)
 - [DB Security Rule](feedback-db-security.md) — RDS/Aurora must NEVER be publicly accessible; Lambda must use VPC to reach DB (both amaradata + rohas-group)
 - [AWS Infra Standards](feedback-aws-infra-standards.md) — Always apply cost-allocation tags (tenant/application/project/component); 1 consolidated log group per application
-- [Deploy Process](feedback-deploy-process.md) — Always use `npm run deploy` (tests gate the deploy); never bare `sam deploy`
+- [Deploy Process](feedback-deploy-process.md) — Block deploys if any test fails; run smoke tests after every deployment (backend/UI/API); always `npm run deploy` (user-mandated permanent rules)
 - [NonDB No AWS](feedback-nondb-no-aws.md) — NonDB mode must have ZERO AWS RDS/DynamoDB (no database AWS services); other AWS (SES, S3, SSM) are allowed; both sites
 - [Auth Error UX](feedback-auth-error-ux.md) — 401/403 must show access-denied popup with 10-sec countdown then redirect to login (both sites)
 - [Issue Fixes → Enhancements](project-issue-fixes-table.md) — issue_fixes retired; CSV import goes into enhancements table (source='csv'); bugs=not billable, enhancements=billable
 - [DB Queries Backend Only](feedback-db-queries-backend-only.md) — DB queries must NEVER run from frontend JS; all DB access is in backend/routes/*.js only
 - [No DB Errors to Frontend](feedback-no-db-errors-to-frontend.md) — Raw DB/internal errors must NEVER reach the frontend; log to CloudWatch, return generic 500 message
-- [DB Queries Backend Only](feedback-db-queries-backend-only.md) — DB queries must NEVER run from frontend JS; all DB access is in backend/routes/*.js only
+- [Case-Insensitive Search](feedback-case-insensitive-search.md) — All text-field DB queries use lower(col)=lower($N); NonDB uses .toLowerCase() on both sides; passwords excluded (user-mandated)
+- [Date Display Format](feedback-date-format.md) — All frontend dates must show as "Mon DD YYYY" (e.g. "May 01 2026"); use fmtDate helper; never .slice(0,10) or raw epoch numbers
+- [Testing Pyramid](feedback-testing-pyramid.md) — Tests must follow unit > integration > E2E > smoke pyramid; warn when a request would place tests at a higher layer than necessary
+- [Deploy Test Summary](feedback-deploy-test-summary.md) — Before recommending a deploy, always show pass/fail counts per layer (unit, integration DB, integration NonDB, E2E, smoke)
+- [Performance SLA](feedback-performance-sla.md) — API ≤500ms, page load ≤3s; API perf tests at integration layer, page load perf tests at E2E layer

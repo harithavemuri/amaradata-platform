@@ -1,6 +1,13 @@
 -- AmaraData Platform Database
 -- Run against a dedicated PostgreSQL database: amaradata_platform
 
+-- Migration history — one row per named migration; version is the primary key so re-runs are safe.
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version     VARCHAR(50)  PRIMARY KEY,
+    description TEXT,
+    applied_at  TIMESTAMP    NOT NULL DEFAULT NOW()
+);
+
 -- Internal AmaraData staff users
 -- Roles: site_admin | admin | sales_manager | billing | staff
 CREATE TABLE IF NOT EXISTS amr_users (
@@ -8,10 +15,12 @@ CREATE TABLE IF NOT EXISTS amr_users (
     username        VARCHAR(255) UNIQUE NOT NULL,
     email           VARCHAR(255) NOT NULL,
     name            VARCHAR(255) NOT NULL,
+    first_name      VARCHAR(100),
+    last_name       VARCHAR(100),
     role            VARCHAR(50)  NOT NULL DEFAULT 'staff',
     password_hash   TEXT         NOT NULL DEFAULT '',
     google_id       VARCHAR(255),
-    picture         TEXT,
+    logo_url        VARCHAR(500),
     is_active       BOOLEAN      NOT NULL DEFAULT true,
     last_login_at   TIMESTAMP,
     created_at      TIMESTAMP    NOT NULL DEFAULT NOW(),
@@ -45,36 +54,81 @@ INSERT INTO amr_roles (name, label, description, is_system) VALUES
     ('staff',         'Staff',         'Basic read-only platform access', true)
 ON CONFLICT (name) DO NOTHING;
 
--- Staff user groups (e.g. "Billing Team", "Sales IN")
--- A group can optionally confer a role on all its members (role column references amr_roles.name).
-CREATE TABLE IF NOT EXISTS amr_user_groups (
+-- Migration: rename old amr_user_groups / amr_user_group_members → new names and add FK columns.
+-- Must run BEFORE the CREATE TABLE IF NOT EXISTS below so that renames happen first on existing DBs.
+-- Safe to re-run; every step is guarded by IF EXISTS / IF NOT EXISTS.
+DO $$
+BEGIN
+    -- Rename old tables if they exist under the old names and the new names don't exist yet
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'amr_user_groups')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'amr_groups') THEN
+        ALTER TABLE amr_user_groups RENAME TO amr_groups;
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'amr_user_group_members')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'amr_group_members') THEN
+        ALTER TABLE amr_user_group_members RENAME TO amr_group_members;
+    END IF;
+
+    -- Create indexes if missing
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_gm_group') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'amr_group_members') THEN
+            CREATE INDEX idx_gm_group ON amr_group_members(group_id);
+        END IF;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_gm_user') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'amr_group_members') THEN
+            CREATE INDEX idx_gm_user ON amr_group_members(user_id);
+        END IF;
+    END IF;
+END $$;
+
+-- Groups — platform staff grouped by function (e.g. "Sales Team", "Billing Team").
+-- Tenant + role assignments live in the group_tenant join table (mirrors rohas-group pattern).
+CREATE TABLE IF NOT EXISTS amr_groups (
     id          SERIAL PRIMARY KEY,
-    name        VARCHAR(100) NOT NULL,
+    name        VARCHAR(100) UNIQUE NOT NULL,
     description TEXT,
-    role        VARCHAR(50) REFERENCES amr_roles(name) ON DELETE SET NULL,
     is_active   BOOLEAN NOT NULL DEFAULT true,
-    created_by  INTEGER REFERENCES amr_users(id),
     created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 -- Many-to-many: user ↔ group membership
-CREATE TABLE IF NOT EXISTS amr_user_group_members (
-    id         SERIAL PRIMARY KEY,
-    group_id   INTEGER NOT NULL REFERENCES amr_user_groups(id) ON DELETE CASCADE,
-    user_id    INTEGER NOT NULL REFERENCES amr_users(id) ON DELETE CASCADE,
-    added_at   TIMESTAMP NOT NULL DEFAULT NOW(),
+CREATE TABLE IF NOT EXISTS amr_group_members (
+    id          SERIAL PRIMARY KEY,
+    group_id    INTEGER   NOT NULL REFERENCES amr_groups(id) ON DELETE CASCADE,
+    user_id     INTEGER   NOT NULL REFERENCES amr_users(id)  ON DELETE CASCADE,
+    assigned_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
     UNIQUE (group_id, user_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_ugm_group ON amr_user_group_members(group_id);
-CREATE INDEX IF NOT EXISTS idx_ugm_user  ON amr_user_group_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_gm_group ON amr_group_members(group_id);
+CREATE INDEX IF NOT EXISTS idx_gm_user  ON amr_group_members(user_id);
+
+-- Group → tenant + role assignments (mirrors rohas-group's group_project table).
+-- A group can have different roles across different tenant projects.
+CREATE TABLE IF NOT EXISTS group_tenant (
+    id          SERIAL    PRIMARY KEY,
+    group_id    INTEGER   NOT NULL REFERENCES amr_groups(id) ON DELETE CASCADE,
+    tenant_id   INTEGER   NOT NULL REFERENCES tenants(id)    ON DELETE CASCADE,
+    role_id     INTEGER   NOT NULL REFERENCES amr_roles(id)  ON DELETE CASCADE,
+    assigned_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE (group_id, tenant_id, role_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_gt_group  ON group_tenant(group_id);
+CREATE INDEX IF NOT EXISTS idx_gt_tenant ON group_tenant(tenant_id);
 
 -- Tenants (one row per customer, e.g. "Rohas Group")
 CREATE TABLE IF NOT EXISTS tenants (
     id                    SERIAL PRIMARY KEY,
     name                  VARCHAR(255) NOT NULL,          -- display name
     slug                  VARCHAR(100) UNIQUE NOT NULL,   -- e.g. "rohas"
+    currency_code         VARCHAR(3)   NOT NULL DEFAULT 'INR',
     contact_name          VARCHAR(255),
     contact_email         VARCHAR(255),
     contact_phone         VARCHAR(50),
@@ -197,7 +251,7 @@ CREATE TABLE IF NOT EXISTS enhancements (
     notes             TEXT,
     -- CSV import fields (source='csv' rows come from RohasTestNotesSheet_Fixed.csv)
     source            VARCHAR(20)   NOT NULL DEFAULT 'manual', -- 'manual' | 'csv'
-    issue_id          INTEGER,
+    issue_id          BIGINT,
     site_name         VARCHAR(100),
     fixed             VARCHAR(200),
     item_type         VARCHAR(50)   NOT NULL DEFAULT 'enhancement', -- 'bug' | 'enhancement'
@@ -262,7 +316,139 @@ CREATE INDEX IF NOT EXISTS idx_tsub_tenant           ON tenant_subscriptions(ten
 -- Prevent a tenant from having two active subscriptions simultaneously
 CREATE UNIQUE INDEX IF NOT EXISTS idx_tsub_one_active ON tenant_subscriptions(tenant_id) WHERE effective_to IS NULL;
 
+-- ── Migration 2026.06.11.003: Align structure with rohas-group pattern ──────────
+DO $$
+BEGIN
+    -- amr_users: add profile columns
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='amr_users' AND column_name='first_name') THEN
+        ALTER TABLE amr_users ADD COLUMN first_name  VARCHAR(100);
+        ALTER TABLE amr_users ADD COLUMN last_name   VARCHAR(100);
+        ALTER TABLE amr_users ADD COLUMN logo_url    VARCHAR(500);
+        UPDATE amr_users SET
+            first_name = TRIM(SPLIT_PART(TRIM(name), ' ', 1)),
+            last_name  = NULLIF(TRIM(SUBSTRING(TRIM(name) FROM POSITION(' ' IN TRIM(name)) + 1)), ''),
+            logo_url   = picture;
+    END IF;
+
+    -- tenants: add currency_code
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='tenants' AND column_name='currency_code') THEN
+        ALTER TABLE tenants ADD COLUMN currency_code VARCHAR(3) NOT NULL DEFAULT 'INR';
+        UPDATE tenants SET currency_code = 'INR';
+    END IF;
+
+    -- amr_groups: migrate existing role+tenant assignments to group_tenant, then drop columns
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='amr_groups' AND column_name='role_id') THEN
+        -- Create group_tenant first if it doesn't exist yet (may arrive here before the CREATE TABLE above runs on re-run)
+        -- (group_tenant is created by CREATE TABLE IF NOT EXISTS above, but the DO block runs in same transaction)
+        INSERT INTO group_tenant (group_id, tenant_id, role_id, assigned_at, created_at, updated_at)
+        SELECT g.id, g.tenant_id, g.role_id, g.created_at, g.created_at, g.updated_at
+        FROM amr_groups g
+        WHERE g.tenant_id IS NOT NULL AND g.role_id IS NOT NULL
+        ON CONFLICT (group_id, tenant_id, role_id) DO NOTHING;
+
+        ALTER TABLE amr_groups DROP COLUMN IF EXISTS role_id;
+        ALTER TABLE amr_groups DROP COLUMN IF EXISTS tenant_id;
+        ALTER TABLE amr_groups DROP COLUMN IF EXISTS created_by;
+    END IF;
+
+    -- amr_groups: add UNIQUE constraint on name if missing
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'amr_groups_name_key' OR conname = 'amr_groups_name_unique') THEN
+        -- Deduplicate: keep only the lowest id for each name
+        DELETE FROM amr_group_members WHERE group_id IN (
+            SELECT id FROM amr_groups WHERE id NOT IN (
+                SELECT MIN(id) FROM amr_groups GROUP BY lower(name)
+            )
+        );
+        DELETE FROM amr_groups WHERE id NOT IN (
+            SELECT MIN(id) FROM amr_groups GROUP BY lower(name)
+        );
+        ALTER TABLE amr_groups ADD CONSTRAINT amr_groups_name_key UNIQUE (name);
+    END IF;
+
+    -- amr_group_members: drop tenant_id, rename added_at → assigned_at, add created_at
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='amr_group_members' AND column_name='tenant_id') THEN
+        ALTER TABLE amr_group_members DROP COLUMN tenant_id;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='amr_group_members' AND column_name='added_at')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='amr_group_members' AND column_name='assigned_at') THEN
+        ALTER TABLE amr_group_members RENAME COLUMN added_at TO assigned_at;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='amr_group_members' AND column_name='created_at') THEN
+        ALTER TABLE amr_group_members ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT NOW();
+        UPDATE amr_group_members SET created_at = assigned_at;
+    END IF;
+END $$;
+
+-- ── Migration 2026.06.12.001: Drop unused columns ────────────────────────────
+DO $$
+BEGIN
+    ALTER TABLE amr_users DROP COLUMN IF EXISTS picture;
+    ALTER TABLE amr_users DROP COLUMN IF EXISTS locale;
+    ALTER TABLE amr_users DROP COLUMN IF EXISTS region_code;
+    ALTER TABLE tenants   DROP COLUMN IF EXISTS description;
+    ALTER TABLE tenants   DROP COLUMN IF EXISTS logo_url;
+    ALTER TABLE tenants   DROP COLUMN IF EXISTS region_code;
+END $$;
+
+-- Sequence sync: reset all SERIAL sequences to MAX(id)+1 to fix drift after bulk JSON imports.
+-- Safe to run on every migration — setval is idempotent when data hasn't changed.
+SELECT setval('amr_users_id_seq',                 COALESCE((SELECT MAX(id) FROM amr_users), 0) + 1, false);
+SELECT setval('amr_roles_id_seq',                 COALESCE((SELECT MAX(id) FROM amr_roles), 0) + 1, false);
+-- Sequence name depends on whether table was created fresh (amr_groups_id_seq) or renamed from old table
+-- (amr_user_groups_id_seq). Use pg_get_serial_sequence to resolve the correct name safely.
+DO $$
+BEGIN
+    EXECUTE format('SELECT setval(%L, COALESCE((SELECT MAX(id) FROM amr_groups), 0) + 1, false)',
+        pg_get_serial_sequence('amr_groups', 'id'));
+    EXECUTE format('SELECT setval(%L, COALESCE((SELECT MAX(id) FROM amr_group_members), 0) + 1, false)',
+        pg_get_serial_sequence('amr_group_members', 'id'));
+END $$;
+SELECT setval('tenants_id_seq',                    COALESCE((SELECT MAX(id) FROM tenants), 0) + 1, false);
+SELECT setval('tenant_subscriptions_id_seq',       COALESCE((SELECT MAX(id) FROM tenant_subscriptions), 0) + 1, false);
+SELECT setval('subscription_plans_id_seq',         COALESCE((SELECT MAX(id) FROM subscription_plans), 0) + 1, false);
+SELECT setval('invoices_id_seq',                   COALESCE((SELECT MAX(id) FROM invoices), 0) + 1, false);
+SELECT setval('invoice_line_items_id_seq',         COALESCE((SELECT MAX(id) FROM invoice_line_items), 0) + 1, false);
+SELECT setval('billing_metrics_id_seq',            COALESCE((SELECT MAX(id) FROM billing_metrics), 0) + 1, false);
+SELECT setval('enhancements_id_seq',               COALESCE((SELECT MAX(id) FROM enhancements), 0) + 1, false);
+SELECT setval('payments_id_seq',                   COALESCE((SELECT MAX(id) FROM payments), 0) + 1, false);
+SELECT setval('contact_submissions_id_seq',        COALESCE((SELECT MAX(id) FROM contact_submissions), 0) + 1, false);
+SELECT setval('amr_password_reset_tokens_id_seq',  COALESCE((SELECT MAX(id) FROM amr_password_reset_tokens), 0) + 1, false);
+SELECT setval('group_tenant_id_seq',               COALESCE((SELECT MAX(id) FROM group_tenant), 0) + 1, false);
+
 -- Seed: default plan
 INSERT INTO subscription_plans (name, description, sales_pct, rental_pct, hourly_rate, min_monthly_fee)
 VALUES ('Standard', 'Default plan — 1% of sales, 2% of rental income, ₹2000/hr enhancements', 1.00, 2.00, 2000.00, 0)
 ON CONFLICT DO NOTHING;
+
+-- Seed: smoke-test service accounts (password: ez3Find@@123, bcrypt rounds=12)
+-- UPDATE resets to known password if user already exists; conditional INSERT creates if absent.
+UPDATE amr_users
+SET password_hash = '$2a$12$FQbKNm5AlKLsMC8VNc1BcegcIu8p9djZaeFAhYB2lEopCY7ruaFi.',
+    role = 'site_admin', is_active = true, updated_at = NOW()
+WHERE username = 'smoketest.admin';
+
+INSERT INTO amr_users (username, email, name, role, password_hash, is_active)
+SELECT 'smoketest.admin', 'harithavemuri@gmail.com', 'Smoke Test Admin', 'site_admin',
+       '$2a$12$FQbKNm5AlKLsMC8VNc1BcegcIu8p9djZaeFAhYB2lEopCY7ruaFi.', true
+WHERE NOT EXISTS (SELECT 1 FROM amr_users WHERE username = 'smoketest.admin');
+
+UPDATE amr_users
+SET password_hash = '$2a$12$FQbKNm5AlKLsMC8VNc1BcegcIu8p9djZaeFAhYB2lEopCY7ruaFi.',
+    email = 'smoketest.salesperson@amaradata.com',
+    role = 'sales_manager', is_active = true, updated_at = NOW()
+WHERE username = 'smoketest.salesperson';
+
+INSERT INTO amr_users (username, email, name, role, password_hash, is_active)
+SELECT 'smoketest.salesperson', 'smoketest.salesperson@amaradata.com', 'Smoke Test Sales Person', 'sales_manager',
+       '$2a$12$FQbKNm5AlKLsMC8VNc1BcegcIu8p9djZaeFAhYB2lEopCY7ruaFi.', true
+WHERE NOT EXISTS (SELECT 1 FROM amr_users WHERE username = 'smoketest.salesperson');
+
+-- Migration versions — add a new row for each deploy that changes the schema.
+-- ON CONFLICT DO NOTHING makes re-runs safe; applied_at reflects first application.
+INSERT INTO schema_migrations (version, description) VALUES
+    ('2026.06.10.001', 'Username-based auth, sequence sync, smoketest users, schema_migrations table'),
+    ('2026.06.11.001', 'Rename amr_user_groups→amr_groups, amr_user_group_members→amr_group_members; add tenant_id + role_id FK'),
+    ('2026.06.11.002', 'Add tenant_id to amr_group_members for direct per-tenant access lookup'),
+    ('2026.06.11.003', 'Align with rohas-group: user profile cols, tenant profile cols, group_tenant table, drop role_id/tenant_id/created_by from groups, assigned_at+created_at on group_members'),
+    ('2026.06.12.001', 'Drop unused columns: amr_users.picture/locale/region_code, tenants.description/logo_url/region_code')
+ON CONFLICT (version) DO NOTHING;

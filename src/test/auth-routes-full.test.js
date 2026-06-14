@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import app from '../../server.js';
-import { uid, tokens, auth } from './helpers.js';
+import { uid, tokens, auth, assertJson } from './helpers.js';
 
 const SETUP_KEY = 'test-jwt-secret-32-chars-minimum!!';
 
@@ -12,8 +12,8 @@ describe('Auth routes — full coverage', () => {
         it('without setup_key → 403', async () => {
             const res = await request(app).post('/api/auth/create-user')
                 .send({ email: `u${uid()}@t.com`, name: 'Test', password: 'pass1234' });
+            assertJson(res);
             expect(res.status).toBe(403);
-            expect(res.headers['content-type']).toMatch(/json/);
             expect(res.body).toHaveProperty('error');
         });
 
@@ -21,6 +21,7 @@ describe('Auth routes — full coverage', () => {
             const email = `user-${uid()}@test.com`;
             const res = await request(app).post('/api/auth/create-user')
                 .send({ email, name: 'Test User', password: 'pass1234', setup_key: SETUP_KEY });
+            assertJson(res);
             expect(res.status).toBe(201);
             expect(res.body.success).toBe(true);
             expect(res.body.data.email).toBe(email);
@@ -33,6 +34,7 @@ describe('Auth routes — full coverage', () => {
                 .send({ email, name: 'First', password: 'pass1234', setup_key: SETUP_KEY });
             const res = await request(app).post('/api/auth/create-user')
                 .send({ email, name: 'Second', password: 'pass1234', setup_key: SETUP_KEY });
+            assertJson(res);
             expect(res.status).toBe(409);
         });
 
@@ -40,9 +42,11 @@ describe('Auth routes — full coverage', () => {
             const sharedEmail = `shared-${uid()}@test.com`;
             const res1 = await request(app).post('/api/auth/create-user')
                 .send({ email: sharedEmail, username: `u1-${uid()}`, name: 'User One', password: 'pass1234', setup_key: SETUP_KEY });
+            assertJson(res1);
             expect(res1.status).toBe(201);
             const res2 = await request(app).post('/api/auth/create-user')
                 .send({ email: sharedEmail, username: `u2-${uid()}`, name: 'User Two', password: 'pass1234', setup_key: SETUP_KEY });
+            assertJson(res2);
             expect(res2.status).toBe(201);
             expect(res1.body.data.email).toBe(sharedEmail);
             expect(res2.body.data.email).toBe(sharedEmail);
@@ -62,6 +66,7 @@ describe('Auth routes — full coverage', () => {
         it('correct credentials → 200 with token and refresh_token', async () => {
             const res = await request(app).post('/api/auth/login')
                 .send({ username: email, password: 'correctpassword' });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
             expect(res.body).toHaveProperty('token');
@@ -83,6 +88,7 @@ describe('Auth routes — full coverage', () => {
 
             const res = await request(app).post('/api/auth/refresh')
                 .send({ refresh_token: refreshToken });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
             expect(res.body).toHaveProperty('token');
@@ -93,6 +99,7 @@ describe('Auth routes — full coverage', () => {
     describe('POST /api/auth/logout', () => {
         it('always → 200', async () => {
             const res = await request(app).post('/api/auth/logout');
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
         });
@@ -102,6 +109,7 @@ describe('Auth routes — full coverage', () => {
     describe('POST /api/auth/forgot-password', () => {
         it('missing email → 400', async () => {
             const res = await request(app).post('/api/auth/forgot-password').send({});
+            assertJson(res);
             expect(res.status).toBe(400);
             expect(res.body).toHaveProperty('error');
         });
@@ -109,6 +117,7 @@ describe('Auth routes — full coverage', () => {
         it('unknown email → 200 (no user enumeration)', async () => {
             const res = await request(app).post('/api/auth/forgot-password')
                 .send({ email: 'nobody@nonexistent.com' });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
         });
@@ -118,6 +127,7 @@ describe('Auth routes — full coverage', () => {
             await request(app).post('/api/auth/create-user')
                 .send({ email, name: 'FP User', password: 'pass1234', setup_key: SETUP_KEY });
             const res = await request(app).post('/api/auth/forgot-password').send({ email });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
         });
@@ -127,12 +137,14 @@ describe('Auth routes — full coverage', () => {
     describe('POST /api/auth/reset-password', () => {
         it('missing token and password → 400', async () => {
             const res = await request(app).post('/api/auth/reset-password').send({});
+            assertJson(res);
             expect(res.status).toBe(400);
         });
 
         it('password too short → 400', async () => {
             const res = await request(app).post('/api/auth/reset-password')
                 .send({ token: 'anytoken', password: 'short' });
+            assertJson(res);
             expect(res.status).toBe(400);
             expect(res.body.error).toMatch(/8 characters/);
         });
@@ -140,6 +152,7 @@ describe('Auth routes — full coverage', () => {
         it('invalid token → 400', async () => {
             const res = await request(app).post('/api/auth/reset-password')
                 .send({ token: 'invalid-token-xyz', password: 'validpassword123' });
+            assertJson(res);
             expect(res.status).toBe(400);
             expect(res.body).toHaveProperty('error');
         });
@@ -151,6 +164,7 @@ describe('Auth routes — full coverage', () => {
             const res = await request(app).post('/api/auth/sso/issue')
                 .set(auth('admin'))
                 .send({});
+            assertJson(res);
             expect(res.status).toBe(400);
             expect(res.body).toHaveProperty('error');
         });
@@ -159,6 +173,7 @@ describe('Auth routes — full coverage', () => {
             const res = await request(app).post('/api/auth/sso/issue')
                 .set(auth('admin'))
                 .send({ aud: 'rohas' });
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
             expect(res.body).toHaveProperty('sso_token');
@@ -169,6 +184,7 @@ describe('Auth routes — full coverage', () => {
     describe('POST /api/auth/google/login', () => {
         it('→ 200 with PKCE session data', async () => {
             const res = await request(app).post('/api/auth/google/login').send({});
+            assertJson(res);
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
             expect(res.body.data).toHaveProperty('sessionId');

@@ -118,6 +118,17 @@
 
         try {
             await window.__amrd.login(username, password);
+
+            // Offer to save password via the browser's Credential Management API.
+            // Only fires for username/password logins (not Google OAuth).
+            if (window.PasswordCredential && navigator.credentials?.store) {
+                try {
+                    await navigator.credentials.store(
+                        new PasswordCredential({ id: username, password, name: username })
+                    );
+                } catch (_) { /* browser declined or feature disabled — silent */ }
+            }
+
             showOk('Signed in! Redirecting…');
             setTimeout(() => { location.href = '/dashboard'; }, 600);
         } catch (e) {

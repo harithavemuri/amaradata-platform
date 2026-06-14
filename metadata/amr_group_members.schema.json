@@ -1,0 +1,10 @@
+{
+  "table": "amr_group_members",
+  "columns": [
+    { "name": "id",          "type": "serial",    "primaryKey": true },
+    { "name": "group_id",    "type": "integer",   "notNull": true, "references": "amr_groups.id" },
+    { "name": "user_id",     "type": "integer",   "notNull": true, "references": "amr_users.id" },
+    { "name": "assigned_at", "type": "timestamp", "notNull": true },
+    { "name": "created_at",  "type": "timestamp", "notNull": true }
+  ]
+}
