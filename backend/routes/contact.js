@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const db     = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const { sendEmail }   = require('../services/ses');
 
 function makeRef() {
     const d   = new Date();
@@ -13,8 +14,7 @@ function makeRef() {
 
 async function sendAdminEmail(submission) {
     const adminEmail = process.env.ADMIN_EMAIL || process.env.CONTACT_EMAIL;
-    const fromEmail  = process.env.CONTACT_EMAIL || adminEmail;
-    if (!adminEmail || !fromEmail) return;
+    if (!adminEmail) return;
 
     const body = [
         `New contact submission received.`,
@@ -30,16 +30,21 @@ async function sendAdminEmail(submission) {
     ].join('\n');
 
     try {
-        const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
-        const ses = new SESClient({ region: process.env.AWS_REGION || 'ap-south-1' });
-        await ses.send(new SendEmailCommand({
-            Source: fromEmail,
-            Destination: { ToAddresses: [adminEmail] },
-            Message: {
-                Subject: { Data: `[AmaraData] Contact: ${submission.ref_number}` },
-                Body:    { Text: { Data: body } },
-            },
-        }));
+        // Reuses services/ses.js's sendEmail() — same SES_FROM_EMAIL dev-mode
+        // guard (logs to stdout instead of calling AWS) as every other email
+        // in the app, e.g. auth.js's password-reset mail. contact.js used to
+        // instantiate its own SESClient here, gated only on ADMIN_EMAIL/
+        // CONTACT_EMAIL (both set in .env for real, non-test reasons) — so it
+        // always attempted a real AWS call in local dev/tests, which failed
+        // against .env's placeholder AWS credentials and made unrelated GET
+        // /api/contact tests flaky (background SES retries delayed them past
+        // Vitest's 5s timeout).
+        await sendEmail({
+            to:      adminEmail,
+            subject: `[AmaraData] Contact: ${submission.ref_number}`,
+            text:    body,
+            html:    `<pre style="font-family:sans-serif;white-space:pre-wrap">${body.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</pre>`,
+        });
     } catch (err) {
         // SES not configured or not verified — log and continue
         console.warn('Contact email not sent:', err.message);
