@@ -404,4 +404,57 @@ describe('Admin routes (site_admin only)', () => {
             }
         }, 30000);
     });
+
+    // ── Purge test tenants (one-off cleanup route) ──────────────────────────────
+    describe('POST /api/admin/purge-test-tenants', () => {
+        it('without auth → 401', async () => {
+            const res = await request(app).post('/api/admin/purge-test-tenants').send({ keep_tenant_id: 1 });
+            assertJson(res);
+            expect(res.status).toBe(401);
+        });
+
+        it('with admin (not site_admin) → 403', async () => {
+            const res = await request(app).post('/api/admin/purge-test-tenants')
+                .set(auth('admin')).send({ keep_tenant_id: 1 });
+            assertJson(res);
+            expect(res.status).toBe(403);
+        });
+
+        it('missing keep_tenant_id → 400', async () => {
+            const res = await request(app).post('/api/admin/purge-test-tenants')
+                .set(auth('siteAdmin')).send({});
+            assertJson(res);
+            expect(res.status).toBe(400);
+            expect(res.body).toHaveProperty('error');
+        });
+
+        it('deletes every tenant except keep_tenant_id, and their linked rows', async () => {
+            const keeper = await request(app).post('/api/tenants')
+                .set(auth('siteAdmin')).send({ name: 'Keeper', slug: `keeper-${uid()}` });
+            const keeperId = keeper.body.data.id;
+
+            const victim = await request(app).post('/api/tenants')
+                .set(auth('siteAdmin')).send({ name: 'Victim', slug: `victim-${uid()}` });
+            const victimId = victim.body.data.id;
+
+            const enh = await request(app).post('/api/enhancements')
+                .set(auth('admin')).send({ tenant_id: victimId, title: 'Victim enhancement' });
+            const enhId = enh.body.data.id;
+
+            const res = await request(app).post('/api/admin/purge-test-tenants')
+                .set(auth('siteAdmin')).send({ keep_tenant_id: keeperId });
+            assertJson(res);
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data.tenants).toBeGreaterThanOrEqual(1);
+
+            const tenants = await request(app).get('/api/tenants').set(auth('siteAdmin'));
+            const ids = tenants.body.data.map(t => t.id);
+            expect(ids).toContain(keeperId);
+            expect(ids).not.toContain(victimId);
+
+            const enhancements = await request(app).get('/api/enhancements').set(auth('admin'));
+            expect(enhancements.body.data.find(e => e.id === enhId)).toBeUndefined();
+        }, 30000);
+    });
 });
