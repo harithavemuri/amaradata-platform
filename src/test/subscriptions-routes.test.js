@@ -82,6 +82,69 @@ describe('Subscriptions routes', () => {
         });
     });
 
+    // ── DELETE /api/subscriptions/plans/:id ──────────────────────────────────
+    describe('DELETE /api/subscriptions/plans/:id', () => {
+        it('without auth → 401', async () => {
+            const res = await request(app).delete(`/api/subscriptions/plans/${planId}`);
+            assertJson(res);
+            expect(res.status).toBe(401);
+        });
+
+        it('with staff role → 403', async () => {
+            const res = await request(app).delete(`/api/subscriptions/plans/${planId}`)
+                .set(auth('staff'));
+            assertJson(res);
+            expect(res.status).toBe(403);
+        });
+
+        it('unknown id → 404', async () => {
+            const res = await request(app).delete('/api/subscriptions/plans/9999999')
+                .set(auth('admin'));
+            assertJson(res);
+            expect(res.status).toBe(404);
+        });
+
+        it('plan in use by a tenant subscription → 409', async () => {
+            // Self-contained (own plan + tenant + subscription) rather than reusing
+            // the shared planId — this test must not depend on the "POST
+            // /api/subscriptions" describe block below having already run first.
+            const p = await request(app).post('/api/subscriptions/plans')
+                .set(auth('admin'))
+                .send({ name: `InUse ${uid()}` });
+            const inUsePlanId = p.body.data.id;
+
+            const t = await request(app).post('/api/tenants')
+                .set(auth('admin'))
+                .send({ name: 'Plan In Use Tenant', slug: `plan-in-use-${uid()}` });
+
+            await request(app).post('/api/subscriptions')
+                .set(auth('admin'))
+                .send({ tenant_id: t.body.data.id, plan_id: inUsePlanId, effective_from: '2025-01-01' });
+
+            const res = await request(app).delete(`/api/subscriptions/plans/${inUsePlanId}`)
+                .set(auth('admin'));
+            assertJson(res);
+            expect(res.status).toBe(409);
+            expect(res.body).toHaveProperty('error');
+        });
+
+        it('unused plan → 200, removed', async () => {
+            const p = await request(app).post('/api/subscriptions/plans')
+                .set(auth('admin'))
+                .send({ name: `Unused ${uid()}` });
+            const unusedId = p.body.data.id;
+
+            const res = await request(app).delete(`/api/subscriptions/plans/${unusedId}`)
+                .set(auth('admin'));
+            assertJson(res);
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+
+            const list = await request(app).get('/api/subscriptions/plans').set(auth('admin'));
+            expect(list.body.data.find(x => x.id === unusedId)).toBeUndefined();
+        });
+    });
+
     // ── POST /api/subscriptions ──────────────────────────────────────────────
     describe('POST /api/subscriptions', () => {
         it('without auth → 401', async () => {

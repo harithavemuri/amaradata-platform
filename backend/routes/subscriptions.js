@@ -35,6 +35,28 @@ router.post('/plans', requireAdmin, async (req, res) => {
     } catch (e) { console.error('[subscriptions]', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
 
+// DELETE /api/subscriptions/plans/:id
+router.delete('/plans/:id', requireAdmin, async (req, res) => {
+    try {
+        if (req.db.mode === 'nondb') {
+            // FileDbService has no FK enforcement, so the in-use check that Postgres
+            // gives us for free (23503) has to be done manually here to keep
+            // behavior consistent between modes.
+            const inUse = req.db.fileDb.find('tenant_subscriptions').some(s => s.plan_id == req.params.id);
+            if (inUse) return res.status(409).json({ error: 'Cannot delete: plan is assigned to one or more tenant subscriptions' });
+            const row = req.db.fileDb.delete('subscription_plans', req.params.id);
+            if (!row) return res.status(404).json({ error: 'Not found' });
+            return res.json({ success: true, data: row });
+        }
+        const { rows } = await db.query('DELETE FROM subscription_plans WHERE id=$1 RETURNING *', [req.params.id]);
+        if (!rows[0]) return res.status(404).json({ error: 'Not found' });
+        res.json({ success: true, data: rows[0] });
+    } catch (e) {
+        if (e.code === '23503') return res.status(409).json({ error: 'Cannot delete: plan is assigned to one or more tenant subscriptions' });
+        console.error('[subscriptions]', e.message); res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // POST /api/subscriptions  (assign plan to tenant, closes previous)
 router.post('/', requireAdmin, async (req, res) => {
     const { tenant_id, plan_id, effective_from, custom_sales_pct, custom_rental_pct,
