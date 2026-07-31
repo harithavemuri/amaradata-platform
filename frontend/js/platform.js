@@ -107,6 +107,17 @@
     /* ── NonDB indicator ──────────────────────────────────────────── */
     let _nonDbShown = false;
     function _showNonDbBadge(reason) {
+        // Sync to DB (POST /api/admin/sync-to-db) 400s whenever the server is
+        // in NonDB mode — it has no DB to sync into. The button itself is
+        // rendered role-only (site_admin) at topbar build time, before any API
+        // response has revealed the mode, so hide it here reactively the same
+        // way the badge below gets shown reactively, rather than leaving a
+        // button visible that's guaranteed to error if clicked.
+        const btn = document.getElementById('amrd-sync-btn');
+        if (btn) btn.style.display = 'none';
+        const out = document.getElementById('amrd-sync-result');
+        if (out) out.style.display = 'none';
+
         if (_nonDbShown) return;
         _nonDbShown = true;
         const label = reason === 'fallback' ? '⚠ DB Fallback' : '⚠ NonDB Mode';

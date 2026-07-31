@@ -1,5 +1,6 @@
 // @ts-check
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/perf-tracking.js';
+import { apiGet, testTag } from './helpers/edit-save.js';
 
 const ADMIN = {
     email:    'playwright-admin@test.local',
@@ -13,6 +14,11 @@ async function loginAdmin(page) {
     await page.click('button.btn-primary');
     await page.waitForURL('**/dashboard', { timeout: 5_000 });
 }
+
+// No DELETE route exists for /api/tenants (confirmed: only GET/POST/PUT) — tenants
+// created by these tests accumulate for the rest of the suite run. Acceptable: the
+// regression DB is truncated once at suite start (global-setup.js), and this file's
+// own tests only ever look up tenants by their own unique generated name/slug.
 
 // ── Page basics ───────────────────────────────────────────────────────────────
 test.describe('Tenants page — basics', () => {
@@ -43,36 +49,9 @@ test.describe('Tenants page — basics', () => {
     });
 });
 
-// ── Empty state ───────────────────────────────────────────────────────────────
-test.describe('Tenants page — empty state', () => {
-    test.beforeEach(async ({ page }) => {
-        await loginAdmin(page);
-        await page.goto('/tenants');
-        await page.waitForSelector('.amrd-table', { timeout: 10_000 });
-    });
-
-    test('shows "0 tenant(s)" count when no tenants exist', async ({ page }) => {
-        await expect(page.locator('text=0 tenant(s)')).toBeVisible();
-    });
-
-    test('table headers are present', async ({ page }) => {
-        const headers = page.locator('.amrd-table thead th');
-        await expect(headers.nth(0)).toHaveText('Name');
-        await expect(headers.nth(1)).toHaveText('Contact');
-        await expect(headers.nth(2)).toHaveText('Phone');
-        await expect(headers.nth(3)).toHaveText('Status');
-        await expect(headers.nth(4)).toHaveText('Onboarded');
-        await expect(headers.nth(5)).toHaveText('Site');
-    });
-
-    test('empty table shows "No tenants yet" message', async ({ page }) => {
-        await expect(page.locator('td:has-text("No tenants yet")')).toBeVisible();
-    });
-
-    test('"+ Add Tenant" button is visible', async ({ page }) => {
-        await expect(page.locator('button:has-text("+ Add Tenant")')).toBeVisible();
-    });
-});
+// "Empty state" checks moved to 00-tenants-empty-state.spec.js — see that file's
+// header comment for why (they need the tenants table to be genuinely empty,
+// which only holds true if that file runs first).
 
 // ── Add Tenant form ───────────────────────────────────────────────────────────
 test.describe('Tenants page — Add Tenant form', () => {
@@ -150,6 +129,12 @@ test.describe('Tenants page — create tenant', () => {
         // Table reloads — form disappears and row appears
         await expect(page.locator('#f-name')).not.toBeVisible({ timeout: 8_000 });
         await expect(page.locator('td:has-text("Acme Corp")')).toBeVisible();
+
+        // API readback — catches DB-mode routing bugs a DOM-only check would miss.
+        const tenants = await apiGet(page, '/api/tenants');
+        const created = tenants.find(t => t.slug === 'acme-corp');
+        expect(created, 'expected the created tenant to be readable via the API').toBeTruthy();
+        expect(created.name).toBe('Acme Corp');
     });
 
     test('tenant count increments after creating a tenant', async ({ page }) => {
@@ -201,8 +186,9 @@ test.describe('Tenants page — edit tenant', () => {
         await page.goto('/tenants');
         await page.waitForSelector('.amrd-table', { timeout: 10_000 });
 
-        // Unique per-run to avoid slug collisions in the real DB
-        const uid = Date.now().toString(36);
+        // Unique per-run (and per-process — the load test runs 5 concurrent
+        // OS processes that could otherwise collide within the same millisecond)
+        const uid = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
         tenantName = `Edit Me Corp ${uid}`;
         tenantSlug = `edit-me-${uid}`;
 
@@ -233,6 +219,12 @@ test.describe('Tenants page — edit tenant', () => {
 
         await expect(page.locator('#f-name')).not.toBeVisible({ timeout: 8_000 });
         await expect(page.locator(`td:has-text("${tenantName} Updated")`)).toBeVisible();
+
+        // API readback — proves the edit actually persisted, not just a stale/optimistic DOM update.
+        const tenants = await apiGet(page, '/api/tenants');
+        const updated = tenants.find(t => t.slug === tenantSlug);
+        expect(updated, 'expected the edited tenant to still be readable via the API').toBeTruthy();
+        expect(updated.name).toBe(`${tenantName} Updated`);
     });
 
     test('changing status to "suspended" shows suspended badge', async ({ page }) => {
@@ -242,5 +234,38 @@ test.describe('Tenants page — edit tenant', () => {
 
         await expect(page.locator('#f-name')).not.toBeVisible({ timeout: 8_000 });
         await expect(page.locator('.amrd-badge-suspended')).toBeVisible();
+    });
+
+    test('editing contact/billing/tax/site fields persists via API readback', async ({ page }) => {
+        const contactName  = testTag('Contact');
+        const contactEmail = `zzzzzz-contact-${Date.now()}@test.local`;
+        const phone        = '+1-555-0100';
+        const address      = testTag('123 Billing St');
+        const gstin        = 'ZZZZZ1234Z1Z5';
+        const pan          = 'ZZZZZ1234Z';
+        const siteUrl      = 'https://zzzzzz-example.test';
+
+        await page.locator(`tr:has-text("${tenantName}") button:has-text("Edit")`).first().click();
+        await page.waitForSelector('#f-cname');
+        await page.fill('#f-cname', contactName);
+        await page.fill('#f-cemail', contactEmail);
+        await page.fill('#f-phone', phone);
+        await page.fill('#f-addr', address);
+        await page.fill('#f-gstin', gstin);
+        await page.fill('#f-pan', pan);
+        await page.fill('#f-siteurl', siteUrl);
+        await page.click('button:has-text("Save")');
+        await expect(page.locator('#f-name')).not.toBeVisible({ timeout: 8_000 });
+
+        const tenants = await apiGet(page, '/api/tenants');
+        const updated = tenants.find(t => t.slug === tenantSlug);
+        expect(updated, 'expected the edited tenant to still be readable via the API').toBeTruthy();
+        expect(updated.contact_name).toBe(contactName);
+        expect(updated.contact_email).toBe(contactEmail);
+        expect(updated.contact_phone).toBe(phone);
+        expect(updated.billing_address).toBe(address);
+        expect(updated.gstin).toBe(gstin);
+        expect(updated.pan).toBe(pan);
+        expect(updated.site_url).toBe(siteUrl);
     });
 });

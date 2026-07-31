@@ -269,7 +269,7 @@
                     report_date: get(row, 'report_date') || null,
                     notes:       get(row, 'notes'),
                     fix_details: get(row, 'fix_details'),
-                    item_type:   get(row, 'type').toLowerCase() || 'enhancement',
+                    item_type:   get(row, 'type').toLowerCase() === 'bug' ? 'bug' : 'enhancement',
                     is_billable: get(row, 'billable').toLowerCase() === 'yes',
                     fixed:       get(row, 'fixed_'),
                     site_name:   get(row, 'site_name'),

@@ -6,3 +6,5 @@ node_modules/
 .aws-sam/
 coverage/
 test-results/
+testing/performance-testdata/
+testing/playwright-testdata/

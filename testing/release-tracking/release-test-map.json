@@ -1,0 +1,6 @@
+{
+  "TC-001": {
+    "spec": "TC-001-enhancements-csv-task-type.spec.js",
+    "description": "Enhancements CSV import: a Type=Task row must be classified as item_type=enhancement (visible under the Enhancements filter), never as a raw 'task' value"
+  }
+}

@@ -1,4 +1,5 @@
 const { defineConfig, devices } = require('@playwright/test');
+const { resolveReporterMode } = require('./helpers/perf-aggregate.js');
 
 // Set REGRESSION_DB=1 to run against the amaradata-platform_test PostgreSQL database.
 // Default (unset) runs in NonDB mode — reads playwright-testdata/ JSON files.
@@ -9,7 +10,8 @@ const { defineConfig, devices } = require('@playwright/test');
 //
 // DB mode requires the _test database to exist and have the schema applied:
 //   psql -U postgres -p 5435 -d amaradata-platform_test -f database/schema.sql
-const DB_MODE = process.env.REGRESSION_DB === '1';
+const DB_MODE     = process.env.REGRESSION_DB === '1';
+const TEST_DB_NAME = process.env.TEST_DB_NAME || 'amaradata-platform_test';
 
 module.exports = defineConfig({
     testDir:  '.',
@@ -20,6 +22,7 @@ module.exports = defineConfig({
     reporter: [
         ['list'],
         ['html', { open: 'never', outputFolder: 'testing/regression_testsuite/playwright-report' }],
+        ['./helpers/performance-reporter.cjs', { mode: resolveReporterMode(DB_MODE, TEST_DB_NAME) }],
     ],
 
     globalSetup:    './global-setup.js',

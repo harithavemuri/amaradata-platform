@@ -1,5 +1,5 @@
 // @ts-check
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/perf-tracking.js';
 
 // ── Shared credentials (seeded in global-setup.js) ────────────────────────────
 const ADMIN = {
@@ -116,6 +116,19 @@ test.describe('Dashboard — sidebar fully rendered (admin role)', () => {
 
     test('URL is /dashboard', async ({ page }) => {
         expect(page.url()).toContain('/dashboard');
+    });
+
+    // Page-load performance SLA — see feedback-performance-sla.md (<=3000ms).
+    // DB mode only: NonDB mode's file-based reads are artificially fast and
+    // wouldn't catch a real production regression the way a Postgres-backed
+    // page load would.
+    test('dashboard loads within the 3s page-load SLA', async ({ page }) => {
+        test.skip(process.env.REGRESSION_DB !== '1', 'performance SLA only asserted in DB mode');
+        const loadMs = await page.evaluate(() => {
+            const nav = performance.getEntriesByType('navigation')[0];
+            return nav.loadEventEnd - nav.startTime;
+        });
+        expect(loadMs, `took ${loadMs}ms`).toBeLessThan(3000);
     });
 
     // ── Sidebar container ─────────────────────────────────────────────────────

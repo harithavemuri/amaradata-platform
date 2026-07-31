@@ -4,11 +4,11 @@
 const { mkdirSync, writeFileSync } = require('fs');
 const { resolve }                  = require('path');
 const { Client }                   = require('pg');
+const { SEED_USERS, SETUP_KEY }    = require('./helpers/seed-users');
 
 const DB_MODE       = process.env.REGRESSION_DB === '1';
 const TEST_DATA_DIR = resolve(__dirname, '..', 'playwright-testdata');
 const BASE_URL      = 'http://localhost:9001';
-const SETUP_KEY     = 'playwright-test-secret-32chars!!';
 
 const TABLES = [
     'amr_password_reset_tokens', 'amr_group_members',
@@ -17,13 +17,6 @@ const TABLES = [
     'tenants', 'subscription_plans', 'amr_groups',
     'amr_users', 'amr_roles',
 ];
-
-const ADMIN_USER = {
-    email:    'playwright-admin@test.local',
-    password: 'PlaywrightTest123!',
-    name:     'Playwright Admin',
-    role:     'admin',
-};
 
 module.exports = async function globalSetup() {
     if (DB_MODE) {
@@ -60,17 +53,18 @@ module.exports = async function globalSetup() {
         }
     }
 
-    // Seed admin user via API (both modes)
-    const res = await fetch(`${BASE_URL}/api/auth/create-user`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ ...ADMIN_USER, setup_key: SETUP_KEY }),
-    });
-
-    if (!res.ok && res.status !== 409) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(`Failed to seed admin user: HTTP ${res.status} — ${body.error || 'unknown'}`);
+    // Seed one user per role via API (both modes) — needed by role-login-smoke.spec.js
+    // and by the edit-save specs for screens that require requireSiteAdmin.
+    for (const user of Object.values(SEED_USERS)) {
+        const res = await fetch(`${BASE_URL}/api/auth/create-user`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ ...user, setup_key: SETUP_KEY }),
+        });
+        if (!res.ok && res.status !== 409) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(`Failed to seed ${user.role} user: HTTP ${res.status} — ${body.error || 'unknown'}`);
+        }
+        console.log(`[setup] ${user.role} user ready: ${user.email}`);
     }
-
-    console.log(`[setup] Admin user ready: ${ADMIN_USER.email}`);
 };

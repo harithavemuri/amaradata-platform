@@ -164,4 +164,18 @@ router.post('/import', requireAdmin, async (req, res) => {
     res.json({ success: true, data: results });
 });
 
+// DELETE /api/enhancements/:id
+router.delete('/:id', requireAdmin, async (req, res) => {
+    try {
+        if (req.db.mode === 'nondb') {
+            const row = req.db.fileDb.delete('enhancements', req.params.id);
+            if (!row) return res.status(404).json({ error: 'Not found' });
+            return res.json({ success: true, data: row });
+        }
+        const { rows } = await db.query('DELETE FROM enhancements WHERE id=$1 RETURNING *', [req.params.id]);
+        if (!rows[0]) return res.status(404).json({ error: 'Not found' });
+        res.json({ success: true, data: rows[0] });
+    } catch (e) { console.error('[enhancements]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+});
+
 module.exports = router;
