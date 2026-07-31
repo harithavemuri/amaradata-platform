@@ -18,7 +18,12 @@ const { spawnSync } = require('child_process');
 const path          = require('path');
 
 // Load .env.test explicitly — `-r dotenv/config` alone only loads .env.
-require('dotenv').config({ path: path.join(__dirname, '..', '.env.test') });
+// override:true is required: .env also defines SMOKE_TEST_USER/PASSWORD (for
+// standalone `npm run smoke` convenience) and dotenv does not replace already-
+// set vars by default, so without this the -r dotenv/config preload's .env
+// values would silently win and the spawned smoke-prod.js child would
+// authenticate with the wrong (stale) password.
+require('dotenv').config({ path: path.join(__dirname, '..', '.env.test'), override: true });
 
 const BASE            = (process.env.SMOKE_URL || 'https://amaradata.com').replace(/\/$/, '');
 const BOOT_USER        = process.env.SMOKE_BOOTSTRAP_ADMIN_USER;
