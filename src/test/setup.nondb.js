@@ -11,6 +11,7 @@ process.env.GOOGLE_CLIENT_ID     = 'test-client-id';
 process.env.GOOGLE_CLIENT_SECRET = 'test-client-secret';
 process.env.GOOGLE_REDIRECT_URI  = 'http://localhost/callback';
 process.env.FRONTEND_URL         = 'http://localhost';
+process.env.EMAIL_BUCKET         = 'test-email-bucket'; // backend/routes/email.js reads this at module load — S3/SES calls are mocked in email-routes.test.js
 
 // Wipe all table files before each test file so every suite starts with a clean slate
 const TABLES = [

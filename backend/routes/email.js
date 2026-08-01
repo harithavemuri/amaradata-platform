@@ -1,17 +1,30 @@
 const router = require('express').Router();
 const { requireAdmin } = require('../middleware/auth');
-const { S3Client, ListObjectsV2Command, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { s3, ListObjectsV2Command, GetObjectCommand } = require('../services/email-s3-client');
 const { SESClient, SendRawEmailCommand } = require('@aws-sdk/client-ses');
 const { simpleParser } = require('mailparser');
 const nodemailer = require('nodemailer');
 
 const EMAIL_REGION = 'us-east-1';
-const s3  = new S3Client({ region: EMAIL_REGION });
 const ses = new SESClient({ region: EMAIL_REGION });
 
 const BUCKET = process.env.EMAIL_BUCKET;
 const FROM   = process.env.EMAIL_INBOX_FROM || 'rajas@amaradata.com';
 const PREFIX = 'emails/';
+
+// Same convention as services/ses.js: without SES_FROM_EMAIL (local dev/tests),
+// log instead of making a real AWS SES call. Send/reply previously had no such
+// guard — every call attempted a live SES send regardless of environment,
+// the same gap contact.js's sendAdminEmail() had before it was fixed.
+const SES_DEV_MODE = !process.env.SES_FROM_EMAIL;
+
+async function sendRaw(raw, destinations) {
+    if (SES_DEV_MODE) {
+        console.log(`[email:dev] To: ${destinations.join(', ')}\n${raw.toString('utf8').slice(0, 500)}`);
+        return;
+    }
+    await ses.send(new SendRawEmailCommand({ Source: FROM, Destinations: destinations, RawMessage: { Data: raw } }));
+}
 
 async function toBuffer(stream) {
     const chunks = [];
@@ -119,11 +132,7 @@ router.post('/send', requireAdmin, async (req, res) => {
                 contentType: a.contentType || 'application/octet-stream',
             })),
         });
-        await ses.send(new SendRawEmailCommand({
-            Source:       FROM,
-            Destinations: [to, ...(cc ? [cc] : [])],
-            RawMessage:   { Data: raw },
-        }));
+        await sendRaw(raw, [to, ...(cc ? [cc] : [])]);
         res.json({ success: true });
     } catch (e) { console.error('[email]', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });
@@ -153,11 +162,7 @@ router.post('/:id/reply', requireAdmin, async (req, res) => {
                 contentType: a.contentType || 'application/octet-stream',
             })),
         });
-        await ses.send(new SendRawEmailCommand({
-            Source:       FROM,
-            Destinations: [replyTo],
-            RawMessage:   { Data: mimeRaw },
-        }));
+        await sendRaw(mimeRaw, [replyTo]);
         res.json({ success: true });
     } catch (e) { console.error('[email]', e.message); res.status(500).json({ error: 'Internal server error' }); }
 });

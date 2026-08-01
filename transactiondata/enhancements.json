@@ -2,7 +2,7 @@
   {
     "id": 1,
     "created_at": "2026-07-26T12:43:21.727Z",
-    "updated_at": "2026-07-27T02:33:21.327Z",
+    "updated_at": "2026-07-31T18:50:25.209Z",
     "tenant_id": 1,
     "title": "When clicking Payment Schedule; it is directing to home page of rohas.amaradata.com which is wrong. it has to take user to paymnt schedule page",
     "description": "When clicking Payment Schedule; it is directing to home page of rohas.amaradata.com which is wrong. it has to take user to paymnt schedule page",
@@ -26,7 +26,7 @@
   {
     "id": 2,
     "created_at": "2026-07-26T12:43:21.732Z",
-    "updated_at": "2026-07-27T02:33:21.332Z",
+    "updated_at": "2026-07-31T18:50:25.220Z",
     "tenant_id": 1,
     "title": "When clicking any Payment Schedule link; it has to take user to payment Schedule Page. Right now, it is taking user to all wrong pages or taking to home page or logging out",
     "description": "When clicking any Payment Schedule link; it has to take user to payment Schedule Page. Right now, it is taking user to all wrong pages or taking to home page or logging out",
@@ -50,7 +50,7 @@
   {
     "id": 3,
     "created_at": "2026-07-26T12:43:21.734Z",
-    "updated_at": "2026-07-27T02:33:21.239Z",
+    "updated_at": "2026-07-31T18:50:24.975Z",
     "tenant_id": 1,
     "title": "change the login from Google to regular login process",
     "description": "change the login from Google to regular login process",
@@ -74,7 +74,7 @@
   {
     "id": 4,
     "created_at": "2026-07-26T12:43:21.736Z",
-    "updated_at": "2026-07-27T02:33:21.244Z",
+    "updated_at": "2026-07-31T18:50:24.991Z",
     "tenant_id": 1,
     "title": "make sure atleast 2 users are able to login as non google users. one is admin and the second one is Sales person. Use harithavemuri@gmail.com as Admin and rayinmail99@gmail.com as Sales Person non goo",
     "description": "make sure atleast 2 users are able to login as non google users. one is admin and the second one is Sales person. Use harithavemuri@gmail.com as Admin and rayinmail99@gmail.com as Sales Person non google userids.",
@@ -98,7 +98,7 @@
   {
     "id": 5,
     "created_at": "2026-07-26T12:43:21.738Z",
-    "updated_at": "2026-07-27T02:33:21.247Z",
+    "updated_at": "2026-07-31T18:50:24.995Z",
     "tenant_id": 1,
     "title": "Make sure that project to user configuration works with the new login process add harithavemuri@gmail.com as non gmail user and rayinmail99@gmail.com as non gmail user",
     "description": "Make sure that project to user configuration works with the new login process add harithavemuri@gmail.com as non gmail user and rayinmail99@gmail.com as non gmail user",
@@ -122,7 +122,7 @@
   {
     "id": 6,
     "created_at": "2026-07-26T12:43:21.740Z",
-    "updated_at": "2026-07-27T02:33:21.251Z",
+    "updated_at": "2026-07-31T18:50:25.000Z",
     "tenant_id": 1,
     "title": "In the main Dashboard when the user rayinmail99@gmail.com logs in as non google user; we have to show like the Unit Status screen with Total Count, Available, Booked, Sold and reserved",
     "description": "In the main Dashboard when the user rayinmail99@gmail.com logs in as non google user; we have to show like the Unit Status screen with Total Count, Available, Booked, Sold and reserved",
@@ -146,7 +146,7 @@
   {
     "id": 7,
     "created_at": "2026-07-26T12:43:21.744Z",
-    "updated_at": "2026-07-27T02:33:21.254Z",
+    "updated_at": "2026-07-31T18:50:25.005Z",
     "tenant_id": 1,
     "title": "make sure atleast 2 users are able to login. one is admin and the second one is Sales person. Use harithavemuri and rayinmail99 as userids.",
     "description": "make sure atleast 2 users are able to login. one is admin and the second one is Sales person. Use harithavemuri and rayinmail99 as userids.",
@@ -170,7 +170,7 @@
   {
     "id": 8,
     "created_at": "2026-07-26T12:43:21.746Z",
-    "updated_at": "2026-07-27T02:33:21.258Z",
+    "updated_at": "2026-07-31T18:50:25.009Z",
     "tenant_id": 1,
     "title": "In the Properties screen, user should be able to search based on the Floor number instead of going through next page to go to 10th page",
     "description": "In the Properties screen, user should be able to search based on the Floor number instead of going through next page to go to 10th page",
@@ -194,7 +194,7 @@
   {
     "id": 9,
     "created_at": "2026-07-26T12:43:21.749Z",
-    "updated_at": "2026-07-27T02:33:21.261Z",
+    "updated_at": "2026-07-31T18:50:25.015Z",
     "tenant_id": 1,
     "title": "In the unit bookings screen, there should be a dropdown of projects along with Type dropdown. when the Unit is Sold what was the reason it is showing active, help me understand.",
     "description": "In the unit bookings screen, there should be a dropdown of projects along with Type dropdown. when the Unit is Sold what was the reason it is showing active, help me understand.",
@@ -218,7 +218,7 @@
   {
     "id": 10,
     "created_at": "2026-07-26T12:43:21.751Z",
-    "updated_at": "2026-07-27T02:33:21.264Z",
+    "updated_at": "2026-07-31T18:50:25.020Z",
     "tenant_id": 1,
     "title": "In the car parking slots screen, in the status drop down the word All Statuss spelling has to changed to All Status",
     "description": "In the car parking slots screen, in the status drop down the word All Statuss spelling has to changed to All Status",
@@ -242,7 +242,7 @@
   {
     "id": 11,
     "created_at": "2026-07-26T12:43:21.753Z",
-    "updated_at": "2026-07-27T02:33:21.268Z",
+    "updated_at": "2026-07-31T18:50:25.039Z",
     "tenant_id": 1,
     "title": "The logout was done automatically. The logout should not be automatic. User decides when to logout. If user is about to timeout, it should show a warning and allow to extend for {SESSION_TIMEOUT} minu",
     "description": "The logout was done automatically. The logout should not be automatic. User decides when to logout. If user is about to timeout, it should show a warning and allow to extend for {SESSION_TIMEOUT} minutes({SESSION_TIMEOUT is configured in Env variable with default to 30 minutes)",
@@ -266,7 +266,7 @@
   {
     "id": 12,
     "created_at": "2026-07-26T12:43:21.755Z",
-    "updated_at": "2026-07-27T02:33:21.271Z",
+    "updated_at": "2026-07-31T18:50:25.060Z",
     "tenant_id": 1,
     "title": "In the Property Types screen or any other screen, the filter should always have first dropdown of projects list instead of all columns",
     "description": "In the Property Types screen or any other screen, the filter should always have first dropdown of projects list instead of all columns",
@@ -290,7 +290,7 @@
   {
     "id": 13,
     "created_at": "2026-07-26T12:43:21.758Z",
-    "updated_at": "2026-07-27T02:33:21.275Z",
+    "updated_at": "2026-07-31T18:50:25.076Z",
     "tenant_id": 1,
     "title": "In the Unit Type Variants screen or any other screen, the filter should always have first dropdown of projects list instead of all columns",
     "description": "In the Unit Type Variants screen or any other screen, the filter should always have first dropdown of projects list instead of all columns",
@@ -314,7 +314,7 @@
   {
     "id": 14,
     "created_at": "2026-07-26T12:43:21.760Z",
-    "updated_at": "2026-07-27T02:33:21.279Z",
+    "updated_at": "2026-07-31T18:50:25.086Z",
     "tenant_id": 1,
     "title": "In the Price Estimator screen, make sure all the fields are entered by validation before moving to the payment schedule screen",
     "description": "In the Price Estimator screen, make sure all the fields are entered by validation before moving to the payment schedule screen",
@@ -338,7 +338,7 @@
   {
     "id": 15,
     "created_at": "2026-07-26T12:43:21.762Z",
-    "updated_at": "2026-07-27T02:33:21.283Z",
+    "updated_at": "2026-07-31T18:50:25.095Z",
     "tenant_id": 1,
     "title": "In the Price Estimator Grid screens, the seach has to be individual dropdowns either by flat number or first name or phone number or lead",
     "description": "In the Price Estimator Grid screens, the seach has to be individual dropdowns either by flat number or first name or phone number or lead",
@@ -362,7 +362,7 @@
   {
     "id": 16,
     "created_at": "2026-07-26T12:43:21.764Z",
-    "updated_at": "2026-07-27T02:33:21.287Z",
+    "updated_at": "2026-07-31T18:50:25.101Z",
     "tenant_id": 1,
     "title": "In the Payment schedule Grid screens, the seach has to be individual dropdowns either by flat number or first name or phone number or lead",
     "description": "In the Payment schedule Grid screens, the seach has to be individual dropdowns either by flat number or first name or phone number or lead",
@@ -386,7 +386,7 @@
   {
     "id": 17,
     "created_at": "2026-07-26T12:43:21.766Z",
-    "updated_at": "2026-07-27T02:33:21.290Z",
+    "updated_at": "2026-07-31T18:50:25.139Z",
     "tenant_id": 1,
     "title": "Payment Schedule screen is not loading from the side menu click",
     "description": "Payment Schedule screen is not loading from the side menu click",
@@ -410,7 +410,7 @@
   {
     "id": 18,
     "created_at": "2026-07-26T12:43:21.768Z",
-    "updated_at": "2026-07-27T02:33:21.294Z",
+    "updated_at": "2026-07-31T18:50:25.159Z",
     "tenant_id": 1,
     "title": "In the users screen; password column has to be editable for super admin when Edit button is clicked. New password can be entered for resetting.",
     "description": "In the users screen; password column has to be editable for super admin when Edit button is clicked. New password can be entered for resetting.",
@@ -434,7 +434,7 @@
   {
     "id": 19,
     "created_at": "2026-07-26T12:43:21.770Z",
-    "updated_at": "2026-07-27T02:33:21.308Z",
+    "updated_at": "2026-07-31T18:50:25.180Z",
     "tenant_id": 1,
     "title": "In the User Project access screen; instead of showing a usernumber; we have to show the username. Also we should be able to take away the access.",
     "description": "In the User Project access screen; instead of showing a usernumber; we have to show the username. Also we should be able to take away the access.",
@@ -458,7 +458,7 @@
   {
     "id": 20,
     "created_at": "2026-07-26T12:43:21.772Z",
-    "updated_at": "2026-07-27T02:33:21.314Z",
+    "updated_at": "2026-07-31T18:50:25.190Z",
     "tenant_id": 1,
     "title": "Payment Tracker screen is not loading. It is logging out; instead it has to show the page as Under Development but not to take back to login.",
     "description": "Payment Tracker screen is not loading. It is logging out; instead it has to show the page as Under Development but not to take back to login.",
@@ -482,7 +482,7 @@
   {
     "id": 21,
     "created_at": "2026-07-26T12:43:21.774Z",
-    "updated_at": "2026-07-27T02:33:21.318Z",
+    "updated_at": "2026-07-31T18:50:25.197Z",
     "tenant_id": 1,
     "title": "Add forgot password link",
     "description": "Add forgot password link",
@@ -506,7 +506,7 @@
   {
     "id": 22,
     "created_at": "2026-07-26T12:43:21.777Z",
-    "updated_at": "2026-07-27T02:33:21.323Z",
+    "updated_at": "2026-07-31T18:50:25.204Z",
     "tenant_id": 1,
     "title": "When Sales manager logs in, the dashboard is not showing full building units. It is only show 1floor",
     "description": "When Sales manager logs in, the dashboard is not showing full building units. It is only show 1floor",
@@ -530,7 +530,7 @@
   {
     "id": 23,
     "created_at": "2026-07-26T12:43:21.779Z",
-    "updated_at": "2026-07-27T02:33:21.366Z",
+    "updated_at": "2026-07-31T18:50:25.266Z",
     "tenant_id": 1,
     "title": "Dashboard heatmap (admin/dashboard.html) shows no Floor/Flat column headers for a building whose property type could not be identified as an apartment by name (property_type_id null/unmapped) — units ",
     "description": "Dashboard heatmap (admin/dashboard.html) shows no Floor/Flat column headers for a building whose property type could not be identified as an apartment by name (property_type_id null/unmapped) — units rendered in the villa-series view instead of the floor grid, losing Floor/Flat labels.",
@@ -554,7 +554,7 @@
   {
     "id": 24,
     "created_at": "2026-07-26T12:43:21.782Z",
-    "updated_at": "2026-07-27T02:33:21.339Z",
+    "updated_at": "2026-07-31T18:50:25.241Z",
     "tenant_id": 1,
     "title": "When i log in as tenant.admin@rohas.in; in the Buildings edit screen; when i try to edit any entry and try to save changes; i am getting an error like An error occurred. Please try again.",
     "description": "When i log in as tenant.admin@rohas.in; in the Buildings edit screen; when i try to edit any entry and try to save changes; i am getting an error like An error occurred. Please try again.",
@@ -578,7 +578,7 @@
   {
     "id": 25,
     "created_at": "2026-07-26T12:43:21.785Z",
-    "updated_at": "2026-07-27T02:33:21.345Z",
+    "updated_at": "2026-07-31T18:50:25.246Z",
     "tenant_id": 1,
     "title": "When i log in as tenant.admin@rohas.in; in the Unit Type Variants edit screen; when i try to edit any entry and try to save changes; i am not getting any error but it is not saving changes",
     "description": "When i log in as tenant.admin@rohas.in; in the Unit Type Variants edit screen; when i try to edit any entry and try to save changes; i am not getting any error but it is not saving changes",
@@ -602,7 +602,7 @@
   {
     "id": 26,
     "created_at": "2026-07-26T12:43:21.787Z",
-    "updated_at": "2026-07-27T02:33:21.349Z",
+    "updated_at": "2026-07-31T18:50:25.251Z",
     "tenant_id": 1,
     "title": "When i log in as tenant.admin@rohas.in; in the Unit Type Variants edit screen; when i try to edit by uploading a blueprint jpg file and try to upload or save changes; i am getting an error File upload",
     "description": "When i log in as tenant.admin@rohas.in; in the Unit Type Variants edit screen; when i try to edit by uploading a blueprint jpg file and try to upload or save changes; i am getting an error File upload failed for Blueprint",
@@ -626,7 +626,7 @@
   {
     "id": 27,
     "created_at": "2026-07-26T12:43:21.790Z",
-    "updated_at": "2026-07-27T02:33:21.353Z",
+    "updated_at": "2026-07-31T18:50:25.257Z",
     "tenant_id": 1,
     "title": "When i log in as tenant.admin@rohas.in; in the Users edit screen; when i try to edit by changing the user name; i am getting an error Required: Google ID. Please remove GoogleID as mandatory field and",
     "description": "When i log in as tenant.admin@rohas.in; in the Users edit screen; when i try to edit by changing the user name; i am getting an error Required: Google ID. Please remove GoogleID as mandatory field and make it optional. Also in the usernames please remove @rohas.in or anything after @ symbol",
@@ -650,7 +650,7 @@
   {
     "id": 28,
     "created_at": "2026-07-26T12:43:21.792Z",
-    "updated_at": "2026-07-27T02:33:21.356Z",
+    "updated_at": "2026-07-31T18:50:25.261Z",
     "tenant_id": 1,
     "title": "Add ability to hide/show units/properties. Show by default. Dont show hidden properties on Dashboard",
     "description": "Add ability to hide/show units/properties. Show by default. Dont show hidden properties on Dashboard",
@@ -674,7 +674,7 @@
   {
     "id": 29,
     "created_at": "2026-07-26T12:43:21.795Z",
-    "updated_at": "2026-07-27T02:33:21.378Z",
+    "updated_at": "2026-07-31T18:50:25.289Z",
     "tenant_id": 1,
     "title": "Pricing estimator is not filling pricing details after selecting the flat in the pricing estimator page. Save and retrive saved estimate and go to payment schedule from the retrieved data and save pay",
     "description": "Pricing estimator is not filling pricing details after selecting the flat in the pricing estimator page. Save and retrive saved estimate and go to payment schedule from the retrieved data and save payment schedule and reload pricing estimator and payment schedule and make sure all the data is accurate and the data in the db is accurate for both the screens.",
@@ -698,7 +698,7 @@
   {
     "id": 30,
     "created_at": "2026-07-26T12:43:21.797Z",
-    "updated_at": "2026-07-27T02:33:21.370Z",
+    "updated_at": "2026-07-31T18:50:25.271Z",
     "tenant_id": 1,
     "title": "On the dashboard page, when clicking a unit, as tenant_admin or higher role, the Unavailable status should be selectable in the status dropdown next to the Save button (not visible/available to any ot",
     "description": "On the dashboard page, when clicking a unit, as tenant_admin or higher role, the Unavailable status should be selectable in the status dropdown next to the Save button (not visible/available to any other role). It is not shown. Unavailable units should also be visible on the dashboard (heatmap/grid and stats) for tenant_admin or higher. Hidden units must never be visible on the property dashboard screen for any role.",
@@ -722,7 +722,7 @@
   {
     "id": 31,
     "created_at": "2026-07-26T12:43:21.800Z",
-    "updated_at": "2026-07-27T02:33:21.374Z",
+    "updated_at": "2026-07-31T18:50:25.284Z",
     "tenant_id": 1,
     "title": "Discovered via TC-028 production release-check (Issue 28 follow-up): after saving a Price Estimator estimate and reloading it by its saved GUID (/price-estimator/:guid), the price table section (#pric",
     "description": "Discovered via TC-028 production release-check (Issue 28 follow-up): after saving a Price Estimator estimate and reloading it by its saved GUID (/price-estimator/:guid), the price table section (#priceTableSection) never becomes visible — the reloaded form does not repopulate rates/pricing data. The original Issue 28 fix only addressed empty property_pricing_details seed data; this full save-then-reload-by-guid path was not previously exercised against production.",
