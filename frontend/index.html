@@ -53,9 +53,6 @@
         }
         .nav-links a:hover { color: #008cbb; }
 
-        .nav-cta {
-            display: flex; align-items: center; gap: .75rem;
-        }
         .btn-login {
             color: #008cbb; font-weight: 600; font-size: .92rem;
             text-decoration: none; padding: .5rem 1rem;
@@ -63,15 +60,6 @@
             transition: all .2s;
         }
         .btn-login:hover { background: #008cbb; color: #fff; }
-
-        .btn-demo {
-            background: linear-gradient(135deg, #008cbb, #0D9488);
-            color: #fff; font-weight: 600; font-size: .92rem;
-            text-decoration: none; padding: .5rem 1.25rem;
-            border-radius: 8px; transition: all .2s;
-            box-shadow: 0 2px 8px rgba(0, 140, 187,.3);
-        }
-        .btn-demo:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0, 140, 187,.4); }
 
         /* ── Hero ────────────────────────────────────────────────────── */
         .hero {
@@ -233,7 +221,7 @@
         }
         .gallery-heading .eyebrow {
             font-size: .8rem; font-weight: 700; letter-spacing: 2px;
-            color: #008cbb; text-transform: uppercase; margin-bottom: .75rem;
+            color: #3fb8e8; text-transform: uppercase; margin-bottom: .75rem;
         }
         .gallery-heading h2 {
             font-size: 2.4rem; font-weight: 800; color: #f1f5f9; line-height: 1.2;
@@ -243,7 +231,7 @@
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        .gallery-heading p { font-size: 1rem; color: #64748b; margin-top: .75rem; }
+        .gallery-heading p { font-size: 1rem; color: #94a3b8; margin-top: .75rem; }
 
         .gallery-wrapper {
             position: relative; height: 380px; overflow: hidden;
@@ -291,7 +279,7 @@
         }
         .section-heading .eyebrow {
             font-size: .8rem; font-weight: 700; letter-spacing: 2px;
-            color: #008cbb; text-transform: uppercase; margin-bottom: .75rem;
+            color: #006d96; text-transform: uppercase; margin-bottom: .75rem;
         }
         .section-heading h2 {
             font-size: 2.2rem; font-weight: 800; color: #112240; line-height: 1.25;
@@ -388,7 +376,7 @@
         }
         .contact-item:hover { border-color: #5EC8EA; transform: translateY(-2px); }
         .contact-item .contact-icon { font-size: 1.6rem; margin-bottom: .5rem; }
-        .contact-item h3 { color: #008cbb; font-size: .85rem; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; margin-bottom: .4rem; }
+        .contact-item h3 { color: #006d96; font-size: .85rem; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; margin-bottom: .4rem; }
         .contact-item p  { color: #334155; font-size: .95rem; font-weight: 500; }
 
         .contact-form-wrap {
@@ -408,7 +396,7 @@
             outline: none; border-color: #008cbb; box-shadow: 0 0 0 3px rgba(0, 140, 187,.12);
         }
         .cf-row textarea { resize: vertical; min-height: 100px; }
-        .cf-submit { width: 100%; padding: .85rem; background: #008cbb; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: .5rem; transition: background .2s; }
+        .cf-submit { width: 100%; padding: .85rem; background: #006d96; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: .5rem; transition: background .2s; }
         .cf-submit:hover { background: #0f766e; }
         .cf-submit:disabled { background: #94a3b8; cursor: not-allowed; }
         .cf-error { color: #dc2626; font-size: .85rem; margin-top: .5rem; text-align: center; }
@@ -445,9 +433,9 @@
             background-clip: text;
         }
         .footer-links { display: flex; gap: 2rem; }
-        .footer-links a { color: #64748b; text-decoration: none; font-size: .88rem; transition: color .2s; }
-        .footer-links a:hover { color: #008cbb; }
-        .footer-copy { color: #475569; font-size: .82rem; }
+        .footer-links a { color: #94a3b8; text-decoration: none; font-size: .88rem; transition: color .2s; }
+        .footer-links a:hover { color: #3fb8e8; }
+        .footer-copy { color: #94a3b8; font-size: .82rem; }
 
         /* ── Responsive ──────────────────────────────────────────────── */
         @media (max-width: 768px) {
@@ -462,8 +450,8 @@
             .nav-links li:not(.nav-login) { display: none; }
             .footer-inner { flex-direction: column; text-align: center; }
             .footer-links { flex-wrap: wrap; justify-content: center; }
-            /* Normalize button heights: border on btn-login adds box height, so use explicit equal height */
-            .btn-login, .btn-demo {
+            /* Normalize button height: border on btn-login adds box height, so use explicit height */
+            .btn-login {
                 height: 36px;
                 display: inline-flex;
                 align-items: center;
@@ -490,7 +478,7 @@
         <img src="/images/AmaraData_Logo_Text.jpeg" alt="AmaraData — Data Refine Experts" class="logo-wordmark-img">
     </a>
 
-    <nav>
+    <nav aria-label="Main">
         <ul class="nav-links">
             <li><a href="#features">Features</a></li>
             <li><a href="#how">How It Works</a></li>
@@ -499,12 +487,9 @@
             <li class="nav-login" id="authLink"><a href="/login" class="btn-login">Login</a></li>
         </ul>
     </nav>
-
-    <div class="nav-cta" id="navCta">
-        <a href="#contact" class="btn-demo">Book a Demo</a>
-    </div>
 </header>
 
+<main>
 <!-- ── Hero ─────────────────────────────────────────────────────────── -->
 <section class="hero">
     <!-- Property image slider -->
@@ -535,19 +520,19 @@
                 </div>
             </div>
         </div>
-        <div class="hero-tagline">
+        <h1 class="hero-tagline">
             <span>Close deals</span>
             <span class="ht-dot"></span>
             <span>Collect rent</span>
             <span class="ht-dot"></span>
             <span>Run your business</span>
-        </div>
+        </h1>
         <button class="hero-arrow hero-arrow-prev" id="heroPrev" aria-label="Previous">&#8592;</button>
         <button class="hero-arrow hero-arrow-next" id="heroNext" aria-label="Next">&#8594;</button>
-        <div class="hero-slider-dots" id="heroSliderDots">
-            <button class="hero-slider-dot active" data-slide="0"></button>
-            <button class="hero-slider-dot" data-slide="1"></button>
-            <button class="hero-slider-dot" data-slide="2"></button>
+        <div class="hero-slider-dots" id="heroSliderDots" aria-label="Property type slides">
+            <button class="hero-slider-dot active" data-slide="0" aria-label="Show slide 1 of 3: Commercial Properties" aria-current="true"></button>
+            <button class="hero-slider-dot" data-slide="1" aria-label="Show slide 2 of 3: Apartment Complexes"></button>
+            <button class="hero-slider-dot" data-slide="2" aria-label="Show slide 3 of 3: Premium Villas"></button>
         </div>
     </div>
 
@@ -758,6 +743,7 @@
         </div>
     </div>
 </section>
+</main>
 
 <script>
 async function submitContact() {
@@ -795,7 +781,7 @@ async function submitContact() {
             <img src="/images/AmaraData_Logo.jpeg" alt="AmaraData" class="logo-icon" style="width:36px;height:36px;border-radius:7px">
             <span class="logo-name-sm">AmaraData</span>
         </div>
-        <nav class="footer-links">
+        <nav class="footer-links" aria-label="Footer">
             <a href="#features">Features</a>
             <a href="#how">How It Works</a>
             <a href="#gallery">Platform</a>
@@ -890,7 +876,6 @@ async function submitContact() {
         const staff   = (() => { try { return JSON.parse(localStorage.getItem('amrd_staff') || 'null'); } catch { return null; } })();
         const token   = localStorage.getItem('amrd_token');
         const authEl  = document.getElementById('authLink');
-        const ctaEl   = document.getElementById('navCta');
 
         if (staff && token) {
             authEl.innerHTML = `
@@ -907,7 +892,6 @@ async function submitContact() {
                         <a href="#" onclick="doLogout()" style="display:block;padding:.6rem 1rem;font-size:.88rem;color:#dc2626;text-decoration:none">Sign Out</a>
                     </div>
                 </div>`;
-            ctaEl.style.display = 'none';
         }
 
         // Smooth scroll
@@ -953,7 +937,10 @@ async function submitContact() {
         function go(idx) {
             cur = (idx + total) % total;
             track.style.transform = `translateX(${-cur * 100}%)`;
-            dots.forEach((d, i) => d.classList.toggle('active', i === cur));
+            dots.forEach((d, i) => {
+                d.classList.toggle('active', i === cur);
+                if (i === cur) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current');
+            });
         }
 
         function start() { timer = setInterval(() => go(cur + 1), 5000); }

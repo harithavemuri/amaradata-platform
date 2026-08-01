@@ -15,7 +15,7 @@
     .logo{text-align:center;margin-bottom:28px;}
     .logo-full{width:360px;max-width:100%;height:auto;display:block;margin:0 auto;filter:drop-shadow(0 1px 2px rgba(0,0,0,.15));}
 
-    h2{font-size:15px;font-weight:600;color:#0f172a;margin-bottom:20px;}
+    h1{font-size:15px;font-weight:600;color:#0f172a;margin-bottom:20px;}
 
     /* Google button */
     .btn-google{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;background:#fff;color:#374151;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit;}
@@ -23,15 +23,15 @@
     .btn-google:disabled{opacity:.5;cursor:default;}
     .btn-google svg{flex-shrink:0;}
 
-    .divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:#9ca3af;font-size:13px;}
+    .divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:#64748b;font-size:13px;}
     .divider::before,.divider::after{content:'';flex:1;height:1px;background:#e5e7eb;}
 
     label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:5px;}
     input{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;color:#111827;font-family:inherit;margin-bottom:14px;}
     input:focus{outline:none;border-color:#008cbb;box-shadow:0 0 0 3px rgba(0, 140, 187,.15);}
 
-    .btn-primary{width:100%;padding:12px;background:#008cbb;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;font-family:inherit;}
-    .btn-primary:hover{background:#006D96;}
+    .btn-primary{width:100%;padding:12px;background:#006D96;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;font-family:inherit;}
+    .btn-primary:hover{background:#00587a;}
 
     .msg{font-size:13px;margin-top:12px;text-align:center;padding:8px 12px;border-radius:6px;display:none;}
     .msg.err{color:#dc2626;background:#fef2f2;}
@@ -42,16 +42,16 @@
     @keyframes spin{to{transform:rotate(360deg)}}
 
     .back{text-align:center;margin-top:18px;font-size:13px;color:#64748b;}
-    .back a{color:#008cbb;font-weight:600;text-decoration:none;}
+    .back a{color:#006d96;font-weight:600;text-decoration:none;}
   </style>
 </head>
 <body>
-  <div class="card">
+  <main class="card">
     <div class="logo">
       <img src="/images/Amaradata_logo.svg" alt="AmaraData" class="logo-full">
     </div>
 
-    <h2>Staff Sign In</h2>
+    <h1>Staff Sign In</h1>
 
     <!-- Google Sign-In -->
     <button class="btn-google" id="googleSignInBtn">
@@ -80,11 +80,11 @@
     <button class="btn-primary" onclick="doLogin()">Sign In</button>
 
     <div style="text-align:center;margin-top:12px;font-size:13px">
-      <a href="/forgot-password" style="color:#008cbb;text-decoration:none;font-weight:500">Forgot password?</a>
+      <a href="/forgot-password" style="color:#006d96;text-decoration:none;font-weight:500">Forgot password?</a>
     </div>
 
     <div class="back"><a href="/">← Back to home</a></div>
-  </div>
+  </main>
 
   <script src="/js/platform.js"></script>
   <script>

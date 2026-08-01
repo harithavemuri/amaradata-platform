@@ -53,6 +53,7 @@
   },
   "devDependencies": {
     "@aws-sdk/client-lambda": "^3.600.0",
+    "@axe-core/playwright": "^4.12.1",
     "@playwright/test": "^1.60.0",
     "@vitest/coverage-v8": "^4.1.7",
     "autocannon": "^8.0.0",
