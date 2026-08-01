@@ -4,9 +4,6 @@ const { s3, ListObjectsV2Command, GetObjectCommand, DeleteObjectCommand } = requ
 const { SESClient, SendRawEmailCommand } = require('@aws-sdk/client-ses');
 const { simpleParser } = require('mailparser');
 const nodemailer = require('nodemailer');
-// archiver@8 dropped the classic archiver('zip', opts) factory function in
-// favor of exporting the format classes directly.
-const { ZipArchive } = require('archiver');
 const db = require('../db');
 
 const EMAIL_REGION = 'us-east-1';
@@ -171,6 +168,13 @@ router.get('/thread/download', requireAdmin, async (req, res) => {
     const ids = (req.query.ids || '').split(',').map(s => s.trim()).filter(Boolean);
     if (!ids.length) return res.status(400).json({ error: 'ids required' });
     try {
+        // archiver@8 is a pure ESM package. A synchronous require('archiver')
+        // works under local Node 24 (which allows require() of ESM) but
+        // throws ERR_REQUIRE_ESM on the nodejs22.x Lambda runtime — and since
+        // this file is required eagerly by server.js, that crash used to take
+        // down the whole app, not just this route. Dynamic import() is
+        // supported from CJS on every Node version, so load it lazily here.
+        const { ZipArchive } = await import('archiver');
         res.setHeader('Content-Type', 'application/zip');
         res.setHeader('Content-Disposition', 'attachment; filename="email-thread.zip"');
         const archive = new ZipArchive({ zlib: { level: 9 } });
