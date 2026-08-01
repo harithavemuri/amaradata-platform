@@ -43,12 +43,19 @@ test.describe('Role login smoke — site_admin nav differences', () => {
 
     // Sync-to-DB (POST /api/admin/sync-to-db) 400s whenever the server is in
     // NonDB mode — there's no DB to sync into — so platform.js hides the button
-    // reactively as soon as any API response reveals NonDB mode. Only visible
-    // in DB mode, where it can actually work.
+    // reactively as soon as any API response reveals NonDB mode. Also hidden
+    // per-page when that page's own table(s) have nothing pending (GET
+    // /api/admin/sync-status — see admin.js and PAGE_TABLES in platform.js),
+    // so this check navigates to /tenants (has a PAGE_TABLES entry, and the
+    // seeded tenant data always differs from the fresh Rohas-Group-only DB
+    // fixture, so it always needs syncing) rather than /dashboard, which has
+    // no page-relevant table and hides the button unconditionally.
     test('site_admin sees the Sync-to-DB button only in DB mode', async ({ page }) => {
         await login(page, SEED_USERS.site_admin);
+        await page.goto('/tenants');
+        await page.waitForSelector('.amrd-table', { timeout: 10_000 });
         if (process.env.REGRESSION_DB === '1') {
-            await expect(page.locator('#amrd-sync-btn')).toBeVisible();
+            await expect(page.locator('#amrd-sync-btn')).toBeVisible({ timeout: 8_000 });
         } else {
             await expect(page.locator('#amrd-sync-btn')).not.toBeVisible();
         }

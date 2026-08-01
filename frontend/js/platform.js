@@ -251,7 +251,7 @@
 body{margin:0;font-family:'Inter',Arial,sans-serif;background:#f1f5f9;display:flex;min-height:100vh;flex-direction:column;}
 .amrd-wrap{display:flex;flex:1;min-height:0;position:relative;}
 .amrd-sidebar{width:240px;flex-shrink:0;background:#112240;display:flex;flex-direction:column;
- height:100%;position:sticky;top:0;overflow:hidden;transition:width .25s ease;}
+ align-self:stretch;overflow-x:hidden;transition:width .25s ease;}
 .amrd-sidebar.collapsed{width:0;min-width:0;}
 .amrd-sb-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:39;}
 .amrd-sb-backdrop.open{display:block;}
