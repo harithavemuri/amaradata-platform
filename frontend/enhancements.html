@@ -300,10 +300,24 @@
                 }
             }
 
-            resultEl.style.color = allErrors.length ? '#dc2626' : '#16a34a';
-            resultEl.textContent = `Done — ${totalInserted} inserted, ${totalUpdated} updated, ${totalSkipped} skipped`
+            const summaryColor = allErrors.length ? '#dc2626' : '#16a34a';
+            const summaryText  = `Done — ${totalInserted} inserted, ${totalUpdated} updated, ${totalSkipped} skipped`
                 + (allErrors.length ? `. Errors: ${allErrors.slice(0,3).join('; ')}` : '');
+            resultEl.style.color = summaryColor;
+            resultEl.textContent = summaryText;
             await load();
+
+            // load() rebuilds the whole panel via root.innerHTML — including a fresh,
+            // empty #imp-result and #import-panel reset to hidden — which would wipe
+            // the message set above before anyone could see it. Re-apply it to the
+            // freshly rendered nodes and keep the panel open.
+            const panel = document.getElementById('import-panel');
+            if (panel) panel.style.display = 'block';
+            const freshResultEl = document.getElementById('imp-result');
+            if (freshResultEl) {
+                freshResultEl.style.color = summaryColor;
+                freshResultEl.textContent = summaryText;
+            }
         }
 
         function splitCsvLine(line) {
