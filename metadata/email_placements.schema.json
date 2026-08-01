@@ -1,0 +1,11 @@
+{
+  "table": "email_placements",
+  "columns": [
+    { "name": "id",         "type": "serial",       "primaryKey": true },
+    { "name": "user_id",    "type": "integer",      "notNull": true },
+    { "name": "email_id",   "type": "varchar(500)", "notNull": true },
+    { "name": "folder_id",  "type": "integer" },
+    { "name": "created_at", "type": "timestamptz",  "notNull": true },
+    { "name": "updated_at", "type": "timestamptz",  "notNull": true }
+  ]
+}

@@ -15,6 +15,7 @@ process.env.EMAIL_BUCKET         = 'test-email-bucket'; // backend/routes/email.
 
 // Wipe all table files before each test file so every suite starts with a clean slate
 const TABLES = [
+    'email_placements', 'email_folders',
     'amr_password_reset_tokens', 'group_tenant', 'amr_group_members',
     'contact_submissions', 'payments', 'invoice_line_items', 'billing_metrics',
     'tenant_subscriptions', 'invoices', 'enhancements',

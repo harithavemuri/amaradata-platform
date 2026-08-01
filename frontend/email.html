@@ -10,6 +10,15 @@
   <script src="/js/platform.js"></script>
   <style>
     .email-wrap { display:flex; height:calc(100vh - 56px); overflow:hidden; gap:0; }
+    .email-folders { width:180px; min-width:150px; border-right:1px solid #e2e8f0; background:#f8fafc; flex-shrink:0; overflow-y:auto; padding:14px 10px; box-sizing:border-box; }
+    .folder-item { display:flex; align-items:center; justify-content:space-between; gap:6px; padding:8px 10px; border-radius:8px; font-size:13px; color:#334155; cursor:pointer; margin-bottom:2px; }
+    .folder-item:hover { background:#eef2f7; }
+    .folder-item.active { background:#dbeafe; color:#1d4ed8; font-weight:600; }
+    .folder-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .folder-del { background:none; border:none; color:#94a3b8; font-size:14px; line-height:1; cursor:pointer; padding:0 2px; display:none; }
+    .folder-item:hover .folder-del { display:inline; }
+    .folder-del:hover { color:#dc2626; }
+    #btn-new-folder { width:100%; margin-top:10px; }
     .email-list { width:320px; min-width:220px; border-right:1px solid #e2e8f0; overflow-y:auto; background:#fff; flex-shrink:0; }
     .email-pane { flex:1; overflow-y:auto; background:#f8fafc; padding:24px; }
     .email-item { padding:14px 16px; border-bottom:1px solid #f1f5f9; cursor:pointer; transition:background .15s; }
@@ -38,6 +47,13 @@
     .compose-bar { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid #e2e8f0; background:#fff; }
     .compose-bar-title { font-size:13px; font-weight:700; color:#1e293b; letter-spacing:.02em; }
     .empty-pane { display:flex; align-items:center; justify-content:center; height:100%; color:#94a3b8; font-size:14px; }
+    .thread-box { margin-top:20px; padding:14px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; }
+    .thread-title { font-size:12px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:.03em; margin-bottom:10px; }
+    .thread-item { display:flex; align-items:flex-start; gap:8px; font-size:13px; color:#334155; padding:5px 0; cursor:pointer; }
+    .thread-item input { margin-top:3px; }
+    .thread-current { font-weight:700; color:#1e293b; }
+    .detail-actions { margin-top:24px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .detail-actions select.form-control { width:auto; display:inline-block; padding:7px 10px; }
     /* Modal */
     .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1000; display:flex; align-items:center; justify-content:center; }
     .modal-box { background:#fff; border-radius:14px; padding:28px 32px; width:600px; max-width:95vw; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.2); }
@@ -62,8 +78,14 @@
     let _emails   = [];
     let _current  = null;
     let _composeMode = null; // 'new' | 'reply'
+    let _folders  = [];      // custom folders + Trash, from GET /api/email/folders (Inbox is implicit, not a row)
+    let _currentFolder = 'inbox'; // 'inbox' | 'trash' | <folderId>
 
     // ── DOM ─────────────────────────────────────────────────────────
+    const foldersEl = document.createElement('div');
+    foldersEl.className = 'email-folders';
+    foldersEl.innerHTML = '<div class="loading">Loading…</div>';
+
     const listEl  = document.createElement('div');
     listEl.className = 'email-list';
     listEl.innerHTML = `
@@ -79,16 +101,118 @@
 
     const wrap = document.createElement('div');
     wrap.className = 'email-wrap';
+    wrap.appendChild(foldersEl);
     wrap.appendChild(listEl);
     wrap.appendChild(paneEl);
     root.appendChild(wrap);
+
+    // ── Folder sidebar ─────────────────────────────────────────────
+    function folderLabel(key) {
+      if (key === 'inbox') return 'Inbox';
+      if (key === 'trash') return 'Trash';
+      const f = _folders.find(x => String(x.id) === String(key));
+      return f ? f.name : 'Folder';
+    }
+
+    async function loadFolders() {
+      try {
+        const res = await window.__amrd.apiFetch('/api/email/folders');
+        _folders = res.data || [];
+      } catch (e) {
+        _folders = [];
+      }
+      renderFolders();
+    }
+
+    function renderFolders() {
+      const custom = _folders.filter(f => !f.is_trash).map(f => `
+        <div class="folder-item${_currentFolder===String(f.id)?' active':''}" data-folder="${f.id}">
+          <span class="folder-name">${esc(f.name)}</span>
+          <button class="folder-del" data-id="${f.id}" title="Delete folder">×</button>
+        </div>`).join('');
+
+      foldersEl.innerHTML = `
+        <div class="folder-item${_currentFolder==='inbox'?' active':''}" data-folder="inbox">
+          <span class="folder-name">📥 Inbox</span>
+        </div>
+        ${custom}
+        <div class="folder-item${_currentFolder==='trash'?' active':''}" data-folder="trash">
+          <span class="folder-name">🗑 Trash</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btn-new-folder">+ New Folder</button>`;
+
+      foldersEl.querySelectorAll('.folder-item').forEach(el =>
+        el.addEventListener('click', () => switchFolder(el.dataset.folder))
+      );
+      foldersEl.querySelectorAll('.folder-del').forEach(btn =>
+        btn.addEventListener('click', (e) => { e.stopPropagation(); deleteFolder(btn.dataset.id); })
+      );
+      document.getElementById('btn-new-folder').addEventListener('click', openNewFolderModal);
+    }
+
+    async function switchFolder(key) {
+      if (key === _currentFolder) return;
+      _currentFolder = key;
+      _current = null;
+      paneEl.innerHTML = '<div class="empty-pane">Select an email to read</div>';
+      document.querySelector('.compose-bar-title').textContent = folderLabel(key);
+      renderFolders();
+      await loadInbox();
+    }
+
+    async function deleteFolder(id) {
+      if (!confirm('Delete this folder? Emails inside will move back to Inbox.')) return;
+      try {
+        await window.__amrd.apiFetch(`/api/email/folders/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        if (_currentFolder === String(id)) await switchFolder('inbox');
+        await loadFolders();
+      } catch (e) {
+        alert('Failed to delete folder: ' + e.message);
+      }
+    }
+
+    function openNewFolderModal() {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `
+        <div class="modal-box" style="width:380px">
+          <div class="modal-title">New Folder</div>
+          <div class="form-group">
+            <label>Folder name</label>
+            <input id="nf-name" class="form-control" type="text" placeholder="e.g. Invoices">
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" id="nf-cancel">Cancel</button>
+            <button class="btn btn-primary" id="nf-create">Create</button>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+      document.getElementById('nf-cancel').addEventListener('click', () => overlay.remove());
+      overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+      document.getElementById('nf-name').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('nf-create').click(); });
+
+      document.getElementById('nf-create').addEventListener('click', async () => {
+        const name = document.getElementById('nf-name').value.trim();
+        if (!name) return;
+        const btn = document.getElementById('nf-create');
+        btn.disabled = true;
+        try {
+          await window.__amrd.apiFetch('/api/email/folders', { method: 'POST', body: JSON.stringify({ name }) });
+          overlay.remove();
+          await loadFolders();
+        } catch (e) {
+          btn.disabled = false;
+          alert('Failed to create folder: ' + e.message);
+        }
+      });
+    }
 
     // ── Inbox load ──────────────────────────────────────────────────
     async function loadInbox() {
       const itemsEl = document.getElementById('email-items');
       itemsEl.innerHTML = '<div class="loading">Loading…</div>';
       try {
-        const res = await window.__amrd.apiFetch('/api/email/inbox');
+        const res = await window.__amrd.apiFetch(`/api/email/inbox?folder=${encodeURIComponent(_currentFolder)}`);
         _emails = res.data || [];
         renderList();
       } catch (e) {
@@ -126,13 +250,20 @@
 
     function renderPane(email) {
       const atts = (email.attachments || []).map((a, i) => `
-        <a class="att-pill" href="/api/email/${encodeURIComponent(email.id)}/attachment/${i}" download="${esc(a.filename)}">
+        <a class="att-pill" href="#" data-idx="${i}" data-filename="${esc(a.filename)}">
           📎 ${esc(a.filename)} <span style="color:#94a3b8">(${fmtSize(a.size)})</span>
         </a>`).join('');
 
       const body = email.html
         ? `<div class="email-html">${email.html}</div>`
         : `<div class="email-body">${esc(email.text)}</div>`;
+
+      const isTrashView = _currentFolder === 'trash';
+      const moveOptions = [`<option value="">Move to…</option>`]
+        .concat(_currentFolder !== 'inbox' ? [`<option value="inbox">Inbox</option>`] : [])
+        .concat(_folders.filter(f => !f.is_trash && _currentFolder !== String(f.id))
+          .map(f => `<option value="${f.id}">${esc(f.name)}</option>`))
+        .join('');
 
       paneEl.innerHTML = `
         <div class="email-detail">
@@ -147,12 +278,126 @@
           </div>
           ${body}
           ${atts ? `<div class="att-list">${atts}</div>` : ''}
-          <div style="margin-top:24px">
+          <div id="thread-box"></div>
+          <div class="detail-actions">
             <button class="btn btn-secondary" id="btn-reply">↩ Reply</button>
+            <select class="form-control" id="move-select">${moveOptions}</select>
+            ${isTrashView
+              ? `<button class="btn btn-secondary" id="btn-restore">Restore</button>
+                 <button class="btn btn-secondary" id="btn-delete-forever" style="color:#dc2626">Delete Forever</button>`
+              : `<button class="btn btn-secondary" id="btn-trash">🗑 Trash</button>`}
+            <button class="btn btn-secondary" id="btn-download-eml">⬇ Download .eml</button>
           </div>
         </div>`;
 
       document.getElementById('btn-reply').addEventListener('click', () => openCompose('reply', email));
+
+      paneEl.querySelectorAll('.att-pill').forEach(a =>
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          downloadFile(`/api/email/${encodeURIComponent(email.id)}/attachment/${a.dataset.idx}`, a.dataset.filename);
+        })
+      );
+
+      document.getElementById('move-select').addEventListener('change', async (e) => {
+        const val = e.target.value;
+        if (!val) return;
+        await moveEmail(email.id, val === 'inbox' ? null : val);
+      });
+
+      if (isTrashView) {
+        document.getElementById('btn-restore').addEventListener('click', () => moveEmail(email.id, null));
+        document.getElementById('btn-delete-forever').addEventListener('click', async () => {
+          if (!confirm('Permanently delete this email? This cannot be undone.')) return;
+          try {
+            await window.__amrd.apiFetch(`/api/email/${encodeURIComponent(email.id)}/permanent`, { method: 'DELETE' });
+            clearPaneAndReload();
+          } catch (e) {
+            alert('Failed to delete: ' + e.message);
+          }
+        });
+      } else {
+        document.getElementById('btn-trash').addEventListener('click', async () => {
+          try {
+            await window.__amrd.apiFetch(`/api/email/${encodeURIComponent(email.id)}`, { method: 'DELETE' });
+            clearPaneAndReload();
+          } catch (e) {
+            alert('Failed to trash email: ' + e.message);
+          }
+        });
+      }
+
+      document.getElementById('btn-download-eml').addEventListener('click', () =>
+        downloadFile(`/api/email/${encodeURIComponent(email.id)}/download`, `${email.id}.eml`)
+      );
+
+      loadThread(email.id);
+    }
+
+    async function moveEmail(id, folderId) {
+      try {
+        await window.__amrd.apiFetch(`/api/email/${encodeURIComponent(id)}/move`, {
+          method: 'PUT', body: JSON.stringify({ folder_id: folderId }),
+        });
+        clearPaneAndReload();
+      } catch (e) {
+        alert('Failed to move email: ' + e.message);
+      }
+    }
+
+    function clearPaneAndReload() {
+      _current = null;
+      paneEl.innerHTML = '<div class="empty-pane">Select an email to read</div>';
+      loadInbox();
+    }
+
+    async function loadThread(id) {
+      const box = document.getElementById('thread-box');
+      if (!box) return;
+      try {
+        const res = await window.__amrd.apiFetch(`/api/email/${encodeURIComponent(id)}/thread`);
+        const thread = res.data || [];
+        if (thread.length <= 1) { box.innerHTML = ''; return; }
+        box.innerHTML = `
+          <div class="thread-box">
+            <div class="thread-title">Thread (${thread.length} messages)</div>
+            ${thread.map(t => `
+              <label class="thread-item">
+                <input type="checkbox" class="thread-chk" value="${esc(t.id)}" ${t.id === id ? 'checked' : ''}>
+                <span class="${t.id === id ? 'thread-current' : ''}">${esc(t.subject)} — ${fmtDateFull(t.date)}</span>
+              </label>`).join('')}
+            <button class="btn btn-secondary btn-sm" id="btn-download-thread" style="margin-top:8px">⬇ Download selected as .zip</button>
+          </div>`;
+        document.getElementById('btn-download-thread').addEventListener('click', () => {
+          const ids = Array.from(box.querySelectorAll('.thread-chk:checked')).map(c => c.value);
+          if (!ids.length) { alert('Select at least one message to download.'); return; }
+          downloadFile(`/api/email/thread/download?ids=${encodeURIComponent(ids.join(','))}`, 'email-thread.zip');
+        });
+      } catch (e) {
+        box.innerHTML = '';
+      }
+    }
+
+    // Plain <a href> downloads can't carry the Bearer auth header, so
+    // protected downloads (attachments, .eml, thread zips) fetch as a blob
+    // and trigger the save via a throwaway object URL instead.
+    async function downloadFile(path, filename) {
+      try {
+        const token = localStorage.getItem('amrd_token');
+        const res = await fetch(path, { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) throw new Error('Download failed');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        alert('Download failed: ' + e.message);
+      }
     }
 
     // ── Compose / Reply modal ────────────────────────────────────────
@@ -275,6 +520,7 @@
       });
     }
 
+    await loadFolders();
     await loadInbox();
   });
   </script>

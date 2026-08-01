@@ -11,6 +11,7 @@ const TEST_DATA_DIR = resolve(__dirname, '..', 'playwright-testdata');
 const BASE_URL      = 'http://localhost:9001';
 
 const TABLES = [
+    'email_placements', 'email_folders',
     'amr_password_reset_tokens', 'amr_group_members',
     'contact_submissions', 'payments', 'invoice_line_items', 'billing_metrics',
     'tenant_subscriptions', 'invoices', 'enhancements',

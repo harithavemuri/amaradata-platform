@@ -1,0 +1,11 @@
+{
+  "table": "email_folders",
+  "columns": [
+    { "name": "id",         "type": "serial",       "primaryKey": true },
+    { "name": "user_id",    "type": "integer",      "notNull": true },
+    { "name": "name",       "type": "varchar(100)", "notNull": true },
+    { "name": "is_trash",   "type": "boolean",      "notNull": true, "default": false },
+    { "name": "created_at", "type": "timestamptz",  "notNull": true },
+    { "name": "updated_at", "type": "timestamptz",  "notNull": true }
+  ]
+}

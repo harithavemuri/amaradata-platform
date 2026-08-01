@@ -303,6 +303,34 @@ CREATE TABLE IF NOT EXISTS amr_password_reset_tokens (
 
 CREATE INDEX IF NOT EXISTS idx_prt_token ON amr_password_reset_tokens(token);
 
+-- Per-user email folders (custom + a per-user Trash) — emails themselves live in
+-- S3 (see backend/routes/email.js), identified by their S3 object key. An email
+-- with no row in email_placements for a given user is implicitly in that user's
+-- Inbox — only explicit moves (including to Trash) get a row.
+CREATE TABLE IF NOT EXISTS email_folders (
+    id         SERIAL PRIMARY KEY,
+    user_id    INTEGER      NOT NULL REFERENCES amr_users(id) ON DELETE CASCADE,
+    name       VARCHAR(100) NOT NULL,
+    is_trash   BOOLEAN      NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    UNIQUE (user_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS email_placements (
+    id         SERIAL PRIMARY KEY,
+    user_id    INTEGER      NOT NULL REFERENCES amr_users(id) ON DELETE CASCADE,
+    email_id   VARCHAR(500) NOT NULL,
+    folder_id  INTEGER      REFERENCES email_folders(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    UNIQUE (user_id, email_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_folders_user      ON email_folders(user_id);
+CREATE INDEX IF NOT EXISTS idx_email_placements_user   ON email_placements(user_id);
+CREATE INDEX IF NOT EXISTS idx_email_placements_folder ON email_placements(folder_id);
+
 -- issue_fixes retired — issue fix data is now stored in enhancements (source='csv')
 
 -- Indexes
@@ -414,6 +442,8 @@ SELECT setval('payments_id_seq',                   COALESCE((SELECT MAX(id) FROM
 SELECT setval('contact_submissions_id_seq',        COALESCE((SELECT MAX(id) FROM contact_submissions), 0) + 1, false);
 SELECT setval('amr_password_reset_tokens_id_seq',  COALESCE((SELECT MAX(id) FROM amr_password_reset_tokens), 0) + 1, false);
 SELECT setval('group_tenant_id_seq',               COALESCE((SELECT MAX(id) FROM group_tenant), 0) + 1, false);
+SELECT setval('email_folders_id_seq',              COALESCE((SELECT MAX(id) FROM email_folders), 0) + 1, false);
+SELECT setval('email_placements_id_seq',           COALESCE((SELECT MAX(id) FROM email_placements), 0) + 1, false);
 
 -- Seed: default plan
 INSERT INTO subscription_plans (name, description, sales_pct, rental_pct, hourly_rate, min_monthly_fee)
@@ -450,5 +480,6 @@ INSERT INTO schema_migrations (version, description) VALUES
     ('2026.06.11.001', 'Rename amr_user_groups→amr_groups, amr_user_group_members→amr_group_members; add tenant_id + role_id FK'),
     ('2026.06.11.002', 'Add tenant_id to amr_group_members for direct per-tenant access lookup'),
     ('2026.06.11.003', 'Align with rohas-group: user profile cols, tenant profile cols, group_tenant table, drop role_id/tenant_id/created_by from groups, assigned_at+created_at on group_members'),
-    ('2026.06.12.001', 'Drop unused columns: amr_users.picture/locale/region_code, tenants.description/logo_url/region_code')
+    ('2026.06.12.001', 'Drop unused columns: amr_users.picture/locale/region_code, tenants.description/logo_url/region_code'),
+    ('2026.08.01.001', 'Add email_folders and email_placements for per-user email folders/trash')
 ON CONFLICT (version) DO NOTHING;

@@ -4,6 +4,7 @@ import path from 'path';
 const NONDB_TEST_DIR = path.join(process.cwd(), '.tmp-nondb-testdata');
 
 const TABLES = [
+    'email_placements', 'email_folders',
     'amr_password_reset_tokens', 'group_tenant', 'amr_group_members',
     'contact_submissions', 'payments', 'invoice_line_items', 'billing_metrics',
     'tenant_subscriptions', 'invoices', 'enhancements',
