@@ -43,7 +43,7 @@
                                 <td>${t.contact_phone || '—'}</td>
                                 <td><span class="amrd-badge amrd-badge-${t.status}">${t.status}</span></td>
                                 <td>${fmtDate(t.onboarded_at)}</td>
-                                <td>${t.site_url ? `<a href="${t.site_url}" target="_blank" rel="noopener" style="color:#0D9488;font-size:12px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:4px">Open ↗</a>` : '<span style="color:#94a3b8">—</span>'}</td>
+                                <td>${t.site_url ? `<a href="${t.site_url}" target="_blank" rel="noopener" style="color:#008cbb;font-size:12px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:4px">Open ↗</a>` : '<span style="color:#94a3b8">—</span>'}</td>
                                 <td><button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick='openForm(${JSON.stringify(t)})'>${window.__amrd.isReadOnly() ? 'View' : 'Edit'}</button></td>
                             </tr>`).join('') || '<tr><td colspan="7" style="color:#94a3b8;text-align:center;padding:24px">No tenants yet</td></tr>'}
                         </tbody>

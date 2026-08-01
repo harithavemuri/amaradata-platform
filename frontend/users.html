@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const groups = u.groups || [];
         const roleColours = {
             site_admin:'#7c3aed;background:#ede9fe', admin:'#1d4ed8;background:#dbeafe',
-            sales_manager:'#0D9488;background:#ccfbf1', billing:'#d97706;background:#fef3c7', staff:'#64748b;background:#f1f5f9',
+            sales_manager:'#008cbb;background:#cfeaf7', billing:'#d97706;background:#fef3c7', staff:'#64748b;background:#f1f5f9',
         };
         const roleBadge = r => {
             const c = roleColours[r] || '64748b;background:#f1f5f9';
@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const colours = {
             site_admin:    '#7c3aed;background:#ede9fe',
             admin:         '#1d4ed8;background:#dbeafe',
-            sales_manager: '#0D9488;background:#ccfbf1',
+            sales_manager: '#008cbb;background:#cfeaf7',
             billing:       '#d97706;background:#fef3c7',
             staff:         '#64748b;background:#f1f5f9',
         };
@@ -254,7 +254,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 : '<span style="color:#94a3b8;font-size:12px">—</span>';
             return `
             <tr data-search="${(u.name + u.email + groups.map(g=>g.name).join(' ')).toLowerCase()}">
-                <td style="font-weight:600;cursor:pointer;color:#0D9488" onclick="openUserPanel(${u.id})">${u.name}</td>
+                <td style="font-weight:600;cursor:pointer;color:#008cbb" onclick="openUserPanel(${u.id})">${u.name}</td>
                 <td style="color:#64748b">${u.email}</td>
                 <td>${groupBadges}</td>
                 <td><span class="amrd-badge ${u.is_active ? 'amrd-badge-active' : 'amrd-badge-cancelled'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>

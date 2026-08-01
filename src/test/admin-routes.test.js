@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import app from '../../server.js';
 import { uid, auth, assertJson } from './helpers.js';
@@ -403,5 +403,95 @@ describe('Admin routes (site_admin only)', () => {
                 expect(Array.isArray(res.body.data)).toBe(true);
             }
         }, 30000);
+    });
+
+    // ── Sync status (dry-run, for hiding the Sync to DB button) ────────────────
+    describe('GET /api/admin/sync-status', () => {
+        it('without auth → 401', async () => {
+            const res = await request(app).get('/api/admin/sync-status?tables=tenants');
+            assertJson(res);
+            expect(res.status).toBe(401);
+        });
+
+        it('with staff role → 403', async () => {
+            const res = await request(app).get('/api/admin/sync-status?tables=tenants').set(auth('staff'));
+            assertJson(res);
+            expect(res.status).toBe(403);
+        });
+
+        it('no tables param → needsSync:false', async () => {
+            const res = await request(app).get('/api/admin/sync-status').set(auth('siteAdmin'));
+            assertJson(res);
+            expect(res.status).toBe(200);
+            expect(res.body.data.needsSync).toBe(false);
+        });
+
+        it('unknown table name → needsSync:false', async () => {
+            const res = await request(app).get('/api/admin/sync-status?tables=not_a_real_table').set(auth('siteAdmin'));
+            assertJson(res);
+            expect(res.status).toBe(200);
+            expect(res.body.data.needsSync).toBe(false);
+        });
+
+        // These two only exercise the real diff logic in DB mode — sync-status
+        // short-circuits to needsSync:false immediately in NonDB mode (there's
+        // no separate "DB" to be out of sync with), so both branches still pass
+        // there, just without touching the fixture file at all.
+        describe('DB-mode diff detection (fixture-based, isolated from real transactiondata/)', () => {
+            const fs   = require('fs');
+            const os   = require('os');
+            const path = require('path');
+            let tmpDir, prevDir, tenantId, tenantSlug;
+
+            let isNonDb;
+
+            beforeAll(async () => {
+                const health = await request(app).get('/api/admin/health').set(auth('siteAdmin'));
+                isNonDb = health.body.data?.mode === 'nondb';
+
+                const t = await request(app).post('/api/tenants')
+                    .set(auth('siteAdmin')).send({ name: 'Sync Status Tenant', slug: `sync-status-${uid()}` });
+                tenantId   = t.body.data.id;
+                tenantSlug = t.body.data.slug;
+            });
+
+            beforeEach(() => {
+                tmpDir  = fs.mkdtempSync(path.join(os.tmpdir(), 'amrd-sync-status-'));
+                prevDir = process.env.TRANSACTIONDATA_DIR;
+                process.env.TRANSACTIONDATA_DIR = tmpDir;
+            });
+
+            afterEach(() => {
+                process.env.TRANSACTIONDATA_DIR = prevDir;
+                fs.rmSync(tmpDir, { recursive: true, force: true });
+            });
+
+            it('fixture row matches the DB exactly → needsSync:false', async () => {
+                fs.writeFileSync(path.join(tmpDir, 'tenants.json'), JSON.stringify([
+                    { id: tenantId, name: 'Sync Status Tenant', slug: tenantSlug },
+                ]));
+                const res = await request(app).get('/api/admin/sync-status?tables=tenants').set(auth('siteAdmin'));
+                assertJson(res);
+                expect(res.body.data.needsSync).toBe(false);
+            });
+
+            it('fixture row differs from the DB → needsSync:true (DB mode only — NonDB has no separate DB to diff against)', async () => {
+                fs.writeFileSync(path.join(tmpDir, 'tenants.json'), JSON.stringify([
+                    { id: tenantId, name: 'Changed Name Not In DB', slug: tenantSlug },
+                ]));
+                const res = await request(app).get('/api/admin/sync-status?tables=tenants').set(auth('siteAdmin'));
+                assertJson(res);
+                expect(res.body.data.needsSync).toBe(isNonDb ? false : true);
+            });
+
+            it('fixture has a row id not present in the DB → needsSync:true (DB mode only)', async () => {
+                fs.writeFileSync(path.join(tmpDir, 'tenants.json'), JSON.stringify([
+                    { id: 999999999, name: 'Nonexistent', slug: `nonexistent-${uid()}` },
+                ]));
+                const res = await request(app).get('/api/admin/sync-status?tables=tenants').set(auth('siteAdmin'));
+                assertJson(res);
+                expect(res.body.data.needsSync).toBe(isNonDb ? false : true);
+            });
+        });
     });
 });

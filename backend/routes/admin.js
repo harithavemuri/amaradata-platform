@@ -598,6 +598,82 @@ router.post('/sync-to-db', async (req, res) => {
     res.json({ success: true, data: results });
 });
 
+// GET /api/admin/sync-status?tables=tenants,invoices
+//
+// Read-only dry-run for the "Sync to DB" button: reports whether any row in
+// the given tables' transactiondata/*.json differs from (or is missing from)
+// the DB, so the frontend can hide the button when there's genuinely nothing
+// to sync. Deliberately independent of sync-to-db's own write logic — that
+// route always overwrites on conflict regardless of whether values actually
+// changed (ON CONFLICT DO UPDATE), so it can't answer "is a sync needed"
+// itself. String-coerced comparison is intentionally loose (tolerates
+// type/formatting differences between JSON and pg's native types) — a false
+// "needs sync" just shows the button unnecessarily, which is harmless; a
+// false negative would hide real admin functionality, which isn't.
+router.get('/sync-status', async (req, res) => {
+    if (req.db.mode === 'nondb') {
+        return res.json({ success: true, data: { needsSync: false } });
+    }
+
+    const fs       = require('fs');
+    const path     = require('path');
+    const manifest = require('../../metadata/manifest.json');
+    const DATA_DIR = process.env.TRANSACTIONDATA_DIR
+        ? path.resolve(process.env.TRANSACTIONDATA_DIR)
+        : path.join(__dirname, '../../transactiondata');
+
+    const requested = (req.query.tables || '').split(',').map(t => t.trim()).filter(Boolean);
+    const tables    = requested.filter(t => manifest.tables.includes(t));
+    if (!tables.length) return res.json({ success: true, data: { needsSync: false } });
+
+    try {
+        let needsSync = false;
+
+        for (const table of tables) {
+            const file = path.join(DATA_DIR, `${table}.json`);
+            if (!fs.existsSync(file)) continue;
+
+            let rows;
+            try { rows = JSON.parse(fs.readFileSync(file, 'utf8')); }
+            catch { continue; }
+            if (!rows.length) continue;
+
+            const { rows: colRows } = await db.query(
+                `SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=$1`,
+                [table]
+            );
+            const allowedCols = new Set(colRows.map(r => r.column_name));
+
+            const cleaned = rows
+                .map(r => Object.fromEntries(
+                    Object.entries(r).filter(([k, v]) =>
+                        k !== '_metadata' && k !== 'created_at' && k !== 'updated_at' &&
+                        !Array.isArray(v) && (typeof v !== 'object' || v === null) &&
+                        allowedCols.has(k)
+                    )
+                ))
+                .filter(r => r.id);
+            if (!cleaned.length) continue;
+
+            const ids = cleaned.map(r => r.id);
+            const { rows: dbRows } = await db.query(`SELECT * FROM ${table} WHERE id = ANY($1)`, [ids]);
+            const dbById = new Map(dbRows.map(r => [String(r.id), r]));
+
+            for (const r of cleaned) {
+                const dbRow = dbById.get(String(r.id));
+                if (!dbRow) { needsSync = true; break; }
+                const differs = Object.entries(r).some(([k, v]) =>
+                    k !== 'id' && String(dbRow[k] ?? '') !== String(v ?? '')
+                );
+                if (differs) { needsSync = true; break; }
+            }
+            if (needsSync) break;
+        }
+
+        res.json({ success: true, data: { needsSync } });
+    } catch (e) { console.error('[admin/sync-status]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+});
+
 // ── System health & versions ──────────────────────────────────────────────────
 
 // GET /api/admin/health — versions, environment, per-table row counts

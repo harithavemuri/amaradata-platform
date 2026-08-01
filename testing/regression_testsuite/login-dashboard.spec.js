@@ -28,9 +28,9 @@ test.describe('Login page', () => {
         await expect(page).toHaveTitle('Sign In — AmaraData Platform');
     });
 
-    test('AmaraData logo and Platform Console subtitle are visible', async ({ page }) => {
-        await expect(page.locator('.logo-title')).toHaveText('AmaraData');
-        await expect(page.locator('.logo-sub')).toHaveText('Platform Console');
+    test('AmaraData logo is visible', async ({ page }) => {
+        await expect(page.locator('.logo-full')).toBeVisible();
+        await expect(page.locator('.logo-full')).toHaveAttribute('src', '/images/Amaradata_logo.svg');
     });
 
     test('username field, password field and Sign In button are present', async ({ page }) => {
@@ -136,17 +136,17 @@ test.describe('Dashboard — sidebar fully rendered (admin role)', () => {
         await expect(page.locator('.amrd-sidebar')).toBeVisible();
     });
 
-    // ── Logo ──────────────────────────────────────────────────────────────────
-    test('sidebar shows AmaraData logo title', async ({ page }) => {
-        await expect(page.locator('.amrd-sidebar .amrd-logo-title')).toHaveText('AmaraData');
-    });
-
-    test('sidebar shows "Platform Console" subtitle', async ({ page }) => {
-        await expect(page.locator('.amrd-sidebar .amrd-logo-sub')).toHaveText('Platform Console');
+    // ── Logo (topbar — moved out of the dark sidebar since the images have a
+    // white background and didn't read well there) ────────────────────────────
+    test('topbar shows the AmaraData icon and wordmark images', async ({ page }) => {
+        await expect(page.locator('.amrd-topbar .amrd-logo-icon')).toBeVisible();
+        await expect(page.locator('.amrd-topbar .amrd-logo-icon')).toHaveAttribute('src', '/images/AmaraData_Logo.jpeg');
+        await expect(page.locator('.amrd-topbar .amrd-logo-text-img')).toBeVisible();
+        await expect(page.locator('.amrd-topbar .amrd-logo-text-img')).toHaveAttribute('src', '/images/AmaraData_Logo_Text.jpeg');
     });
 
     test('logo is a link pointing to /', async ({ page }) => {
-        await expect(page.locator('.amrd-sidebar a.amrd-logo')).toHaveAttribute('href', '/');
+        await expect(page.locator('.amrd-topbar a.amrd-logo')).toHaveAttribute('href', '/');
     });
 
     // ── Main navigation items ─────────────────────────────────────────────────
@@ -237,8 +237,14 @@ test.describe('Dashboard — sidebar fully rendered (admin role)', () => {
         await expect(page.locator('#amrd-sync-btn')).not.toBeVisible();
     });
 
-    test('hamburger toggle button is visible in topbar', async ({ page }) => {
-        await expect(page.locator('button.amrd-hamburger')).toBeVisible();
+    test('sidebar collapse toggle is visible and toggles the sidebar', async ({ page }) => {
+        const toggle = page.locator('#amrd-sb-toggle');
+        await expect(toggle).toBeVisible();
+        await expect(page.locator('.amrd-sidebar')).not.toHaveClass(/collapsed/);
+        await toggle.click();
+        await expect(page.locator('.amrd-sidebar')).toHaveClass(/collapsed/);
+        await toggle.click();
+        await expect(page.locator('.amrd-sidebar')).not.toHaveClass(/collapsed/);
     });
 
     // ── Sign out ──────────────────────────────────────────────────────────────

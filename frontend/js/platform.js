@@ -207,6 +207,20 @@
         { href: '/admin-health', icon: 'health', label: 'System Health' },
     ];
 
+    // Per-page table mapping for the Sync to DB button's per-page visibility
+    // check (GET /api/admin/sync-status) — pages with no entry (or an empty
+    // list) have no page-specific table to check, so the button is hidden
+    // outright rather than calling the endpoint.
+    const PAGE_TABLES = {
+        '/tenants':      ['tenants'],
+        '/invoices':     ['invoices', 'invoice_line_items'],
+        '/enhancements': ['enhancements'],
+        '/metrics':      ['billing_metrics'],
+        '/users':        ['amr_users'],
+        '/user-groups':  ['amr_groups', 'amr_group_members', 'group_tenant'],
+        '/roles':        ['amr_roles'],
+    };
+
     const ICONS = {
         home:    `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>`,
         tenants: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>`,
@@ -221,7 +235,11 @@
     };
 
     function _icon(k) {
-        return `<svg style="width:18px;height:18px;margin-right:10px;flex-shrink:0" fill="none" stroke="currentColor" viewBox="0 0 24 24">${ICONS[k]}</svg>`;
+        // viewBox is square (0 0 24 24) with preserveAspectRatio's default
+        // "meet" behavior, so a non-square width/height here would just add
+        // blank space on one axis rather than actually enlarging the icon —
+        // scaling both dimensions together is what "10% bigger" needs.
+        return `<svg style="width:19.8px;height:19.8px;margin-right:10px;flex-shrink:0" fill="none" stroke="currentColor" viewBox="0 0 24 24">${ICONS[k]}</svg>`;
     }
 
     function _injectStyles() {
@@ -231,25 +249,27 @@
         s.textContent = `
 *{box-sizing:border-box;}
 body{margin:0;font-family:'Inter',Arial,sans-serif;background:#f1f5f9;display:flex;min-height:100vh;flex-direction:column;}
-.amrd-wrap{display:flex;flex:1;min-height:0;}
+.amrd-wrap{display:flex;flex:1;min-height:0;position:relative;}
 .amrd-sidebar{width:240px;flex-shrink:0;background:#112240;display:flex;flex-direction:column;
- height:100vh;position:sticky;top:0;overflow:hidden;transition:width .25s ease;}
+ height:100%;position:sticky;top:0;overflow:hidden;transition:width .25s ease;}
 .amrd-sidebar.collapsed{width:0;min-width:0;}
 .amrd-sb-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:39;}
 .amrd-sb-backdrop.open{display:block;}
-.amrd-hamburger{display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;padding:6px;border-radius:6px;color:#334155;flex-shrink:0;line-height:0;margin-right:4px;}
-.amrd-hamburger:hover{background:#f1f5f9;}
-.amrd-logo{padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;text-decoration:none;}
+#amrd-sb-toggle{position:absolute;top:12px;left:240px;transform:translateX(-50%);
+ width:26px;height:26px;border-radius:50%;background:#fff;border:1px solid #e2e8f0;
+ box-shadow:0 1px 4px rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;
+ cursor:pointer;z-index:41;color:#334155;font-size:17px;line-height:1;padding:0;
+ transition:left .25s ease;}
+#amrd-sb-toggle:hover{background:#f1f5f9;}
+.amrd-logo{display:flex;align-items:center;gap:8px;text-decoration:none;margin-right:16px;padding-right:16px;border-right:1px solid #e2e8f0;}
 .amrd-logo:hover{opacity:.85;}
-.amrd-logo-icon{width:32px;height:32px;flex-shrink:0;}
-.amrd-logo-text{display:flex;flex-direction:column;}
-.amrd-logo-title{color:#fff;font-size:18px;font-weight:700;letter-spacing:.5px;}
-.amrd-logo-sub{color:#64748b;font-size:11px;margin-top:2px;}
+.amrd-logo-icon{width:30px;height:30px;flex-shrink:0;border-radius:6px;object-fit:contain;}
+.amrd-logo-text-img{height:24px;width:auto;max-width:120px;object-fit:contain;}
 .amrd-nav{flex:1;padding:12px 0;overflow-y:auto;}
 .amrd-nav a{display:flex;align-items:center;padding:10px 18px;color:#94a3b8;text-decoration:none;
  font-size:13px;border-left:3px solid transparent;transition:all .15s;}
-.amrd-nav a:hover{background:rgba(255,255,255,.05);color:#e2e8f0;border-left-color:#0D9488;}
-.amrd-nav a.active{background:rgba(13,148,136,.15);color:#5EEAD4;border-left-color:#0D9488;font-weight:600;}
+.amrd-nav a:hover{background:rgba(255,255,255,.05);color:#e2e8f0;border-left-color:#008cbb;}
+.amrd-nav a.active{background:rgba(0, 140, 187,.15);color:#5EC8EA;border-left-color:#008cbb;font-weight:600;}
 .amrd-user{padding:14px 18px;border-top:1px solid rgba(255,255,255,.08);}
 .amrd-user-name{color:#e2e8f0;font-size:13px;font-weight:600;}
 .amrd-user-role{color:#64748b;font-size:11px;margin-top:2px;}
@@ -277,7 +297,7 @@ body{margin:0;font-family:'Inter',Arial,sans-serif;background:#f1f5f9;display:fl
 .amrd-badge-overdue{background:#fee2e2;color:#dc2626;}
 .amrd-badge-suspended,.amrd-badge-cancelled{background:#fee2e2;color:#dc2626;}
 .amrd-btn{padding:8px 16px;border-radius:7px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s;}
-.amrd-btn-primary{background:#0D9488;color:#fff;} .amrd-btn-primary:hover{background:#0B7A70;}
+.amrd-btn-primary{background:#008cbb;color:#fff;} .amrd-btn-primary:hover{background:#006D96;}
 .amrd-btn-sm{padding:5px 12px;font-size:12px;}
 .amrd-btn-ghost{background:#f1f5f9;color:#334155;} .amrd-btn-ghost:hover{background:#e2e8f0;}
 .amrd-stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:20px;}
@@ -299,7 +319,7 @@ body{margin:0;font-family:'Inter',Arial,sans-serif;background:#f1f5f9;display:fl
 label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:5px;}
 input,select,textarea{width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:7px;
  font-size:13px;color:#111827;background:#fff;font-family:inherit;}
-input:focus,select:focus,textarea:focus{outline:none;border-color:#0D9488;box-shadow:0 0 0 2px rgba(13,148,136,.15);}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#008cbb;box-shadow:0 0 0 2px rgba(0, 140, 187,.15);}
 .amrd-flex-row{display:flex;gap:20px;}
 @media(max-width:900px){
  .amrd-flex-row{flex-direction:column;}
@@ -345,13 +365,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#0D9488;box-sh
         const sidebar = document.createElement('aside');
         sidebar.className = 'amrd-sidebar';
         sidebar.innerHTML = `
-            <a href="/" class="amrd-logo">
-                <img src="/images/logo.svg" alt="AmaraData" class="amrd-logo-icon"/>
-                <div class="amrd-logo-text">
-                    <div class="amrd-logo-title">AmaraData</div>
-                    <div class="amrd-logo-sub">Platform Console</div>
-                </div>
-            </a>
             <nav class="amrd-nav">${navItems}${adminSection}</nav>
             <div class="amrd-user">
                 <div class="amrd-user-name">${staff?.name || '—'}</div>
@@ -366,9 +379,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#0D9488;box-sh
         topbar.className = 'amrd-topbar';
         topbar.innerHTML = `
             <div style="display:flex;align-items:center">
-                <button class="amrd-hamburger" aria-label="Toggle sidebar" onclick="window.__amrdToggleSidebar()">
-                    <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-                </button>
+                <a href="/" class="amrd-logo">
+                    <img src="/images/AmaraData_Logo.jpeg" alt="AmaraData" class="amrd-logo-icon"/>
+                    <img src="/images/AmaraData_Logo_Text.jpeg" alt="AmaraData — Data Refine Experts" class="amrd-logo-text-img"/>
+                </a>
                 <span class="amrd-topbar-title">${pageTitle || ''}</span>
             </div>
             <div style="display:flex;align-items:center;gap:10px">
@@ -405,9 +419,30 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#0D9488;box-sh
                     btn.textContent = '⇅ Sync to DB';
                 }
             });
-        }
-        main.appendChild(topbar);
 
+            // Hide the button when this specific page's own table(s) have
+            // nothing pending — sync-to-db is a global operation, but showing
+            // it on every screen regardless of whether THAT screen's data has
+            // any local changes to push is noise. Checked per-page (by table),
+            // not globally across all tables — see PAGE_TABLES.
+            const pageTables = PAGE_TABLES[activePath.split('/')[1] ? `/${activePath.split('/')[1]}` : activePath];
+            if (!pageTables || !pageTables.length) {
+                const btn = topbar.querySelector('#amrd-sync-btn');
+                const out = topbar.querySelector('#amrd-sync-result');
+                if (btn) btn.style.display = 'none';
+                if (out) out.style.display = 'none';
+            } else {
+                apiFetch(`/api/admin/sync-status?tables=${pageTables.join(',')}`)
+                    .then(res => {
+                        if (res?.data?.needsSync) return;
+                        const btn = topbar.querySelector('#amrd-sync-btn');
+                        const out = topbar.querySelector('#amrd-sync-result');
+                        if (btn) btn.style.display = 'none';
+                        if (out) out.style.display = 'none';
+                    })
+                    .catch(() => { /* leave the button visible — err on the side of not hiding real functionality */ });
+            }
+        }
         const content = document.createElement('div');
         content.className = 'amrd-content';
         while (document.body.firstChild) content.appendChild(document.body.firstChild);
@@ -417,6 +452,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#0D9488;box-sh
         wrap.className = 'amrd-wrap';
         wrap.appendChild(sidebar);
         wrap.appendChild(main);
+
+        // Topbar is a full-width sibling above .amrd-wrap (not nested inside
+        // .amrd-main) so it spans edge-to-edge across the top, with the logo
+        // at its left — the sidebar starts below it, not behind/under it.
+        document.body.appendChild(topbar);
         document.body.appendChild(wrap);
         document.body.style.margin = '0';
 
@@ -426,6 +466,24 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#0D9488;box-sh
         backdrop.setAttribute('aria-hidden', 'true');
         backdrop.onclick = () => window.__amrdToggleSidebar();
         document.body.appendChild(backdrop);
+
+        // Collapse/expand toggle — a sibling of .amrd-sidebar (not a child),
+        // so it stays clickable in both collapsed states: desktop collapse
+        // sets the sidebar to width:0, and mobile-closed sets
+        // transform:translateX(-100%) — a child of either would be
+        // dragged out of the visible/clickable area right along with it.
+        // Positioned via JS to visually track the sidebar's current right edge.
+        const sbToggle = document.createElement('button');
+        sbToggle.id = 'amrd-sb-toggle';
+        sbToggle.setAttribute('aria-label', 'Toggle sidebar');
+        wrap.appendChild(sbToggle);
+
+        function _updateSbToggle() {
+            const collapsed = sidebar.classList.contains('collapsed') || (window.innerWidth < 768 && !sidebar.classList.contains('open'));
+            sbToggle.innerHTML = collapsed ? '&rsaquo;' : '&lsaquo;';
+            sbToggle.style.left = collapsed ? '0px' : '240px';
+            sbToggle.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+        }
 
         window.__amrdToggleSidebar = function () {
             const bd = document.getElementById('amrd-sb-backdrop');
@@ -437,11 +495,14 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#0D9488;box-sh
                 const collapsed = sidebar.classList.toggle('collapsed');
                 try { localStorage.setItem('amrd_sb_collapsed', collapsed ? '1' : '0'); } catch {}
             }
+            _updateSbToggle();
         };
+        sbToggle.onclick = () => window.__amrdToggleSidebar();
 
         try {
             if (localStorage.getItem('amrd_sb_collapsed') === '1') sidebar.classList.add('collapsed');
         } catch {}
+        _updateSbToggle();
 
         return content;
     }

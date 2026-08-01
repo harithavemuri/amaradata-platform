@@ -195,7 +195,7 @@ router.post('/google/exchange', async (req, res) => {
                 req.db.fileDb.update('amr_users', user.id, {
                     last_login_at: new Date().toISOString(),
                     google_id:     userInfo.id,
-                    picture:       userInfo.picture,
+                    logo_url:      userInfo.picture,
                 });
             } else {
                 user = req.db.fileDb.create('amr_users', {
@@ -204,7 +204,7 @@ router.post('/google/exchange', async (req, res) => {
                     name:      userInfo.name,
                     role:      'staff',
                     google_id: userInfo.id,
-                    picture:   userInfo.picture,
+                    logo_url:  userInfo.picture,
                     is_active: true,
                 });
             }
@@ -215,12 +215,12 @@ router.post('/google/exchange', async (req, res) => {
             if (rows.length) {
                 user = rows[0];
                 await db.query(
-                    'UPDATE amr_users SET last_login_at = NOW(), google_id = $2, picture = $3 WHERE id = $1',
+                    'UPDATE amr_users SET last_login_at = NOW(), google_id = $2, logo_url = $3 WHERE id = $1',
                     [user.id, userInfo.id, userInfo.picture]
                 );
             } else {
                 const { rows: r } = await db.query(
-                    `INSERT INTO amr_users (username, email, name, role, google_id, picture, is_active)
+                    `INSERT INTO amr_users (username, email, name, role, google_id, logo_url, is_active)
                      VALUES ($1,$2,$3,'staff',$4,$5,true) RETURNING *`,
                     [userInfo.email, userInfo.email, userInfo.name, userInfo.id, userInfo.picture]
                 );
@@ -230,12 +230,12 @@ router.post('/google/exchange', async (req, res) => {
 
         const role = await resolveEffectiveRole(user, req.db.mode, req.db.fileDb);
         const safe = {
-            id:       user.id,
-            username: user.username,
-            email:    user.email,
-            name:     user.name || userInfo.name,
+            id:        user.id,
+            username:  user.username,
+            email:     user.email,
+            name:      user.name || userInfo.name,
             role,
-            picture:  userInfo.picture,
+            logo_url:  userInfo.picture,
         };
         res.json({
             success: true,

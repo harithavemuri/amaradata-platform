@@ -37,24 +37,12 @@
         .logo-link { text-decoration: none; display: flex; align-items: center; gap: .75rem; }
 
         .logo-icon {
-            width: 38px; height: 38px; border-radius: 8px;
-            background: linear-gradient(135deg, #0D9488, #1E3A5F);
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0; padding: 4px;
+            width: 46px; height: 46px; border-radius: 9px;
+            object-fit: contain; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.2);
+            flex-shrink: 0;
         }
-        .logo-icon svg { width: 100%; height: 100%; }
 
-        .logo-wordmark { display: flex; flex-direction: column; }
-        .logo-name {
-            font-size: 1.25rem; font-weight: 800;
-            background: linear-gradient(90deg, #0D9488, #1E3A5F);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            background-clip: text; letter-spacing: .5px; line-height: 1;
-        }
-        .logo-tagline {
-            font-size: .7rem; color: #94a3b8; font-weight: 500;
-            letter-spacing: .5px; margin-top: 2px;
-        }
+        .logo-wordmark-img { height: 42px; width: auto; }
 
         .nav-links {
             display: flex; gap: 2rem; list-style: none; align-items: center;
@@ -63,27 +51,27 @@
             color: #475569; text-decoration: none; font-size: .92rem;
             font-weight: 500; transition: color .2s;
         }
-        .nav-links a:hover { color: #0D9488; }
+        .nav-links a:hover { color: #008cbb; }
 
         .nav-cta {
             display: flex; align-items: center; gap: .75rem;
         }
         .btn-login {
-            color: #0D9488; font-weight: 600; font-size: .92rem;
+            color: #008cbb; font-weight: 600; font-size: .92rem;
             text-decoration: none; padding: .5rem 1rem;
-            border: 1.5px solid #0D9488; border-radius: 8px;
+            border: 1.5px solid #008cbb; border-radius: 8px;
             transition: all .2s;
         }
-        .btn-login:hover { background: #0D9488; color: #fff; }
+        .btn-login:hover { background: #008cbb; color: #fff; }
 
         .btn-demo {
-            background: linear-gradient(135deg, #0D9488, #1E3A5F);
+            background: linear-gradient(135deg, #008cbb, #0D9488);
             color: #fff; font-weight: 600; font-size: .92rem;
             text-decoration: none; padding: .5rem 1.25rem;
             border-radius: 8px; transition: all .2s;
-            box-shadow: 0 2px 8px rgba(13,148,136,.3);
+            box-shadow: 0 2px 8px rgba(0, 140, 187,.3);
         }
-        .btn-demo:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(13,148,136,.4); }
+        .btn-demo:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0, 140, 187,.4); }
 
         /* ── Hero ────────────────────────────────────────────────────── */
         .hero {
@@ -145,7 +133,7 @@
         }
         .hero-tagline .ht-dot {
             display: inline-block; width: 5px; height: 5px; border-radius: 50%;
-            background: #0D9488; margin: 0 .6rem; vertical-align: middle;
+            background: #008cbb; margin: 0 .6rem; vertical-align: middle;
         }
         .hero-slider-dots {
             position: absolute; bottom: 1.5rem; right: 2rem;
@@ -157,8 +145,8 @@
             border: none; padding: 0;
         }
         .hero-slider-dot.active {
-            background: #0D9488; width: 22px; border-radius: 4px;
-            box-shadow: 0 0 8px rgba(13,148,136,.8);
+            background: #008cbb; width: 22px; border-radius: 4px;
+            box-shadow: 0 0 8px rgba(0, 140, 187,.8);
         }
         .hero-arrow {
             position: absolute; top: 50%; transform: translateY(-50%);
@@ -169,13 +157,13 @@
             display: flex; align-items: center; justify-content: center;
             transition: all .2s; z-index: 10;
         }
-        .hero-arrow:hover { background: rgba(13,148,136,.5); border-color: #0D9488; }
+        .hero-arrow:hover { background: rgba(0, 140, 187,.5); border-color: #008cbb; }
         .hero-arrow-prev { left: 1.25rem; }
         .hero-arrow-next { right: 1.25rem; }
 
         /* ── Hero CTA bar (below slider) ─────────────────────────────── */
         .hero-cta-bar {
-            background: linear-gradient(135deg, #fff 0%, #E8F5F4 100%);
+            background: linear-gradient(135deg, #fff 0%, #E6F4FA 100%);
             padding: 1.75rem 2rem;
             display: flex; align-items: center; justify-content: center; gap: 1.25rem;
             flex-wrap: wrap;
@@ -183,11 +171,11 @@
         }
         .hero-badge {
             display: inline-flex; align-items: center; gap: .5rem;
-            background: rgba(13,148,136,.08); border: 1px solid rgba(13,148,136,.2);
-            color: #0D9488; font-size: .82rem; font-weight: 600;
+            background: rgba(0, 140, 187,.08); border: 1px solid rgba(0, 140, 187,.2);
+            color: #008cbb; font-size: .82rem; font-weight: 600;
             padding: .35rem .9rem; border-radius: 999px;
         }
-        .hero-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: #0D9488; }
+        .hero-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: #008cbb; }
 
         .hero-actions {
             display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;
@@ -195,12 +183,12 @@
         .hero-btn-primary {
             display: inline-flex; align-items: center; gap: .5rem;
             padding: .75rem 1.75rem; border-radius: 10px;
-            background: linear-gradient(135deg, #0D9488, #1E3A5F);
+            background: linear-gradient(135deg, #008cbb, #0D9488);
             color: #fff; font-weight: 700; font-size: .95rem;
             text-decoration: none; transition: all .2s;
-            box-shadow: 0 4px 16px rgba(13,148,136,.35);
+            box-shadow: 0 4px 16px rgba(0, 140, 187,.35);
         }
-        .hero-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(13,148,136,.45); }
+        .hero-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0, 140, 187,.45); }
         .hero-btn-secondary {
             display: inline-flex; align-items: center; gap: .5rem;
             padding: .75rem 1.75rem; border-radius: 10px;
@@ -208,7 +196,7 @@
             border: 1.5px solid #cbd5e1; font-weight: 600; font-size: .95rem;
             text-decoration: none; transition: all .2s;
         }
-        .hero-btn-secondary:hover { border-color: #0D9488; color: #0D9488; transform: translateY(-2px); }
+        .hero-btn-secondary:hover { border-color: #008cbb; color: #008cbb; transform: translateY(-2px); }
 
         /* ── Features bar ────────────────────────────────────────────── */
         .stats-bar {
@@ -220,8 +208,8 @@
         .stat-item { text-align: center; }
         .stat-icon {
             width: 48px; height: 48px; border-radius: 12px;
-            background: linear-gradient(135deg, rgba(13,148,136,.1), rgba(30,58,95,.08));
-            border: 1px solid rgba(13,148,136,.15);
+            background: linear-gradient(135deg, rgba(0, 140, 187,.1), rgba(209, 92, 92,.08));
+            border: 1px solid rgba(0, 140, 187,.15);
             display: flex; align-items: center; justify-content: center;
             margin: 0 auto .5rem;
         }
@@ -237,7 +225,7 @@
         .gallery-section::before {
             content: '';
             position: absolute; top: 0; left: 0; right: 0; height: 2px;
-            background: linear-gradient(90deg, #0D9488, #1E3A5F, #0D9488);
+            background: linear-gradient(90deg, #008cbb, #d15c5c, #008cbb);
         }
 
         .gallery-heading {
@@ -245,13 +233,13 @@
         }
         .gallery-heading .eyebrow {
             font-size: .8rem; font-weight: 700; letter-spacing: 2px;
-            color: #0D9488; text-transform: uppercase; margin-bottom: .75rem;
+            color: #008cbb; text-transform: uppercase; margin-bottom: .75rem;
         }
         .gallery-heading h2 {
             font-size: 2.4rem; font-weight: 800; color: #f1f5f9; line-height: 1.2;
         }
         .gallery-heading h2 .grad {
-            background: linear-gradient(90deg, #0D9488, #1E3A5F);
+            background: linear-gradient(90deg, #008cbb, #d15c5c);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             background-clip: text;
         }
@@ -290,7 +278,7 @@
             width: 8px; height: 8px; border-radius: 50%;
             background: rgba(255,255,255,.3); cursor: pointer; transition: all .3s;
         }
-        .gallery-dot.active { background: #0D9488; box-shadow: 0 0 8px rgba(13,148,136,.8); width: 24px; border-radius: 4px; }
+        .gallery-dot.active { background: #008cbb; box-shadow: 0 0 8px rgba(0, 140, 187,.8); width: 24px; border-radius: 4px; }
 
         /* ── Features ────────────────────────────────────────────────── */
         .features-section {
@@ -303,13 +291,13 @@
         }
         .section-heading .eyebrow {
             font-size: .8rem; font-weight: 700; letter-spacing: 2px;
-            color: #0D9488; text-transform: uppercase; margin-bottom: .75rem;
+            color: #008cbb; text-transform: uppercase; margin-bottom: .75rem;
         }
         .section-heading h2 {
             font-size: 2.2rem; font-weight: 800; color: #112240; line-height: 1.25;
         }
         .section-heading h2 .grad {
-            background: linear-gradient(90deg, #0D9488, #1E3A5F);
+            background: linear-gradient(90deg, #008cbb, #d15c5c);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             background-clip: text;
         }
@@ -325,19 +313,19 @@
             transition: all .2s; position: relative; overflow: hidden;
         }
         .feature-card:hover {
-            border-color: #5EEAD4; box-shadow: 0 8px 32px rgba(13,148,136,.12);
+            border-color: #5EC8EA; box-shadow: 0 8px 32px rgba(0, 140, 187,.12);
             transform: translateY(-2px);
         }
         .feature-card::before {
             content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-            background: linear-gradient(90deg, #0D9488, #1E3A5F);
+            background: linear-gradient(90deg, #008cbb, #d15c5c);
             opacity: 0; transition: opacity .2s;
         }
         .feature-card:hover::before { opacity: 1; }
 
         .feature-icon {
             width: 48px; height: 48px; border-radius: 12px;
-            background: linear-gradient(135deg, rgba(13,148,136,.12), rgba(13,148,136,.12));
+            background: linear-gradient(135deg, rgba(0, 140, 187,.12), rgba(0, 140, 187,.12));
             display: flex; align-items: center; justify-content: center;
             margin-bottom: 1.25rem;
         }
@@ -348,7 +336,7 @@
         /* ── How it works ────────────────────────────────────────────── */
         .how-section {
             padding: 5rem 2rem;
-            background: linear-gradient(160deg, #E8F5F4, #D0EBE9);
+            background: linear-gradient(160deg, #E6F4FA, #D0E9F5);
             scroll-margin-top: 68px;
         }
         .steps-grid {
@@ -359,16 +347,16 @@
         .steps-grid::before {
             content: '';
             position: absolute; top: 28px; left: 16.6%; right: 16.6%;
-            height: 2px; background: linear-gradient(90deg, #0D9488, #1E3A5F);
+            height: 2px; background: linear-gradient(90deg, #008cbb, #d15c5c);
         }
         .step-card { text-align: center; padding: 1.5rem; }
         .step-number {
             width: 56px; height: 56px; border-radius: 50%;
-            background: linear-gradient(135deg, #0D9488, #1E3A5F);
+            background: linear-gradient(135deg, #008cbb, #0D9488);
             color: #fff; font-size: 1.2rem; font-weight: 800;
             display: flex; align-items: center; justify-content: center;
             margin: 0 auto 1.25rem; position: relative; z-index: 1;
-            box-shadow: 0 4px 16px rgba(13,148,136,.35);
+            box-shadow: 0 4px 16px rgba(0, 140, 187,.35);
         }
         .step-card h3 { font-size: 1.05rem; font-weight: 700; color: #112240; margin-bottom: .5rem; }
         .step-card p  { font-size: .9rem; color: #64748b; line-height: 1.6; }
@@ -383,7 +371,7 @@
             font-size: 2.4rem; font-weight: 800; color: #112240; margin-bottom: .75rem;
         }
         .contact-section h2 .grad {
-            background: linear-gradient(90deg, #0D9488, #1E3A5F);
+            background: linear-gradient(90deg, #008cbb, #d15c5c);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             background-clip: text;
         }
@@ -398,9 +386,9 @@
             border-radius: 12px; padding: 1.5rem 2rem; text-align: center;
             min-width: 180px; transition: all .2s;
         }
-        .contact-item:hover { border-color: #5EEAD4; transform: translateY(-2px); }
+        .contact-item:hover { border-color: #5EC8EA; transform: translateY(-2px); }
         .contact-item .contact-icon { font-size: 1.6rem; margin-bottom: .5rem; }
-        .contact-item h3 { color: #0D9488; font-size: .85rem; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; margin-bottom: .4rem; }
+        .contact-item h3 { color: #008cbb; font-size: .85rem; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; margin-bottom: .4rem; }
         .contact-item p  { color: #334155; font-size: .95rem; font-weight: 500; }
 
         .contact-form-wrap {
@@ -417,33 +405,33 @@
             box-sizing: border-box;
         }
         .cf-row input:focus, .cf-row textarea:focus {
-            outline: none; border-color: #0D9488; box-shadow: 0 0 0 3px rgba(13,148,136,.12);
+            outline: none; border-color: #008cbb; box-shadow: 0 0 0 3px rgba(0, 140, 187,.12);
         }
         .cf-row textarea { resize: vertical; min-height: 100px; }
-        .cf-submit { width: 100%; padding: .85rem; background: #0D9488; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: .5rem; transition: background .2s; }
+        .cf-submit { width: 100%; padding: .85rem; background: #008cbb; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: .5rem; transition: background .2s; }
         .cf-submit:hover { background: #0f766e; }
         .cf-submit:disabled { background: #94a3b8; cursor: not-allowed; }
         .cf-error { color: #dc2626; font-size: .85rem; margin-top: .5rem; text-align: center; }
         .cf-success { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 1.5rem; text-align: center; margin-top: 1rem; }
-        .cf-success .ref { font-size: 1.4rem; font-weight: 800; color: #0D9488; letter-spacing: 1px; margin: .5rem 0; }
+        .cf-success .ref { font-size: 1.4rem; font-weight: 800; color: #008cbb; letter-spacing: 1px; margin: .5rem 0; }
         .cf-success p { color: #374151; font-size: .95rem; }
         @media (max-width: 600px) { .cf-row { grid-template-columns: 1fr; } }
 
         .cta-button {
             display: inline-flex; align-items: center; gap: .5rem;
             padding: .9rem 2.25rem; border-radius: 10px;
-            background: linear-gradient(135deg, #0D9488, #1E3A5F);
+            background: linear-gradient(135deg, #008cbb, #0D9488);
             color: #fff; font-weight: 700; font-size: 1rem;
             text-decoration: none; transition: all .2s;
-            box-shadow: 0 4px 16px rgba(13,148,136,.35);
+            box-shadow: 0 4px 16px rgba(0, 140, 187,.35);
         }
-        .cta-button:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(13,148,136,.45); }
+        .cta-button:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0, 140, 187,.45); }
 
         /* ── Footer ──────────────────────────────────────────────────── */
         footer {
             background: #112240;
             padding: 2.5rem 2rem;
-            border-top: 1px solid rgba(13,148,136,.3);
+            border-top: 1px solid rgba(0, 140, 187,.3);
         }
         .footer-inner {
             max-width: 1160px; margin: 0 auto;
@@ -452,13 +440,13 @@
         .footer-brand { display: flex; align-items: center; gap: .75rem; }
         .footer-brand .logo-name-sm {
             font-size: 1.1rem; font-weight: 700;
-            background: linear-gradient(90deg, #0D9488, #1E3A5F);
+            background: linear-gradient(90deg, #008cbb, #d15c5c);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             background-clip: text;
         }
         .footer-links { display: flex; gap: 2rem; }
         .footer-links a { color: #64748b; text-decoration: none; font-size: .88rem; transition: color .2s; }
-        .footer-links a:hover { color: #0D9488; }
+        .footer-links a:hover { color: #008cbb; }
         .footer-copy { color: #475569; font-size: .82rem; }
 
         /* ── Responsive ──────────────────────────────────────────────── */
@@ -498,17 +486,8 @@
 <!-- ── Header ───────────────────────────────────────────────────────── -->
 <header>
     <a href="/" class="logo-link">
-        <div class="logo-icon">
-            <svg viewBox="0 0 500 500" width="100%" height="100%">
-                <path d="M250 50L50 400H150L180 340H320L350 400H450L250 50Z" fill="white"/>
-                <circle cx="215" cy="278" r="30" fill="rgba(13,148,136,0.85)"/>
-                <circle cx="285" cy="278" r="30" fill="rgba(13,148,136,0.85)"/>
-            </svg>
-        </div>
-        <div class="logo-wordmark">
-            <span class="logo-name">AmaraData</span>
-            <span class="logo-tagline">Property Management Platform</span>
-        </div>
+        <img src="/images/AmaraData_Logo.jpeg" alt="AmaraData" class="logo-icon">
+        <img src="/images/AmaraData_Logo_Text.jpeg" alt="AmaraData — Data Refine Experts" class="logo-wordmark-img">
     </a>
 
     <nav>
@@ -589,37 +568,37 @@
 <div class="stats-bar">
     <div class="stat-item">
         <div class="stat-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#008cbb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         </div>
         <div class="stat-label">Sales Pipeline</div>
     </div>
     <div class="stat-item">
         <div class="stat-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#008cbb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         </div>
         <div class="stat-label">Rental Management</div>
     </div>
     <div class="stat-item">
         <div class="stat-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#008cbb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
         </div>
         <div class="stat-label">Multi-Project Inventory</div>
     </div>
     <div class="stat-item">
         <div class="stat-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#008cbb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         </div>
         <div class="stat-label">Tax-Compliant Invoices</div>
     </div>
     <div class="stat-item">
         <div class="stat-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#008cbb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
         </div>
         <div class="stat-label">Payment Tracking</div>
     </div>
     <div class="stat-item">
         <div class="stat-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#008cbb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         </div>
         <div class="stat-label">Reports &amp; Analytics</div>
     </div>
@@ -650,7 +629,7 @@
     <div class="features-grid">
         <div class="feature-card">
             <div class="feature-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#008cbb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
                 </svg>
             </div>
@@ -659,7 +638,7 @@
         </div>
         <div class="feature-card">
             <div class="feature-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#008cbb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
                 </svg>
             </div>
@@ -668,7 +647,7 @@
         </div>
         <div class="feature-card">
             <div class="feature-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#008cbb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
                 </svg>
             </div>
@@ -677,7 +656,7 @@
         </div>
         <div class="feature-card">
             <div class="feature-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#008cbb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
                 </svg>
             </div>
@@ -686,7 +665,7 @@
         </div>
         <div class="feature-card">
             <div class="feature-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#008cbb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
                 </svg>
             </div>
@@ -695,7 +674,7 @@
         </div>
         <div class="feature-card">
             <div class="feature-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#008cbb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
                 </svg>
             </div>
@@ -813,13 +792,7 @@ async function submitContact() {
 <footer>
     <div class="footer-inner">
         <div class="footer-brand">
-            <div class="logo-icon" style="width:30px;height:30px;border-radius:6px">
-                <svg viewBox="0 0 500 500" width="100%" height="100%">
-                    <path d="M250 50L50 400H150L180 340H320L350 400H450L250 50Z" fill="white"/>
-                    <circle cx="215" cy="278" r="30" fill="rgba(13,148,136,0.85)"/>
-                    <circle cx="285" cy="278" r="30" fill="rgba(13,148,136,0.85)"/>
-                </svg>
-            </div>
+            <img src="/images/AmaraData_Logo.jpeg" alt="AmaraData" class="logo-icon" style="width:36px;height:36px;border-radius:7px">
             <span class="logo-name-sm">AmaraData</span>
         </div>
         <nav class="footer-links">
@@ -929,7 +902,7 @@ async function submitContact() {
                         </svg>
                     </button>
                     <div id="userDropdown" style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:160px;padding:.4rem 0;z-index:100">
-                        <a href="/dashboard" style="display:block;padding:.6rem 1rem;font-size:.88rem;color:#0D9488;font-weight:600;text-decoration:none">Dashboard →</a>
+                        <a href="/dashboard" style="display:block;padding:.6rem 1rem;font-size:.88rem;color:#008cbb;font-weight:600;text-decoration:none">Dashboard →</a>
                         <hr style="border:none;border-top:1px solid #f1f5f9;margin:.3rem 0">
                         <a href="#" onclick="doLogout()" style="display:block;padding:.6rem 1rem;font-size:.88rem;color:#dc2626;text-decoration:none">Sign Out</a>
                     </div>

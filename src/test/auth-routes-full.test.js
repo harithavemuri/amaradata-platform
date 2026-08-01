@@ -1,8 +1,18 @@
 // @vitest-environment node
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
+import { createRequire } from 'module';
 import request from 'supertest';
 import app from '../../server.js';
 import { uid, tokens, auth, assertJson } from './helpers.js';
+
+// vi.mock() doesn't reliably intercept require('../auth/google-auth') nested
+// inside server.js's own CJS require graph (same issue documented in
+// src/test/email-routes.test.js). createRequire reaches the exact same class
+// auth.js's require() sees, so patching its prototype methods reaches every
+// `new GoogleOAuth()` the route handler creates, regardless of which
+// "copy" of the require graph constructed it.
+const _require  = createRequire(import.meta.url);
+const GoogleOAuth = _require('../../backend/auth/google-auth.js');
 
 const SETUP_KEY = 'test-jwt-secret-32-chars-minimum!!';
 
@@ -204,6 +214,58 @@ describe('Auth routes — full coverage', () => {
             const res = await request(app).get('/api/auth/google/callback?error=access_denied');
             expect(res.status).toBe(302);
             expect(res.headers.location).toContain('access_denied');
+        });
+    });
+
+    // ── google/exchange — success ────────────────────────────────────────────
+    // Regression coverage for a real production bug: the exchange handler's
+    // raw SQL wrote to a `picture` column that migration 2026.06.12.001
+    // dropped (consolidated into `logo_url` by an earlier migration), so
+    // every real Google login 500'd right after the user approved consent.
+    // GoogleOAuth's exchangeCode()/getUserInfo() make real HTTPS calls to
+    // Google — mocked here so this exercises the actual DB write path.
+    describe('POST /api/auth/google/exchange — success', () => {
+        afterEach(() => vi.restoreAllMocks());
+
+        function mockGoogleUser(userInfo) {
+            vi.spyOn(GoogleOAuth.prototype, 'exchangeCode').mockResolvedValue({ access_token: 'fake-token' });
+            vi.spyOn(GoogleOAuth.prototype, 'getUserInfo').mockResolvedValue(userInfo);
+        }
+
+        it('new user → 200, creates the user with logo_url set from Google picture', async () => {
+            const email = `zzzzzz.google.${uid()}@test.local`;
+            mockGoogleUser({ id: `g-${uid()}`, email, name: 'Google User', picture: 'https://example.com/pic.jpg' });
+
+            const res = await request(app).post('/api/auth/google/exchange')
+                .send({ code: 'fake-code', state: 'sess:csrf', code_verifier: 'fake-verifier' });
+            assertJson(res);
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data.user.email).toBe(email);
+            expect(res.body.data.token).toBeTruthy();
+
+            const users = await request(app).get('/api/admin/users').set(auth('siteAdmin'));
+            const created = users.body.data.find(u => u.email === email);
+            expect(created, 'expected the Google-created user to exist via the admin API').toBeTruthy();
+            expect(created.logo_url).toBe('https://example.com/pic.jpg');
+        });
+
+        it('existing user (matched by email) → 200, updates logo_url and google_id', async () => {
+            const email = `zzzzzz.google.existing.${uid()}@test.local`;
+            await request(app).post('/api/auth/create-user')
+                .send({ email, name: 'Existing User', password: 'pass1234', setup_key: SETUP_KEY });
+
+            const googleId = `g-${uid()}`;
+            mockGoogleUser({ id: googleId, email, name: 'Existing User', picture: 'https://example.com/new-pic.jpg' });
+
+            const res = await request(app).post('/api/auth/google/exchange')
+                .send({ code: 'fake-code', state: 'sess:csrf', code_verifier: 'fake-verifier' });
+            assertJson(res);
+            expect(res.status).toBe(200);
+
+            const users    = await request(app).get('/api/admin/users').set(auth('siteAdmin'));
+            const existing = users.body.data.find(u => u.email === email);
+            expect(existing.logo_url).toBe('https://example.com/new-pic.jpg');
         });
     });
 });
