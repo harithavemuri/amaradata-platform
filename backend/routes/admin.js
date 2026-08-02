@@ -743,13 +743,22 @@ router.post('/purge-invoices', async (req, res) => {
         if (req.db.mode === 'nondb') {
             const invoices = req.db.fileDb.find('invoices');
             const lineItems = req.db.fileDb.find('invoice_line_items');
+            const payments = req.db.fileDb.find('payments');
+            const billedEnhancements = req.db.fileDb.find('enhancements').filter(e => e.invoice_id != null);
+            for (const p of payments) req.db.fileDb.delete('payments', p.id);
+            for (const e of billedEnhancements) req.db.fileDb.update('enhancements', e.id, { invoice_id: null });
             for (const li of lineItems) req.db.fileDb.delete('invoice_line_items', li.id);
             for (const inv of invoices) req.db.fileDb.delete('invoices', inv.id);
-            return res.json({ success: true, data: { deletedInvoices: invoices.length, deletedLineItems: lineItems.length } });
+            return res.json({ success: true, data: { deletedInvoices: invoices.length, deletedLineItems: lineItems.length, deletedPayments: payments.length } });
         }
+        // payments.invoice_id and enhancements.invoice_id both reference invoices without
+        // ON DELETE CASCADE (unlike invoice_line_items, which does cascade) -- clear those
+        // first or the DELETE below fails on a foreign-key violation.
+        await db.query('UPDATE enhancements SET invoice_id = NULL WHERE invoice_id IS NOT NULL');
+        const { rows: payRows } = await db.query('DELETE FROM payments RETURNING id');
         const { rows: liRows } = await db.query('SELECT COUNT(*) FROM invoice_line_items');
         const { rows: invRows } = await db.query('DELETE FROM invoices RETURNING id');
-        res.json({ success: true, data: { deletedInvoices: invRows.length, deletedLineItemsBefore: parseInt(liRows[0].count, 10) } });
+        res.json({ success: true, data: { deletedInvoices: invRows.length, deletedLineItemsBefore: parseInt(liRows[0].count, 10), deletedPayments: payRows.length } });
     } catch (e) {
         console.error('[admin/purge-invoices]', e.message);
         res.status(500).json({ error: 'Internal server error' });
