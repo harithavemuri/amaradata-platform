@@ -131,6 +131,7 @@ Resources:
         ScanEnabled: true
         Recipients:
           - rajas@amaradata.com
+          - info@amaradata.com
         Actions:
           - S3Action:
               BucketName: !Ref EmailBucket
