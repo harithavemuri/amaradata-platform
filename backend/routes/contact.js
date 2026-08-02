@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const db     = require('../db');
 const { requireAuth } = require('../middleware/auth');
-const { sendEmail }   = require('../services/ses');
+const sesService       = require('../services/ses');
 
 function makeRef() {
     const d   = new Date();
@@ -39,7 +39,7 @@ async function sendAdminEmail(submission) {
         // against .env's placeholder AWS credentials and made unrelated GET
         // /api/contact tests flaky (background SES retries delayed them past
         // Vitest's 5s timeout).
-        await sendEmail({
+        await sesService.sendEmail({
             to:      adminEmail,
             subject: `[AmaraData] Contact: ${submission.ref_number}`,
             text:    body,
@@ -78,8 +78,12 @@ router.post('/', async (req, res) => {
             row = rows[0];
         }
 
-        // fire-and-forget email
-        sendAdminEmail(row);
+        // Must be awaited, not fire-and-forget: AWS Lambda freezes the execution
+        // environment immediately after the HTTP response is sent, killing any
+        // still-in-flight promise before it settles. An un-awaited call here
+        // silently drops the admin-notification email in production (confirmed:
+        // zero SES sends, zero log output from this function ever appeared).
+        await sendAdminEmail(row);
 
         res.status(201).json({ success: true, ref_number: row.ref_number });
     } catch (e) { console.error('[contact]', e.message); res.status(500).json({ error: 'Internal server error' }); }
