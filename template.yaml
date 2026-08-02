@@ -177,11 +177,47 @@ Resources:
         - { Key: project,     Value: !Ref TagProject }
         - { Key: component,   Value: shared }
 
+  # ── API Gateway access logs — separate from AppLogGroup: these are raw
+  # per-request log lines emitted by API Gateway itself (including requests
+  # throttled before ever reaching the Lambda, e.g. 429s), not app-level JSON
+  # logs from the function. Needs its own resource policy since API Gateway
+  # (not the Lambda's execution role) is the principal writing to it.
+  ApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '${Tenant}-${Env}-api-access'
+      RetentionInDays: !If [IsProd, 30, 7]
+      Tags:
+        - { Key: tenant,      Value: !Ref Tenant }
+        - { Key: application, Value: !Ref TagApplication }
+        - { Key: project,     Value: !Ref TagProject }
+        - { Key: component,   Value: shared }
+
+  ApiAccessLogGroupPolicy:
+    Type: AWS::Logs::ResourcePolicy
+    Properties:
+      PolicyName: !Sub '${Tenant}-${Env}-api-access-logs'
+      PolicyDocument: !Sub |
+        {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": { "Service": "apigateway.amazonaws.com" },
+            "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
+            "Resource": "${ApiAccessLogGroup.Arn}"
+          }]
+        }
+
   # ── HTTP API Gateway ──────────────────────────────────────────────────────────
   AmrdApi:
     Type: AWS::Serverless::HttpApi
+    DependsOn: ApiAccessLogGroupPolicy
     Properties:
       StageName: !Ref Env
+      AccessLogSettings:
+        DestinationArn: !GetAtt ApiAccessLogGroup.Arn
+        Format: >-
+          {"requestId":"$context.requestId","ip":"$context.identity.sourceIp","requestTime":"$context.requestTime","httpMethod":"$context.httpMethod","routeKey":"$context.routeKey","status":"$context.status","protocol":"$context.protocol","responseLength":"$context.responseLength","integrationErrorMessage":"$context.integrationErrorMessage","errorMessage":"$context.error.message"}
       Tags:
         tenant:      !Ref Tenant
         application: !Ref TagApplication
