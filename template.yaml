@@ -203,6 +203,14 @@ Resources:
           - OPTIONS
         AllowCredentials: true
         MaxAge: 600
+      # Tightened from the API Gateway account default (100 req/sec sustained,
+      # 200 burst) — real traffic here is a light admin tool + one tenant, well
+      # under this ceiling; this just shrinks how far a flood could push before
+      # API Gateway itself starts rejecting requests, at no extra cost.
+      RouteSettings:
+        $default:
+          ThrottlingRateLimit: 20
+          ThrottlingBurstLimit: 40
 
   # ── API Lambda — Express app (all routes) ─────────────────────────────────────
   ApiFn:
@@ -322,6 +330,10 @@ Resources:
         DefaultRootObject: index.html
         HttpVersion: http2
         PriceClass: PriceClass_100
+        Restrictions:
+          GeoRestriction:
+            RestrictionType: whitelist
+            Locations: [IN, AE, US]   # India, UAE, USA — free CloudFront-native geo allow-list
         Aliases: !If
           - HasCustomDomain
           - - !Select [1, !Split ['://', !Ref FrontendUrl]]
