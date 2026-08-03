@@ -32,7 +32,8 @@
     "sync": "node scripts/cli.js sync",
     "sync-tenant-fixes": "node jobs/sync-tenant-fixes.js",
     "seed:local": "node scripts/seed-enhancements.js --target=local",
-    "seed:production": "node scripts/seed-enhancements.js --target=production"
+    "seed:production": "node scripts/seed-enhancements.js --target=production",
+    "bootstrap-db-infra": "node scripts/bootstrap-shared-db-infrastructure.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1063.0",

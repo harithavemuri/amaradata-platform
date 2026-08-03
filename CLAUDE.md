@@ -118,6 +118,8 @@ Secrets live in AWS Secrets Manager at `/<tenant>/<env>/<name>`:
 
 Config (non-secret) lives in SSM Parameter Store: `google-client-id`, `db-host` (redundant), DB usernames.
 
+**Shared DB cluster is NOT managed by either app's CloudFormation stack.** The `amaradata` Aurora Serverless v2 cluster (shared by amaradata-platform and rohas-group) was created manually via a direct `aws rds create-db-cluster` CLI call, not through SAM — confirmed via CloudTrail. Both apps run with `CreateDbCluster=false` and only reference it externally via SSM/Secrets Manager; neither stack's `DBCluster`/`DBInstance` resources are actually deployed. `scripts/bootstrap-shared-db-infrastructure.js` (`npm run bootstrap-db-infra`) is the reproducible record of this setup — idempotent (checks-then-creates, never resets an existing role's password), safe to re-run anytime. **Update this script whenever the shared DB infrastructure changes outside of a SAM template** (parameter group settings, a new tenant's database/role, instance class, scaling config, etc.) — it should always reflect current reality, not just its authoring-time snapshot.
+
 ### Infrastructure constraints
 
 See `.project-constraints` — serverless-only (Lambda + API Gateway). No EC2, Docker, or containers. RDS/Aurora must never be publicly accessible; Lambda must reach the DB via VPC.
