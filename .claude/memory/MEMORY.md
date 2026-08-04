@@ -37,3 +37,4 @@
 - [Verify Before Responding](feedback-verify-before-responding.md) — never answer a diagnostic question with an assumed/inferred reason; gather direct evidence (screenshots, logs, live checks) first, then respond
 - [Least-Privilege Credential Checks](feedback-least-privilege-credential-checks.md) — never retrieve/print root or write-level credentials during investigation; use the lowest-privilege credential that proves the point (e.g. read user rules out network issues)
 - [Shared DB Bootstrap Script](project-shared-db-bootstrap-script.md) — scripts/bootstrap-shared-db-infrastructure.js reproduces the manually-created shared Aurora cluster; keep it updated whenever that infra changes outside a SAM template
+- [Amaradata Repo Commits Only](feedback-amaradata-repo-commits-only.md) — never git commit/push in rohas-group, even when investigating/fixing something there; only amaradata-platform gets committed to
