@@ -1,4 +1,3 @@
-const { SecretsManagerClient, GetSecretValueCommand } = require('@aws-sdk/client-secrets-manager');
 const { Pool } = require('pg');
 const fs   = require('fs');
 const path = require('path');
@@ -90,16 +89,12 @@ function splitSql(sql) {
     return stmts;
 }
 
-const sm = new SecretsManagerClient({ region: process.env.AWS_REGION || 'ap-south-1' });
-
 exports.handler = async () => {
-    const secretRes = await sm.send(new GetSecretValueCommand({
-        SecretId: process.env.DB_MASTER_SECRET_NAME || '/amaradata/aurora/master-password',
-    }));
-
-    // The secret is a raw password string; the username comes from an env var.
-    // Default to 'postgres' — the RDS hidden superuser that bypasses schema ACLs.
-    const password = secretRes.SecretString.trim();
+    // The Lambda is VPC-attached (same VPC/subnets as Aurora) and has no route to
+    // Secrets Manager's public endpoint, so the password is resolved once at CFN
+    // deploy time via {{resolve:secretsmanager:...}} in template.yaml's Environment
+    // block instead of a runtime GetSecretValue call.
+    const password = (process.env.DB_MASTER_PASSWORD || '').trim();
     const user     = process.env.DB_MASTER_USER || 'postgres';
 
     const pool = new Pool({

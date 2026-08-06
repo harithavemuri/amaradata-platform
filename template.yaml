@@ -88,6 +88,14 @@ Parameters:
     Type: List<AWS::EC2::Subnet::Id>
     Description: Two subnets in different AZs (same as rohas-group)
 
+  DbSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: >
+      Existing security group attached to the shared Aurora cluster
+      (sg-085d3a401508c7b5c, see scripts/bootstrap-shared-db-infrastructure.js —
+      this stack doesn't own it, ShouldCreateDb=false). DBMigrateFnToDbIngress
+      below adds a rule to it; it is never replaced or recreated.
+
   SesFromEmail:
     Type: String
     Default: noreply@amaradata.com
@@ -525,25 +533,57 @@ Resources:
       ServiceToken: !GetAtt DBInitFn.Arn
       ResourceVersion: '1'
 
+  # ── DBMigrateFn networking — VPC-attached so it reaches Aurora over the private
+  # network instead of the SG's AWS-managed-IP-range workaround every other
+  # Lambda still uses (see DBSecurityGroup's ingress comment further down).
+  # DBMigrateFnSecurityGroup is owned by this stack (default allow-all egress —
+  # only outbound to the DB on 5432 is actually needed); the ingress rule below
+  # adds to the EXISTING externally-referenced DB security group without owning
+  # or replacing it.
+  DBMigrateFnSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub '${Tenant}-${Env} DBMigrateFn Lambda ENIs'
+      VpcId: !Ref VpcId
+      Tags:
+        - { Key: tenant,      Value: !Ref Tenant }
+        - { Key: application, Value: !Ref TagApplication }
+        - { Key: project,     Value: !Ref TagProject }
+        - { Key: component,   Value: shared }
+
+  DBMigrateFnToDbIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref DbSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !GetAtt DBMigrateFnSecurityGroup.GroupId
+      Description: !Sub '${Tenant}-${Env} DBMigrateFn (VPC-attached schema migration)'
+
   # ── DB migration — runs on every deploy via npm run deploy ───────────────────
   # Invoked explicitly after sam deploy (not a CF Custom Resource) so it always
   # runs regardless of whether the CF changeset touched this function.
   DBMigrateFn:
     Type: AWS::Serverless::Function
-    DependsOn: AppLogGroup
+    DependsOn: [AppLogGroup, DBMigrateFnToDbIngress]
     Properties:
       FunctionName: !Sub '${Tenant}-${Env}-db-migrate'
       Handler: backend/lambda/db-migrate.handler
       CodeUri: .
       Timeout: 120
+      VpcConfig:
+        SecurityGroupIds:
+          - !GetAtt DBMigrateFnSecurityGroup.GroupId
+        SubnetIds: !Ref VpcSubnetIds
       Policies:
-        - Statement:
-            - Effect: Allow
-              Action: secretsmanager:GetSecretValue
-              Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/amaradata/aurora/*'
+        - VPCAccessPolicy: {}
       Environment:
         Variables:
-          DB_MASTER_SECRET_NAME: !Sub '/${Tenant}/aurora/master-password'
+          # Resolved once at CFN deploy time, not via a runtime Secrets Manager
+          # API call — the Lambda is VPC-attached with no route to Secrets
+          # Manager's public endpoint (no NAT Gateway / VPC endpoint exists here).
+          DB_MASTER_PASSWORD: !Sub '{{resolve:secretsmanager:/${Tenant}/aurora/master-password}}'
           DB_MASTER_USER: amararoot
 
   # ── SES — domain identity for amaradata.com ────────────────────────────────────
