@@ -58,7 +58,8 @@ test.describe('TC-001 — Enhancements CSV Type=Task normalization', () => {
         await expect(page.locator('#imp-result')).toContainText('1 inserted', { timeout: 10_000 });
 
         // Filter to Enhancements only — this is exactly where the bug made the row vanish.
-        await page.click('button:has-text("Enhancements")');
+        await page.selectOption('#sf-type', 'enhancement');
+        await page.click('#btn-search');
         const row = page.locator('tr', { hasText: MARKER });
         await expect(row, 'Task-type row must be visible under the Enhancements filter').toBeVisible({ timeout: 10_000 });
         await expect(row.locator('td', { hasText: 'Enhancement' })).toBeVisible();
