@@ -50,7 +50,7 @@ test.describe('User Groups — edit/save coverage (site_admin only)', () => {
 
             const newName = `${name} updated`;
             const newDesc = testTag('updated description');
-            await page.locator(`.amrd-card:has-text("${name}") button:has-text("Edit")`).first().click();
+            await page.locator(`tr:has-text("${name}") button:has-text("Edit")`).first().click();
             await page.waitForSelector('#gmName');
             await page.fill('#gmName', newName);
             await page.fill('#gmDesc', newDesc);
@@ -90,7 +90,7 @@ test.describe('User Groups — edit/save coverage (site_admin only)', () => {
 
             const group = await apiGet(page, '/api/admin/user-groups');
             const name  = group.find(g => g.id === groupId).name;
-            await page.locator(`.amrd-card:has-text("${name}")`).first().click();
+            await page.locator(`tr:has-text("${name}")`).first().click();
             await page.waitForSelector('#addMemberSelect');
 
             await page.selectOption('#addMemberSelect', String(userId));
@@ -139,7 +139,7 @@ test.describe('User Groups — edit/save coverage (site_admin only)', () => {
 
             const group = await apiGet(page, '/api/admin/user-groups');
             const name  = group.find(g => g.id === groupId).name;
-            await page.locator(`.amrd-card:has-text("${name}")`).first().click();
+            await page.locator(`tr:has-text("${name}")`).first().click();
             await page.waitForSelector('#addTenantSelect');
 
             await page.selectOption('#addTenantSelect', String(tenantId));
@@ -159,6 +159,59 @@ test.describe('User Groups — edit/save coverage (site_admin only)', () => {
             groups  = await apiGet(page, '/api/admin/user-groups');
             updated = groups.find(g => g.id === groupId);
             expect(updated.tenant_assignments.some(a => a.tenant_id === tenantId), 'expected tenant assignment to be removed').toBeFalsy();
+        });
+    });
+
+    // ── search/export coverage ───────────────────────────────────────────────
+    test.describe('search + export', () => {
+        let idA = null;
+        let idB = null;
+        let nameA;
+        let nameB;
+
+        test.beforeEach(async ({ page }) => {
+            nameA = testTag('Findme');
+            nameB = testTag('Other');
+            const groupA = await apiPost(page, '/api/admin/user-groups', { name: nameA });
+            idA = groupA.id;
+            const groupB = await apiPost(page, '/api/admin/user-groups', { name: nameB });
+            idB = groupB.id;
+
+            await page.reload();
+            await page.waitForSelector('.amrd-flex-row', { timeout: 10_000 });
+        });
+
+        test.afterEach(async ({ page }) => {
+            if (idA) await apiDelete(page, `/api/admin/user-groups/${idA}`);
+            if (idB) await apiDelete(page, `/api/admin/user-groups/${idB}`);
+            idA = idB = null;
+        });
+
+        test('Name search filters to a matching group', async ({ page }) => {
+            await page.fill('#sf-q', 'Findme');
+            await page.click('#btn-search');
+
+            await expect(page.locator(`tr:has-text("${nameA}")`)).toBeVisible();
+            await expect(page.locator(`tr:has-text("${nameB}")`)).not.toBeVisible();
+        });
+
+        test('resetting the search shows both groups again', async ({ page }) => {
+            await page.fill('#sf-q', 'Findme');
+            await page.click('#btn-search');
+            await expect(page.locator(`tr:has-text("${nameB}")`)).not.toBeVisible();
+
+            await page.click('#btn-reset');
+
+            await expect(page.locator(`tr:has-text("${nameA}")`)).toBeVisible();
+            await expect(page.locator(`tr:has-text("${nameB}")`)).toBeVisible();
+        });
+
+        test('CSV export button triggers a download', async ({ page }) => {
+            const [download] = await Promise.all([
+                page.waitForEvent('download'),
+                page.click('#btn-export'),
+            ]);
+            expect(download.suggestedFilename()).toBe('user-groups.csv');
         });
     });
 });

@@ -16,61 +16,145 @@
         const fmt  = (v, currency) => new Intl.NumberFormat(undefined, currency ? { style: 'currency', currency, maximumFractionDigits: 0 } : { maximumFractionDigits: 0 }).format(Number(v));
         const fmtDate = d => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '—';
 
+        const PAGE_SIZE = 20;
         let _myTenants = [];
-        let _currentFilter   = '';
-        let _currentTenantId = '';
+        let _allInvoices = [];
+        let _filtered     = [];
+        let _page         = 1;
+        let _search = { number: '', tenantId: '', status: '', period: '' };
 
         const tr = await window.__amrd.apiFetch('/api/tenants/mine');
         _myTenants = tr.data || [];
 
-        function tenantSelect(selected) {
-            if (!_myTenants.length) return '';
-            return `<select onchange="setTenantFilter(this.value)" style="padding:4px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;background:#fff">
-                <option value="">All Tenants</option>
-                ${_myTenants.map(t => `<option value="${t.id}"${selected==t.id?' selected':''}>${t.name}</option>`).join('')}
-            </select>`;
+        function tenantOptions(selected) {
+            return `<option value="">All Tenants</option>
+                ${_myTenants.map(t => `<option value="${t.id}"${selected==t.id?' selected':''}>${t.name}</option>`).join('')}`;
         }
 
-        async function load(filter = '', tenantId = '') {
+        // invoice_number and period aren't supported server-side by the
+        // GraphQL resolver — applied client-side on top of the
+        // status/tenant_id server fetch.
+        function applyClientFilters() {
+            const num    = _search.number.trim().toLowerCase();
+            const period = _search.period.trim();
+            _filtered = _allInvoices.filter(i =>
+                (!num    || i.invoice_number.toLowerCase().includes(num)) &&
+                (!period || (i.period_year && `${i.period_year}-${String(i.period_month).padStart(2,'0')}`.startsWith(period)))
+            );
+            _page = 1;
+            renderTable();
+        }
+
+        async function runSearch() {
             const gql = await window.__amrd.gqlFetch(
                 `query($status: String, $tenant_id: ID) { invoices(status: $status, tenant_id: $tenant_id) { id invoice_number tenant_name period_year period_month total_amount due_date status } }`,
-                { status: filter || null, tenant_id: tenantId || null }
+                { status: _search.status || null, tenant_id: _search.tenantId || null }
             );
-            const invoices = gql?.invoices || [];
+            _allInvoices = gql?.invoices || [];
+            applyClientFilters();
+        }
 
+        function resetSearch() {
+            _search = { number: '', tenantId: '', status: '', period: '' };
+            document.getElementById('sf-number').value = '';
+            document.getElementById('sf-tenant').value = '';
+            document.getElementById('sf-status').value = '';
+            document.getElementById('sf-period').value = '';
+            runSearch();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('invoices-tbody');
+            const pageRows = window.__amrd.paginate(_filtered, _page, PAGE_SIZE);
+            tbody.innerHTML = pageRows.map(i => `
+                <tr>
+                    <td><strong>${i.invoice_number}</strong></td>
+                    <td>${i.tenant_name}</td>
+                    <td>${i.period_year ? `${i.period_year}-${String(i.period_month).padStart(2,'0')}` : '—'}</td>
+                    <td>${fmt(i.total_amount, i.currency_code)}</td>
+                    <td>${fmtDate(i.due_date)}</td>
+                    <td><span class="amrd-badge amrd-badge-${i.status}">${i.status}</span></td>
+                    <td style="display:flex;gap:6px">
+                        ${window.__amrd.isReadOnly() ? '' : (i.status === 'draft' ? `<button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="setStatus(${i.id},'sent')">Send</button>` : '')}
+                        ${window.__amrd.isReadOnly() ? '' : (i.status === 'sent'  ? `<button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="setStatus(${i.id},'paid')">Mark Paid</button>` : '')}
+                    </td>
+                </tr>`).join('') || `<tr><td colspan="7" style="color:#94a3b8;text-align:center;padding:24px">No invoices${_allInvoices.length ? ' match your search' : ''}</td></tr>`;
+            document.getElementById('invoices-count').textContent = `${_filtered.length} invoice(s)`;
+            window.__amrd.renderPagination(document.getElementById('invoices-pagination'), {
+                page: _page, pageSize: PAGE_SIZE, total: _filtered.length,
+                onChange: (p) => { _page = p; renderTable(); },
+            });
+        }
+
+        function exportInvoices() {
+            window.__amrd.exportCsv('invoices.csv', _filtered, [
+                { key: 'invoice_number', label: 'Invoice #' },
+                { key: 'tenant_name',    label: 'Tenant' },
+                { key: 'period_year',    label: 'Period Year' },
+                { key: 'period_month',   label: 'Period Month' },
+                { key: 'total_amount',   label: 'Total' },
+                { key: 'due_date',       label: 'Due Date' },
+                { key: 'status',         label: 'Status' },
+            ]);
+        }
+
+        async function load() {
             root.innerHTML = `
-                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;align-items:center">
-                    ${['','draft','sent','paid','overdue'].map(s =>
-                        `<button class="amrd-btn amrd-btn-${filter===s?'primary':'ghost'} amrd-btn-sm" onclick="loadFilter('${s}')">
-                            ${s||'All'}
-                         </button>`).join('')}
-                    ${tenantSelect(tenantId)}
-                    <div style="flex:1"></div>
-                    ${window.__amrd.isReadOnly() ? '' : '<button class="amrd-btn amrd-btn-primary" onclick="openForm()">+ New Invoice</button>'}
+                <div class="amrd-card">
+                    <div class="amrd-search-bar">
+                        <div class="amrd-search-field"><label>Invoice #</label><input id="sf-number" placeholder="Search invoice #…"></div>
+                        <div class="amrd-search-field">
+                            <label>Tenant</label>
+                            <select id="sf-tenant">${tenantOptions('')}</select>
+                        </div>
+                        <div class="amrd-search-field">
+                            <label>Status</label>
+                            <select id="sf-status">
+                                <option value="">All</option>
+                                ${['draft','sent','paid','overdue'].map(s => `<option value="${s}">${s}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="amrd-search-field"><label>Period</label><input id="sf-period" placeholder="YYYY-MM"></div>
+                        <div class="amrd-search-actions">
+                            <button class="amrd-btn amrd-btn-primary" id="btn-search">Search</button>
+                            <button class="amrd-btn amrd-btn-ghost" id="btn-reset">Reset</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="amrd-toolbar">
+                    <span id="invoices-count" style="color:#64748b;font-size:13px"></span>
+                    <div style="display:flex;gap:8px">
+                        <button class="amrd-btn amrd-btn-ghost" id="btn-export">⬇ Export CSV</button>
+                        ${window.__amrd.isReadOnly() ? '' : '<button class="amrd-btn amrd-btn-primary" onclick="openForm()">+ New Invoice</button>'}
+                    </div>
                 </div>
                 <div class="amrd-card" style="padding:0">
                     <div class="amrd-table-wrap">
                     <table class="amrd-table">
                         <thead><tr><th>Invoice #</th><th>Tenant</th><th>Period</th><th>Total</th><th>Due</th><th>Status</th><th></th></tr></thead>
-                        <tbody>
-                            ${invoices.map(i => `
-                            <tr>
-                                <td><strong>${i.invoice_number}</strong></td>
-                                <td>${i.tenant_name}</td>
-                                <td>${i.period_year ? `${i.period_year}-${String(i.period_month).padStart(2,'0')}` : '—'}</td>
-                                <td>${fmt(i.total_amount, i.currency_code)}</td>
-                                <td>${fmtDate(i.due_date)}</td>
-                                <td><span class="amrd-badge amrd-badge-${i.status}">${i.status}</span></td>
-                                <td style="display:flex;gap:6px">
-                                    ${window.__amrd.isReadOnly() ? '' : (i.status === 'draft' ? `<button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="setStatus(${i.id},'sent')">Send</button>` : '')}
-                                    ${window.__amrd.isReadOnly() ? '' : (i.status === 'sent'  ? `<button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="setStatus(${i.id},'paid')">Mark Paid</button>` : '')}
-                                </td>
-                            </tr>`).join('') || '<tr><td colspan="7" style="color:#94a3b8;text-align:center;padding:24px">No invoices</td></tr>'}
-                        </tbody>
+                        <tbody id="invoices-tbody"></tbody>
                     </table>
                     </div>
+                    <div id="invoices-pagination"></div>
                 </div>
                 <div id="form-slot"></div>`;
+
+            document.getElementById('btn-search').addEventListener('click', () => {
+                _search = {
+                    number:   document.getElementById('sf-number').value,
+                    tenantId: document.getElementById('sf-tenant').value,
+                    status:   document.getElementById('sf-status').value,
+                    period:   document.getElementById('sf-period').value,
+                };
+                runSearch();
+            });
+            document.getElementById('btn-reset').addEventListener('click', resetSearch);
+            document.getElementById('btn-export').addEventListener('click', exportInvoices);
+            ['sf-number', 'sf-period'].forEach(id =>
+                document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btn-search').click(); })
+            );
+
+            await runSearch();
         }
 
         async function openForm() {
@@ -157,7 +241,8 @@
                         line_items:   lines,
                     }),
                 });
-                await load(_currentFilter, _currentTenantId);
+                document.getElementById('form-slot').innerHTML = '';
+                await runSearch();
             } catch (e) {
                 document.getElementById('inv-err').textContent = e.message;
             }
@@ -167,17 +252,15 @@
             await window.__amrd.apiFetch(`/api/invoices/${id}/status`, {
                 method: 'PATCH', body: JSON.stringify({ status }),
             });
-            await load(_currentFilter, _currentTenantId);
+            await runSearch();
         }
 
-        window.loadFilter      = (f) => { _currentFilter = f; load(f, _currentTenantId); };
-        window.setTenantFilter = (t) => { _currentTenantId = t; load(_currentFilter, t); };
         window.openForm        = openForm;
         window.addLine         = addLine;
         window.saveInvoice     = saveInvoice;
         window.setStatus       = setStatus;
 
-        await load(_currentFilter, _currentTenantId);
+        await load();
     });
   </script>
 </body>

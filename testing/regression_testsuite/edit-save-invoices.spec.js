@@ -149,24 +149,42 @@ test.describe('Invoices — add/save + status-transition coverage', () => {
 
         test.afterEach(() => { draftId = sentId = null; });
 
-        test('"draft" status filter shows the draft invoice and hides the sent one', async ({ page }) => {
-            await page.click('button:has-text("draft")');
+        test('"draft" status search shows the draft invoice and hides the sent one', async ({ page }) => {
+            await page.selectOption('#sf-status', 'draft');
+            await page.click('#btn-search');
             await expect(page.locator(`td:has-text("${draftNum}")`)).toBeVisible();
             await expect(page.locator(`td:has-text("${sentNum}")`)).not.toBeVisible();
         });
 
-        test('"sent" status filter shows the sent invoice and hides the draft one', async ({ page }) => {
-            await page.click('button:has-text("sent")');
+        test('"sent" status search shows the sent invoice and hides the draft one', async ({ page }) => {
+            await page.selectOption('#sf-status', 'sent');
+            await page.click('#btn-search');
             await expect(page.locator(`td:has-text("${sentNum}")`)).toBeVisible();
             await expect(page.locator(`td:has-text("${draftNum}")`)).not.toBeVisible();
         });
 
-        test('"All" filter shows both again', async ({ page }) => {
-            await page.click('button:has-text("draft")');
+        test('resetting the search shows both again', async ({ page }) => {
+            await page.selectOption('#sf-status', 'draft');
+            await page.click('#btn-search');
             await expect(page.locator(`td:has-text("${sentNum}")`)).not.toBeVisible();
-            await page.click('button:has-text("All")');
+            await page.click('#btn-reset');
             await expect(page.locator(`td:has-text("${draftNum}")`)).toBeVisible();
             await expect(page.locator(`td:has-text("${sentNum}")`)).toBeVisible();
+        });
+
+        test('Invoice # search filters to a matching invoice number', async ({ page }) => {
+            await page.fill('#sf-number', draftNum);
+            await page.click('#btn-search');
+            await expect(page.locator(`td:has-text("${draftNum}")`)).toBeVisible();
+            await expect(page.locator(`td:has-text("${sentNum}")`)).not.toBeVisible();
+        });
+
+        test('CSV export button triggers a download', async ({ page }) => {
+            const [download] = await Promise.all([
+                page.waitForEvent('download'),
+                page.click('#btn-export'),
+            ]);
+            expect(download.suggestedFilename()).toBe('invoices.csv');
         });
     });
 });

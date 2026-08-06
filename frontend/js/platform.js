@@ -316,6 +316,17 @@ body{margin:0;font-family:'Inter',Arial,sans-serif;background:#f1f5f9;display:fl
 .amrd-stat-sub{font-size:12px;color:#94a3b8;margin-top:4px;}
 .amrd-form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
 .amrd-form-row.full{grid-template-columns:1fr;}
+.amrd-search-bar{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;}
+.amrd-search-field{flex:1 1 160px;min-width:140px;}
+.amrd-search-field label{margin-bottom:4px;}
+.amrd-search-actions{display:flex;gap:8px;flex-shrink:0;}
+.amrd-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;}
+.amrd-pagination{display:flex;align-items:center;justify-content:center;gap:16px;padding:16px 0 4px;}
+.amrd-pagination-info{font-size:12px;color:#64748b;}
+@media(max-width:767px){
+ .amrd-search-bar{flex-direction:column;align-items:stretch;}
+ .amrd-search-field{min-width:0;}
+}
 label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:5px;}
 input,select,textarea{width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:7px;
  font-size:13px;color:#111827;background:#fff;font-family:inherit;}
@@ -511,5 +522,58 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#008cbb;box-sh
         return getStaff()?.role === 'staff';
     }
 
-    window.__amrd = { login, logout, apiFetch, gqlFetch, getStaff, isLoggedIn, requireLogin, renderSidebar, isReadOnly };
+    /* ── Pagination (client-side; current data volumes don't warrant
+       server-side LIMIT/OFFSET — revisit if any table grows large enough
+       that shipping the full filtered set becomes a real payload concern) */
+    function paginate(rows, page, pageSize) {
+        const start = (page - 1) * pageSize;
+        return rows.slice(start, start + pageSize);
+    }
+
+    // Renders "‹ Prev  Page X of Y (N total)  Next ›" into `el` and wires
+    // click handlers. Caller owns state — onChange(newPage) is expected to
+    // update the caller's page variable and re-render.
+    function renderPagination(el, { page, pageSize, total, onChange }) {
+        const pageCount = Math.max(1, Math.ceil(total / pageSize));
+        if (total === 0) { el.innerHTML = ''; return; }
+        el.innerHTML = `
+            <div class="amrd-pagination">
+                <button class="amrd-btn amrd-btn-ghost amrd-btn-sm" id="amrd-pg-prev" ${page <= 1 ? 'disabled' : ''}>‹ Prev</button>
+                <span class="amrd-pagination-info">Page ${page} of ${pageCount} (${total} total)</span>
+                <button class="amrd-btn amrd-btn-ghost amrd-btn-sm" id="amrd-pg-next" ${page >= pageCount ? 'disabled' : ''}>Next ›</button>
+            </div>`;
+        el.querySelector('#amrd-pg-prev').addEventListener('click', () => { if (page > 1) onChange(page - 1); });
+        el.querySelector('#amrd-pg-next').addEventListener('click', () => { if (page < pageCount) onChange(page + 1); });
+    }
+
+    /* ── CSV export ────────────────────────────────────────────────── */
+    function _csvField(v) {
+        const s = v === null || v === undefined ? '' : String(v);
+        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    }
+
+    // columns = [{ key, label }] — key may be a dotted path (e.g. 'tenant.name')
+    // resolved against each row; label is the CSV header text.
+    function exportCsv(filename, rows, columns) {
+        const get = (row, key) => key.split('.').reduce((v, k) => (v == null ? v : v[k]), row);
+        const lines = [
+            columns.map(c => _csvField(c.label)).join(','),
+            ...rows.map(row => columns.map(c => _csvField(get(row, c.key))).join(',')),
+        ];
+        // Leading BOM so Excel opens UTF-8 CSVs (₹, non-ASCII names, etc.) correctly.
+        const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    }
+
+    window.__amrd = {
+        login, logout, apiFetch, gqlFetch, getStaff, isLoggedIn, requireLogin, renderSidebar, isReadOnly,
+        paginate, renderPagination, exportCsv,
+    };
 })();

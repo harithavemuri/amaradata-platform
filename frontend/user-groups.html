@@ -21,24 +21,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     let editId     = null;
     let viewGroupId = null;
 
+    let _filtered = [];
+    let _page = 1;
+    const PAGE_SIZE = 20;
+    let _search = { q: '', status: '' };
+
+    const columns = [
+        { key: 'name',            label: 'Name' },
+        { key: 'description',     label: 'Description' },
+        { key: 'member_count',    label: 'Members' },
+        { key: 'tenant_assn_count', label: 'Tenant Assignments' },
+        { key: 'status_label',    label: 'Status' },
+    ];
+
     // ── load ─────────────────────────────────────────────────────────────────
-    async function loadAll() {
-        root.innerHTML = '<p style="color:#94a3b8;padding:20px">Loading…</p>';
-        try {
-            const [gRes, uRes, rRes, tRes] = await Promise.all([
-                window.__amrd.apiFetch('/api/admin/user-groups'),
-                window.__amrd.apiFetch('/api/admin/users'),
-                window.__amrd.apiFetch('/api/admin/roles'),
-                window.__amrd.apiFetch('/api/tenants'),
-            ]);
-            groups     = gRes.data  || [];
-            allUsers   = uRes.data  || [];
-            allRoles   = rRes.data  || [];
-            allTenants = tRes.data  || [];
-            render();
-        } catch (e) {
-            root.innerHTML = `<p style="color:#dc2626;padding:20px">Failed to load: ${e.message}</p>`;
-        }
+    async function fetchAll() {
+        const [gRes, uRes, rRes, tRes] = await Promise.all([
+            window.__amrd.apiFetch('/api/admin/user-groups'),
+            window.__amrd.apiFetch('/api/admin/users'),
+            window.__amrd.apiFetch('/api/admin/roles'),
+            window.__amrd.apiFetch('/api/tenants'),
+        ]);
+        groups     = gRes.data  || [];
+        allUsers   = uRes.data  || [];
+        allRoles   = rRes.data  || [];
+        allTenants = tRes.data  || [];
+    }
+
+    async function refresh() {
+        await fetchAll();
+        applySearch();
+        if (viewGroupId) memberPanel(true, viewGroupId);
     }
 
     // ── group modal ───────────────────────────────────────────────────────────
@@ -67,8 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
             groupModal(false);
-            await loadAll();
-            if (viewGroupId) memberPanel(true, viewGroupId);
+            await refresh();
         } catch (e) { errEl.textContent = e.message; }
     }
 
@@ -77,7 +89,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             await window.__amrd.apiFetch(`/api/admin/user-groups/${id}`, { method: 'DELETE' });
             if (viewGroupId == id) memberPanel(false);
-            loadAll();
+            await refresh();
         } catch (e) { alert(e.message); }
     }
 
@@ -109,7 +121,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const members    = g.members    || [];
         const tenantAssn = g.tenant_assignments || [];
         const nonMembers = allUsers.filter(u => !members.some(m => m.id == u.id) && u.is_active !== false);
-        const assignedTenantRolePairs = new Set(tenantAssn.map(a => `${a.tenant_id}:${a.role_id}`));
         const availTenants = allTenants;
 
         // Members section
@@ -181,16 +192,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             await window.__amrd.apiFetch(`/api/admin/user-groups/${viewGroupId}/members`, {
                 method: 'POST', body: JSON.stringify({ user_id: parseInt(userId) }),
             });
-            await loadAll();
-            memberPanel(true, viewGroupId);
+            await refresh();
         } catch (e) { alert(e.message); }
     }
 
     async function removeMember(groupId, userId) {
         try {
             await window.__amrd.apiFetch(`/api/admin/user-groups/${groupId}/members/${userId}`, { method: 'DELETE' });
-            await loadAll();
-            memberPanel(true, viewGroupId);
+            await refresh();
         } catch (e) { alert(e.message); }
     }
 
@@ -202,8 +211,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             await window.__amrd.apiFetch(`/api/admin/user-groups/${groupId}/tenants`, {
                 method: 'POST', body: JSON.stringify({ tenant_id: parseInt(tenantId), role_id: parseInt(roleId) }),
             });
-            await loadAll();
-            memberPanel(true, viewGroupId);
+            await refresh();
         } catch (e) { alert(e.message); }
     }
 
@@ -211,52 +219,52 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!confirm('Remove this tenant assignment?')) return;
         try {
             await window.__amrd.apiFetch(`/api/admin/user-groups/${groupId}/tenants/${gtId}`, { method: 'DELETE' });
-            await loadAll();
-            memberPanel(true, viewGroupId);
+            await refresh();
         } catch (e) { alert(e.message); }
     }
 
-    // ── main render ───────────────────────────────────────────────────────────
-    function render() {
+    // ── shell (built once) ──────────────────────────────────────────────────
+    function load() {
         root.innerHTML = `
+        <div class="amrd-search-bar">
+            <div class="amrd-search-field">
+                <label>Name / Description</label>
+                <input id="sf-q" type="text" placeholder="Search…">
+            </div>
+            <div class="amrd-search-field">
+                <label>Status</label>
+                <select id="sf-status">
+                    <option value="">All</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+            </div>
+            <div class="amrd-search-actions">
+                <button class="amrd-btn amrd-btn-primary amrd-btn-sm" id="btn-search">Search</button>
+                <button class="amrd-btn amrd-btn-ghost amrd-btn-sm" id="btn-reset">Reset</button>
+            </div>
+        </div>
+
         <div class="amrd-flex-row">
-            <!-- Groups list -->
+            <!-- Groups table -->
             <div style="flex:1;min-width:0">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-                    <span style="font-size:14px;color:#64748b">${groups.length} group${groups.length !== 1 ? 's' : ''}</span>
-                    <button class="amrd-btn amrd-btn-primary" onclick="openNewGroup()">+ New Group</button>
+                <div class="amrd-toolbar">
+                    <span id="groups-count" style="font-size:13px;color:#64748b"></span>
+                    <div style="display:flex;gap:8px">
+                        <button class="amrd-btn amrd-btn-ghost amrd-btn-sm" id="btn-export">Export CSV</button>
+                        <button class="amrd-btn amrd-btn-primary" onclick="openNewGroup()">+ New Group</button>
+                    </div>
                 </div>
 
-                ${groups.length === 0
-                    ? '<div class="amrd-card"><p style="color:#94a3b8;text-align:center">No groups yet.</p></div>'
-                    : groups.map(g => {
-                        const assns = g.tenant_assignments || [];
-                        return `
-                        <div class="amrd-card" style="cursor:pointer;transition:box-shadow .15s;margin-bottom:12px"
-                             onclick="viewMembers(${g.id})">
-                            <div style="display:flex;justify-content:space-between;align-items:flex-start">
-                                <div style="flex:1;min-width:0">
-                                    <div style="font-weight:700;font-size:14px;color:${g.is_active!==false?'#0f172a':'#94a3b8'};margin-bottom:3px">
-                                        ${g.name}
-                                        ${g.is_active===false ? '<span class="amrd-badge amrd-badge-cancelled" style="margin-left:6px">Inactive</span>' : ''}
-                                    </div>
-                                    <div style="font-size:12px;color:#64748b;margin-bottom:6px">${g.description || '—'}</div>
-                                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-                                        <span class="amrd-badge" style="background:#dbeafe;color:#1d4ed8">${g.member_count || 0} member${(g.member_count||0)!==1?'s':''}</span>
-                                        ${assns.length
-                                            ? assns.map(a => `<span style="font-size:11px;color:#64748b">${a.tenant_name}: ${roleBadge(a.role)}</span>`).join('')
-                                            : '<span style="font-size:11px;color:#94a3b8;font-style:italic">No tenant assignments</span>'
-                                        }
-                                    </div>
-                                </div>
-                                <div onclick="event.stopPropagation()" style="display:flex;gap:6px;flex-shrink:0;margin-left:10px">
-                                    <button class="amrd-btn amrd-btn-sm amrd-btn-ghost" onclick="openEditGroup(${g.id})">Edit</button>
-                                    <button class="amrd-btn amrd-btn-sm" style="background:#fee2e2;color:#dc2626" onclick="deleteGroup(${g.id})">Delete</button>
-                                </div>
-                            </div>
-                        </div>`;
-                    }).join('')
-                }
+                <div class="amrd-card" style="padding:0">
+                    <div class="amrd-table-wrap">
+                    <table class="amrd-table">
+                        <thead><tr><th>Name</th><th>Description</th><th>Members</th><th>Tenant Assignments</th><th>Status</th><th>Actions</th></tr></thead>
+                        <tbody id="groups-tbody"></tbody>
+                    </table>
+                    </div>
+                </div>
+                <div id="groups-pagination"></div>
             </div>
 
             <!-- Detail panel -->
@@ -303,10 +311,80 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.addTenantAssn     = addTenantAssn;
         window.removeTenantAssn  = removeTenantAssn;
 
-        if (viewGroupId) memberPanel(true, viewGroupId);
+        document.getElementById('btn-search').addEventListener('click', () => {
+            _search.q      = document.getElementById('sf-q').value;
+            _search.status = document.getElementById('sf-status').value;
+            applySearch();
+        });
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            _search = { q: '', status: '' };
+            document.getElementById('sf-q').value = '';
+            document.getElementById('sf-status').value = '';
+            applySearch();
+        });
+        document.getElementById('btn-export').addEventListener('click', exportGroups);
+        document.getElementById('sf-q').addEventListener('keydown', e => {
+            if (e.key === 'Enter') document.getElementById('btn-search').click();
+        });
     }
 
-    loadAll();
+    function applySearch() {
+        const q = _search.q.trim().toLowerCase();
+        _filtered = groups.filter(g => {
+            if (q) {
+                const hay = (g.name + ' ' + (g.description || '')).toLowerCase();
+                if (!hay.includes(q)) return false;
+            }
+            const active = g.is_active !== false;
+            if (_search.status === 'active'   && !active) return false;
+            if (_search.status === 'inactive' &&  active) return false;
+            return true;
+        }).map(g => ({
+            ...g,
+            member_count:      g.member_count || 0,
+            tenant_assn_count: (g.tenant_assignments || []).length,
+            status_label:      g.is_active !== false ? 'Active' : 'Inactive',
+        }));
+        _page = 1;
+        renderTable();
+    }
+
+    function renderTable() {
+        const pageRows = window.__amrd.paginate(_filtered, _page, PAGE_SIZE);
+        document.getElementById('groups-tbody').innerHTML = pageRows.length ? pageRows.map(g => {
+            const assns = g.tenant_assignments || [];
+            const assnSummary = assns.length
+                ? assns.map(a => `<span style="font-size:11px;color:#64748b;margin-right:6px">${a.tenant_name}: ${roleBadge(a.role)}</span>`).join('')
+                : '<span style="font-size:11px;color:#94a3b8;font-style:italic">None</span>';
+            return `
+            <tr style="cursor:pointer" onclick="viewMembers(${g.id})">
+                <td style="font-weight:600;color:${g.is_active!==false?'#0f172a':'#94a3b8'}">
+                    ${g.name}
+                </td>
+                <td style="color:#64748b">${g.description || '—'}</td>
+                <td><span class="amrd-badge" style="background:#dbeafe;color:#1d4ed8">${g.member_count}</span></td>
+                <td>${assnSummary}</td>
+                <td><span class="amrd-badge ${g.is_active!==false ? 'amrd-badge-active' : 'amrd-badge-cancelled'}">${g.status_label}</span></td>
+                <td onclick="event.stopPropagation()">
+                    <button class="amrd-btn amrd-btn-sm amrd-btn-ghost" onclick="openEditGroup(${g.id})">Edit</button>
+                    <button class="amrd-btn amrd-btn-sm" style="background:#fee2e2;color:#dc2626;margin-left:6px" onclick="deleteGroup(${g.id})">Delete</button>
+                </td>
+            </tr>`;
+        }).join('') : '<tr><td colspan="6" style="color:#94a3b8;text-align:center;padding:24px">No groups found</td></tr>';
+
+        document.getElementById('groups-count').textContent = `${_filtered.length} group${_filtered.length !== 1 ? 's' : ''}`;
+        window.__amrd.renderPagination(document.getElementById('groups-pagination'), {
+            page: _page, pageSize: PAGE_SIZE, total: _filtered.length,
+            onChange: (p) => { _page = p; renderTable(); },
+        });
+    }
+
+    function exportGroups() {
+        window.__amrd.exportCsv('user-groups.csv', _filtered, columns);
+    }
+
+    load();
+    await refresh();
 });
 </script>
 </body>

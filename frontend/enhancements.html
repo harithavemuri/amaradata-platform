@@ -14,9 +14,13 @@
     document.addEventListener('DOMContentLoaded', async () => {
         const root = window.__amrd.renderSidebar('Enhancements');
 
+        const PAGE_SIZE = 20;
         let _tenants   = [];
         let _myTenants = [];
-        let _filter    = { status: '', source: '', item_type: '', tenant_id: '' };
+        let _search    = { title: '', status: '', source: '', item_type: '', tenant_id: '' };
+        let _allRows   = [];
+        let _filtered  = [];
+        let _page      = 1;
 
         // ── helpers ──────────────────────────────────────────────────────────
         function badge(text, color) {
@@ -39,7 +43,54 @@
         }
 
         // ── load & render ────────────────────────────────────────────────────
-        async function load() {
+        function renderStats() {
+            const total    = _filtered.length;
+            const billable = _filtered.filter(r => r.is_billable).length;
+            const bugs     = _filtered.filter(r => r.item_type === 'bug').length;
+            const billed   = _filtered.filter(r => r.status === 'billed').length;
+            document.getElementById('enh-stats').innerHTML =
+                [['Total', total, '#6366f1'], ['Billable', billable, '#d97706'], ['Bugs (no charge)', bugs, '#dc2626'], ['Billed', billed, '#16a34a']]
+                    .map(([l,v,c]) => `<div class="amrd-card" style="padding:14px 18px;display:flex;align-items:center;gap:12px">
+                        <div style="width:10px;height:40px;border-radius:4px;background:${c}"></div>
+                        <div><div style="font-size:22px;font-weight:700">${v}</div><div style="font-size:12px;color:#94a3b8">${l}</div></div>
+                    </div>`).join('');
+        }
+
+        function renderTable() {
+            const pageRows = window.__amrd.paginate(_filtered, _page, PAGE_SIZE);
+            document.getElementById('enh-tbody').innerHTML = pageRows.map(e => `<tr>
+                <td>${sourceBadge(e.source)}</td>
+                <td style="color:#94a3b8;font-size:12px">${e.issue_id ? '#'+e.issue_id : '—'}</td>
+                <td style="max-width:280px">
+                    <strong>${e.title}</strong>
+                    ${e.site_name ? `<br><span style="color:#94a3b8;font-size:11px">${e.site_name}</span>` : ''}
+                    ${e.description && !e.site_name ? `<br><span style="color:#94a3b8;font-size:11px">${e.description.slice(0,70)}${e.description.length>70?'…':''}</span>` : ''}
+                </td>
+                <td>${e.tenant_name}</td>
+                <td>${typeBadge(e.item_type)}</td>
+                <td>${billBadge(e.is_billable)}</td>
+                <td style="font-variant-numeric:tabular-nums">${billableAmount(e)}</td>
+                <td>${statusBadge(e.status)}</td>
+                <td><button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick='openForm(${JSON.stringify(e)})'>${window.__amrd.isReadOnly() ? 'View' : 'Edit'}</button></td>
+            </tr>`).join('') || `<tr><td colspan="9" style="color:#94a3b8;text-align:center;padding:24px">No records${_allRows.length ? ' match your search' : ''}</td></tr>`;
+            document.getElementById('enh-count').textContent = `${_filtered.length} record(s)`;
+            window.__amrd.renderPagination(document.getElementById('enh-pagination'), {
+                page: _page, pageSize: PAGE_SIZE, total: _filtered.length,
+                onChange: (p) => { _page = p; renderTable(); },
+            });
+        }
+
+        // title isn't supported server-side by the GraphQL resolver — applied
+        // client-side on top of the status/source/item_type/tenant_id server fetch.
+        function applyClientFilter() {
+            const title = _search.title.trim().toLowerCase();
+            _filtered = _allRows.filter(e => !title || e.title.toLowerCase().includes(title));
+            _page = 1;
+            renderStats();
+            renderTable();
+        }
+
+        async function runSearch() {
             const gql = await window.__amrd.gqlFetch(
                 `query($status: String, $source: String, $item_type: String, $tenant_id: ID) {
                     enhancements(status: $status, source: $source, item_type: $item_type, tenant_id: $tenant_id) {
@@ -49,45 +100,84 @@
                         source issue_id site_name fixed item_type is_billable report_date
                     }
                 }`,
-                { status: _filter.status || null, source: _filter.source || null, item_type: _filter.item_type || null, tenant_id: _filter.tenant_id || null }
+                { status: _search.status || null, source: _search.source || null, item_type: _search.item_type || null, tenant_id: _search.tenant_id || null }
             );
-            const rows = gql?.enhancements || [];
-            _tenants   = _myTenants;
+            _allRows = gql?.enhancements || [];
+            applyClientFilter();
+        }
 
-            const total      = rows.length;
-            const billable   = rows.filter(r => r.is_billable).length;
-            const bugs       = rows.filter(r => r.item_type === 'bug').length;
-            const billed     = rows.filter(r => r.status === 'billed').length;
+        function resetSearch() {
+            _search = { title: '', status: '', source: '', item_type: '', tenant_id: '' };
+            document.getElementById('sf-title').value = '';
+            document.getElementById('sf-status').value = '';
+            document.getElementById('sf-source').value = '';
+            document.getElementById('sf-type').value = '';
+            document.getElementById('sf-tenant').value = '';
+            runSearch();
+        }
+
+        function exportEnhancements() {
+            window.__amrd.exportCsv('enhancements.csv', _filtered, [
+                { key: 'source',      label: 'Source' },
+                { key: 'issue_id',    label: 'Issue #' },
+                { key: 'title',       label: 'Title' },
+                { key: 'tenant_name', label: 'Tenant' },
+                { key: 'item_type',   label: 'Type' },
+                { key: 'is_billable', label: 'Billable' },
+                { key: 'status',      label: 'Status' },
+                { key: 'delivered_at', label: 'Delivered' },
+            ]);
+        }
+
+        async function load() {
+            _tenants = _myTenants;
 
             root.innerHTML = `
-                <!-- stats -->
-                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
-                    ${[['Total', total, '#6366f1'], ['Billable', billable, '#d97706'], ['Bugs (no charge)', bugs, '#dc2626'], ['Billed', billed, '#16a34a']]
-                        .map(([l,v,c]) => `<div class="amrd-card" style="padding:14px 18px;display:flex;align-items:center;gap:12px">
-                            <div style="width:10px;height:40px;border-radius:4px;background:${c}"></div>
-                            <div><div style="font-size:22px;font-weight:700">${v}</div><div style="font-size:12px;color:#94a3b8">${l}</div></div>
-                        </div>`).join('')}
+                <div id="enh-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px"></div>
+
+                <div class="amrd-card">
+                    <div class="amrd-search-bar">
+                        <div class="amrd-search-field"><label>Title</label><input id="sf-title" placeholder="Search by title…"></div>
+                        <div class="amrd-search-field">
+                            <label>Status</label>
+                            <select id="sf-status">
+                                ${[['','All'],['scoped','Scoped'],['in_progress','In Progress'],['delivered','Delivered'],['billed','Billed'],['cancelled','Cancelled']]
+                                    .map(([v,l]) => `<option value="${v}">${l}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="amrd-search-field">
+                            <label>Source</label>
+                            <select id="sf-source">
+                                ${[['','All Sources'],['manual','Manual'],['csv','From CSV']].map(([v,l]) => `<option value="${v}">${l}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="amrd-search-field">
+                            <label>Type</label>
+                            <select id="sf-type">
+                                ${[['','All Types'],['enhancement','Enhancements'],['bug','Bugs']].map(([v,l]) => `<option value="${v}">${l}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="amrd-search-field">
+                            <label>Tenant</label>
+                            <select id="sf-tenant">
+                                <option value="">All Tenants</option>
+                                ${_myTenants.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="amrd-search-actions">
+                            <button class="amrd-btn amrd-btn-primary" id="btn-search">Search</button>
+                            <button class="amrd-btn amrd-btn-ghost" id="btn-reset">Reset</button>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- filter bar -->
-                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
-                    <div style="display:flex;gap:4px;flex-wrap:wrap">
-                        ${[['','All'],['scoped','Scoped'],['in_progress','In Progress'],['delivered','Delivered'],['billed','Billed'],['cancelled','Cancelled']]
-                            .map(([v,l]) => `<button class="amrd-btn amrd-btn-${_filter.status===v?'primary':'ghost'} amrd-btn-sm" onclick="setFilter('status','${v}')">${l}</button>`).join('')}
-                        <span style="width:1px;background:#e2e8f0;margin:0 4px;align-self:stretch"></span>
-                        ${[['','All Sources'],['manual','Manual'],['csv','From CSV']]
-                            .map(([v,l]) => `<button class="amrd-btn amrd-btn-${_filter.source===v?'primary':'ghost'} amrd-btn-sm" onclick="setFilter('source','${v}')">${l}</button>`).join('')}
-                        <span style="width:1px;background:#e2e8f0;margin:0 4px;align-self:stretch"></span>
-                        ${[['','All Types'],['enhancement','Enhancements'],['bug','Bugs']]
-                            .map(([v,l]) => `<button class="amrd-btn amrd-btn-${_filter.item_type===v?'primary':'ghost'} amrd-btn-sm" onclick="setFilter('item_type','${v}')">${l}</button>`).join('')}
+                <div class="amrd-toolbar">
+                    <span id="enh-count" style="color:#64748b;font-size:13px"></span>
+                    <div style="display:flex;gap:8px">
+                        <button class="amrd-btn amrd-btn-ghost" id="btn-export">⬇ Export CSV</button>
+                        ${window.__amrd.isReadOnly() ? '' : '<button class="amrd-btn amrd-btn-ghost" onclick="toggleImport()">↑ Upload CSV</button>'}
+                        ${window.__amrd.isReadOnly() ? '' : '<button class="amrd-btn amrd-btn-primary" onclick="openForm(null)">+ Log Work</button>'}
                     </div>
-                    ${_myTenants.length ? `<select onchange="setFilter('tenant_id',this.value)" style="padding:4px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;background:#fff">
-                        <option value="">All Tenants</option>
-                        ${_myTenants.map(t => `<option value="${t.id}"${_filter.tenant_id==t.id?' selected':''}>${t.name}</option>`).join('')}
-                    </select>` : ''}
-                    <div style="flex:1"></div>
-                    ${window.__amrd.isReadOnly() ? '' : '<button class="amrd-btn amrd-btn-ghost" onclick="toggleImport()">↑ Upload CSV</button>'}
-                    ${window.__amrd.isReadOnly() ? '' : '<button class="amrd-btn amrd-btn-primary" onclick="openForm(null)">+ Log Work</button>'}
                 </div>
 
                 <!-- csv import panel -->
@@ -126,27 +216,28 @@
                             <th>Source</th><th>Issue #</th><th>Title</th><th>Tenant</th>
                             <th>Type</th><th>Billable</th><th>Amount</th><th>Status</th><th></th>
                         </tr></thead>
-                        <tbody>
-                            ${rows.map(e => `<tr>
-                                <td>${sourceBadge(e.source)}</td>
-                                <td style="color:#94a3b8;font-size:12px">${e.issue_id ? '#'+e.issue_id : '—'}</td>
-                                <td style="max-width:280px">
-                                    <strong>${e.title}</strong>
-                                    ${e.site_name ? `<br><span style="color:#94a3b8;font-size:11px">${e.site_name}</span>` : ''}
-                                    ${e.description && !e.site_name ? `<br><span style="color:#94a3b8;font-size:11px">${e.description.slice(0,70)}${e.description.length>70?'…':''}</span>` : ''}
-                                </td>
-                                <td>${e.tenant_name}</td>
-                                <td>${typeBadge(e.item_type)}</td>
-                                <td>${billBadge(e.is_billable)}</td>
-                                <td style="font-variant-numeric:tabular-nums">${billableAmount(e)}</td>
-                                <td>${statusBadge(e.status)}</td>
-                                <td><button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick='openForm(${JSON.stringify(e)})'>${window.__amrd.isReadOnly() ? 'View' : 'Edit'}</button></td>
-                            </tr>`).join('') || '<tr><td colspan="9" style="color:#94a3b8;text-align:center;padding:24px">No records</td></tr>'}
-                        </tbody>
+                        <tbody id="enh-tbody"></tbody>
                     </table>
+                    <div id="enh-pagination"></div>
                 </div>
 
                 <div id="form-slot"></div>`;
+
+            document.getElementById('btn-search').addEventListener('click', () => {
+                _search = {
+                    title:     document.getElementById('sf-title').value,
+                    status:    document.getElementById('sf-status').value,
+                    source:    document.getElementById('sf-source').value,
+                    item_type: document.getElementById('sf-type').value,
+                    tenant_id: document.getElementById('sf-tenant').value,
+                };
+                runSearch();
+            });
+            document.getElementById('btn-reset').addEventListener('click', resetSearch);
+            document.getElementById('btn-export').addEventListener('click', exportEnhancements);
+            document.getElementById('sf-title').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btn-search').click(); });
+
+            await runSearch();
         }
 
         // ── form ─────────────────────────────────────────────────────────────
@@ -223,7 +314,7 @@
                     await window.__amrd.apiFetch('/api/enhancements', { method: 'POST', body: JSON.stringify(body) });
                 }
                 document.getElementById('form-slot').innerHTML = '';
-                await load();
+                await runSearch();
             } catch (e) {
                 document.getElementById('save-err').textContent = e.message;
             }
@@ -305,19 +396,10 @@
                 + (allErrors.length ? `. Errors: ${allErrors.slice(0,3).join('; ')}` : '');
             resultEl.style.color = summaryColor;
             resultEl.textContent = summaryText;
-            await load();
-
-            // load() rebuilds the whole panel via root.innerHTML — including a fresh,
-            // empty #imp-result and #import-panel reset to hidden — which would wipe
-            // the message set above before anyone could see it. Re-apply it to the
-            // freshly rendered nodes and keep the panel open.
-            const panel = document.getElementById('import-panel');
-            if (panel) panel.style.display = 'block';
-            const freshResultEl = document.getElementById('imp-result');
-            if (freshResultEl) {
-                freshResultEl.style.color = summaryColor;
-                freshResultEl.textContent = summaryText;
-            }
+            // runSearch() only refreshes the stats/table now (unlike the old
+            // load(), which rebuilt the whole page including this panel) — the
+            // message set above and the panel's open state are untouched by it.
+            await runSearch();
         }
 
         function splitCsvLine(line) {
@@ -337,8 +419,6 @@
         const tr = await window.__amrd.apiFetch('/api/tenants/mine');
         _myTenants = tr.data || [];
 
-        // ── filter ───────────────────────────────────────────────────────────
-        window.setFilter    = (key, val) => { _filter[key] = val; load(); };
         window.openForm     = openForm;
         window.save         = save;
         window.toggleImport = toggleImport;

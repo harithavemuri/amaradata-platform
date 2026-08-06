@@ -118,24 +118,94 @@ test.describe('Enhancements — filters', () => {
         bugId = enhId = tenantId = null;
     });
 
-    test('"Bugs" filter shows the bug and hides the enhancement', async ({ page }) => {
-        await page.click('button:has-text("Bugs")');
+    test('"Bugs" type search shows the bug and hides the enhancement', async ({ page }) => {
+        await page.selectOption('#sf-type', 'bug');
+        await page.click('#btn-search');
         await expect(page.locator(`td:has-text("${bugTitle}")`)).toBeVisible();
         await expect(page.locator(`td:has-text("${enhTitle}")`)).not.toBeVisible();
     });
 
-    test('"Enhancements" filter shows the enhancement and hides the bug', async ({ page }) => {
-        await page.click('button:has-text("Enhancements")');
+    test('"Enhancements" type search shows the enhancement and hides the bug', async ({ page }) => {
+        await page.selectOption('#sf-type', 'enhancement');
+        await page.click('#btn-search');
         await expect(page.locator(`td:has-text("${enhTitle}")`)).toBeVisible();
         await expect(page.locator(`td:has-text("${bugTitle}")`)).not.toBeVisible();
     });
 
-    test('"All Types" filter shows both again', async ({ page }) => {
-        await page.click('button:has-text("Bugs")');
+    test('resetting the search shows both again', async ({ page }) => {
+        await page.selectOption('#sf-type', 'bug');
+        await page.click('#btn-search');
         await expect(page.locator(`td:has-text("${enhTitle}")`)).not.toBeVisible();
-        await page.click('button:has-text("All Types")');
+        await page.click('#btn-reset');
         await expect(page.locator(`td:has-text("${bugTitle}")`)).toBeVisible();
         await expect(page.locator(`td:has-text("${enhTitle}")`)).toBeVisible();
+    });
+
+    test('Title search filters to a matching title', async ({ page }) => {
+        await page.fill('#sf-title', bugTitle);
+        await page.click('#btn-search');
+        await expect(page.locator(`td:has-text("${bugTitle}")`)).toBeVisible();
+        await expect(page.locator(`td:has-text("${enhTitle}")`)).not.toBeVisible();
+    });
+
+    test('CSV export button triggers a download', async ({ page }) => {
+        const [download] = await Promise.all([
+            page.waitForEvent('download'),
+            page.click('#btn-export'),
+        ]);
+        expect(download.suggestedFilename()).toBe('enhancements.csv');
+    });
+});
+
+// ── pagination coverage ─────────────────────────────────────────────────────
+// Separate top-level describe (own site_admin login + own scratch tenant), same
+// reasoning as "Enhancements — filters". Creates 21 records via the API (bulk
+// UI creation would be far slower) purely to exercise window.__amrd.paginate()/
+// renderPagination() at the 20-per-page boundary — every other page's data
+// volume is too low to ever hit page 2 in normal test runs.
+test.describe('Enhancements — pagination', () => {
+    test.describe.configure({ timeout: 60_000 });
+
+    let tenantId = null;
+    let createdIds = [];
+
+    test.beforeEach(async ({ page }) => {
+        await loginAs(page, SEED_USERS.site_admin);
+        const tenant = await apiPost(page, '/api/tenants', { name: testTag('PagerTenant'), slug: testSlug('tenant') });
+        tenantId = tenant.id;
+
+        const tag = testTag('pager-item');
+        // Parallel, not sequential — 21 awaited round-trips in series was slow
+        // enough to blow the default 30s test timeout under full-suite load.
+        const created = await Promise.all(
+            Array.from({ length: 21 }, (_, i) =>
+                apiPost(page, '/api/enhancements', { tenant_id: tenantId, title: `${tag} ${i}` }))
+        );
+        createdIds = created.map(item => item.id);
+
+        await page.goto('/enhancements');
+        await page.waitForSelector('.amrd-table', { timeout: 10_000 });
+    });
+
+    test.afterEach(async ({ page }) => {
+        await Promise.all(createdIds.map(id => apiDelete(page, `/api/enhancements/${id}`)));
+        createdIds = [];
+        tenantId = null;
+    });
+
+    test('21 results split across two pages, and Next reveals the 21st row', async ({ page }) => {
+        await page.selectOption('#sf-tenant', String(tenantId));
+        await page.click('#btn-search');
+
+        await expect(page.locator('.amrd-pagination-info')).toContainText('Page 1 of 2 (21 total)');
+        const rowsPage1 = await page.locator('#enh-tbody tr').count();
+        expect(rowsPage1).toBe(20);
+
+        await page.click('#amrd-pg-next');
+
+        await expect(page.locator('.amrd-pagination-info')).toContainText('Page 2 of 2 (21 total)');
+        const rowsPage2 = await page.locator('#enh-tbody tr').count();
+        expect(rowsPage2).toBe(1);
     });
 });
 

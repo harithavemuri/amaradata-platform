@@ -146,9 +146,9 @@ test.describe('Users — edit/save coverage (site_admin only)', () => {
     });
 
     // ── search/read coverage ─────────────────────────────────────────────────
-    // users.html's search box (#search) is a client-side filter over rows
-    // already rendered in the DOM — no API call to verify, just that typing a
-    // query narrows the visible <tr>s correctly.
+    // users.html's search fields (#sf-q/#sf-status/#sf-group) are a client-side
+    // filter over the already-fetched user list — no API call to verify, just
+    // that clicking Search narrows the visible <tr>s correctly.
     test.describe('search', () => {
         let idA = null;
         let idB = null;
@@ -177,20 +177,38 @@ test.describe('Users — edit/save coverage (site_admin only)', () => {
             await expect(page.locator(`tr:has-text("${nameA}")`)).toBeVisible();
             await expect(page.locator(`tr:has-text("${nameB}")`)).toBeVisible();
 
-            await page.fill('#search', 'Findme');
+            await page.fill('#sf-q', 'Findme');
+            await page.click('#btn-search');
 
             await expect(page.locator(`tr:has-text("${nameA}")`)).toBeVisible();
             await expect(page.locator(`tr:has-text("${nameB}")`)).not.toBeVisible();
         });
 
-        test('clearing the search shows both users again', async ({ page }) => {
-            await page.fill('#search', 'Findme');
+        test('resetting the search shows both users again', async ({ page }) => {
+            await page.fill('#sf-q', 'Findme');
+            await page.click('#btn-search');
             await expect(page.locator(`tr:has-text("${nameB}")`)).not.toBeVisible();
 
-            await page.fill('#search', '');
+            await page.click('#btn-reset');
 
             await expect(page.locator(`tr:has-text("${nameA}")`)).toBeVisible();
             await expect(page.locator(`tr:has-text("${nameB}")`)).toBeVisible();
+        });
+
+        test('"Inactive" status search hides an active user', async ({ page }) => {
+            await page.selectOption('#sf-status', 'inactive');
+            await page.click('#btn-search');
+
+            await expect(page.locator(`tr:has-text("${nameA}")`)).not.toBeVisible();
+            await expect(page.locator(`tr:has-text("${nameB}")`)).not.toBeVisible();
+        });
+
+        test('CSV export button triggers a download', async ({ page }) => {
+            const [download] = await Promise.all([
+                page.waitForEvent('download'),
+                page.click('#btn-export'),
+            ]);
+            expect(download.suggestedFilename()).toBe('users.csv');
         });
     });
 });

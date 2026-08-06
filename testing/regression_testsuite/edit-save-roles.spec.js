@@ -65,4 +65,77 @@ test.describe('Roles — edit/save coverage (site_admin only)', () => {
         expect(updated.label).toBe(newLabel);
         expect(updated.description).toBe('updated description');
     });
+
+    // ── search/export coverage ───────────────────────────────────────────────
+    test.describe('search + export', () => {
+        let idA = null;
+        let labelA;
+
+        test.beforeEach(async ({ page }) => {
+            labelA = testTag('Findme');
+        });
+
+        test.afterEach(async ({ page }) => {
+            if (idA) { await apiDelete(page, `/api/admin/roles/${idA}`); idA = null; }
+        });
+
+        test('Name/label search filters to a matching role', async ({ page }) => {
+            await page.click('button:has-text("+ New Role")');
+            await page.waitForSelector('#rmName');
+            await page.fill('#rmName', randomRoleName());
+            await page.fill('#rmLabel', labelA);
+            await page.click('button:has-text("Save")');
+            await expect(page.locator('#rmName')).not.toBeVisible({ timeout: 8_000 });
+
+            const roles = await apiGet(page, '/api/admin/roles');
+            idA = roles.find(r => r.label === labelA).id;
+
+            await page.fill('#sf-q', 'Findme');
+            await page.click('#btn-search');
+            await expect(page.locator(`td:has-text("${labelA}")`)).toBeVisible();
+        });
+
+        test('"System" type search hides a newly created custom role', async ({ page }) => {
+            await page.click('button:has-text("+ New Role")');
+            await page.waitForSelector('#rmName');
+            await page.fill('#rmName', randomRoleName());
+            await page.fill('#rmLabel', labelA);
+            await page.click('button:has-text("Save")');
+            await expect(page.locator('#rmName')).not.toBeVisible({ timeout: 8_000 });
+
+            const roles = await apiGet(page, '/api/admin/roles');
+            idA = roles.find(r => r.label === labelA).id;
+
+            await page.selectOption('#sf-type', 'system');
+            await page.click('#btn-search');
+            await expect(page.locator(`td:has-text("${labelA}")`)).not.toBeVisible();
+        });
+
+        test('resetting the search shows the role again', async ({ page }) => {
+            await page.click('button:has-text("+ New Role")');
+            await page.waitForSelector('#rmName');
+            await page.fill('#rmName', randomRoleName());
+            await page.fill('#rmLabel', labelA);
+            await page.click('button:has-text("Save")');
+            await expect(page.locator('#rmName')).not.toBeVisible({ timeout: 8_000 });
+
+            const roles = await apiGet(page, '/api/admin/roles');
+            idA = roles.find(r => r.label === labelA).id;
+
+            await page.selectOption('#sf-type', 'system');
+            await page.click('#btn-search');
+            await expect(page.locator(`td:has-text("${labelA}")`)).not.toBeVisible();
+
+            await page.click('#btn-reset');
+            await expect(page.locator(`td:has-text("${labelA}")`)).toBeVisible();
+        });
+
+        test('CSV export button triggers a download', async ({ page }) => {
+            const [download] = await Promise.all([
+                page.waitForEvent('download'),
+                page.click('#btn-export'),
+            ]);
+            expect(download.suggestedFilename()).toBe('roles.csv');
+        });
+    });
 });

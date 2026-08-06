@@ -21,36 +21,126 @@
             return isNaN(date.getTime()) ? '—' : date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
         };
 
+        const PAGE_SIZE = 20;
+        let _allTenants = [];
+        let _filtered   = [];
+        let _page       = 1;
+        let _search     = { name: '', email: '', status: '' };
+
+        function applySearch() {
+            const name  = _search.name.trim().toLowerCase();
+            const email = _search.email.trim().toLowerCase();
+            _filtered = _allTenants.filter(t =>
+                (!name  || t.name.toLowerCase().includes(name)) &&
+                (!email || (t.contact_email || '').toLowerCase().includes(email)) &&
+                (!_search.status || t.status === _search.status)
+            );
+            _page = 1;
+            renderTable();
+        }
+
+        function resetSearch() {
+            _search = { name: '', email: '', status: '' };
+            document.getElementById('sf-name').value = '';
+            document.getElementById('sf-email').value = '';
+            document.getElementById('sf-status').value = '';
+            applySearch();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tenants-tbody');
+            const pageRows = window.__amrd.paginate(_filtered, _page, PAGE_SIZE);
+            tbody.innerHTML = pageRows.map(t => `
+                <tr>
+                    <td><strong>${t.name}</strong><br><span style="color:#94a3b8;font-size:11px">${t.slug}</span></td>
+                    <td>${t.contact_name || '—'}<br><span style="color:#64748b;font-size:11px">${t.contact_email || ''}</span></td>
+                    <td>${t.contact_phone || '—'}</td>
+                    <td><span class="amrd-badge amrd-badge-${t.status}">${t.status}</span></td>
+                    <td>${fmtDate(t.onboarded_at)}</td>
+                    <td>${t.site_url ? `<a href="${t.site_url}" target="_blank" rel="noopener" style="color:#008cbb;font-size:12px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:4px">Open ↗</a>` : '<span style="color:#94a3b8">—</span>'}</td>
+                    <td><button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick='openForm(${JSON.stringify(t)})'>${window.__amrd.isReadOnly() ? 'View' : 'Edit'}</button></td>
+                </tr>`).join('') || `<tr><td colspan="7" style="color:#94a3b8;text-align:center;padding:24px">No tenants${_allTenants.length ? ' match your search' : ' yet'}</td></tr>`;
+            document.getElementById('tenants-count').textContent = `${_filtered.length} tenant(s)`;
+            window.__amrd.renderPagination(document.getElementById('tenants-pagination'), {
+                page: _page, pageSize: PAGE_SIZE, total: _filtered.length,
+                onChange: (p) => { _page = p; renderTable(); },
+            });
+        }
+
+        function exportTenants() {
+            window.__amrd.exportCsv('tenants.csv', _filtered, [
+                { key: 'name',           label: 'Name' },
+                { key: 'slug',           label: 'Slug' },
+                { key: 'contact_name',   label: 'Contact Name' },
+                { key: 'contact_email',  label: 'Contact Email' },
+                { key: 'contact_phone',  label: 'Phone' },
+                { key: 'status',         label: 'Status' },
+                { key: 'onboarded_at',   label: 'Onboarded' },
+                { key: 'site_url',       label: 'Site URL' },
+            ]);
+        }
+
         async function load() {
             const gql = await window.__amrd.gqlFetch(
                 `{ tenants { id name slug contact_name contact_email contact_phone status onboarded_at site_url } }`
             );
-            const tenants = gql?.tenants || [];
+            _allTenants = gql?.tenants || [];
+            _filtered   = _allTenants;
+
             root.innerHTML = `
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-                    <span style="color:#64748b;font-size:13px">${tenants.length} tenant(s)</span>
-                    ${window.__amrd.isReadOnly() ? '' : '<button class="amrd-btn amrd-btn-primary" onclick="openForm()">+ Add Tenant</button>'}
+                <div class="amrd-card">
+                    <div class="amrd-search-bar">
+                        <div class="amrd-search-field"><label>Name</label><input id="sf-name" placeholder="Search by name…"></div>
+                        <div class="amrd-search-field"><label>Contact Email</label><input id="sf-email" placeholder="Search by email…"></div>
+                        <div class="amrd-search-field">
+                            <label>Status</label>
+                            <select id="sf-status">
+                                <option value="">All</option>
+                                <option value="active">active</option>
+                                <option value="suspended">suspended</option>
+                                <option value="churned">churned</option>
+                            </select>
+                        </div>
+                        <div class="amrd-search-actions">
+                            <button class="amrd-btn amrd-btn-primary" id="btn-search">Search</button>
+                            <button class="amrd-btn amrd-btn-ghost" id="btn-reset">Reset</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="amrd-toolbar">
+                    <span id="tenants-count" style="color:#64748b;font-size:13px"></span>
+                    <div style="display:flex;gap:8px">
+                        <button class="amrd-btn amrd-btn-ghost" id="btn-export">⬇ Export CSV</button>
+                        ${window.__amrd.isReadOnly() ? '' : '<button class="amrd-btn amrd-btn-primary" onclick="openForm()">+ Add Tenant</button>'}
+                    </div>
                 </div>
                 <div class="amrd-card" style="padding:0">
                     <div class="amrd-table-wrap">
                     <table class="amrd-table">
                         <thead><tr><th>Name</th><th>Contact</th><th>Phone</th><th>Status</th><th>Onboarded</th><th>Site</th><th></th></tr></thead>
-                        <tbody>
-                            ${tenants.map(t => `
-                            <tr>
-                                <td><strong>${t.name}</strong><br><span style="color:#94a3b8;font-size:11px">${t.slug}</span></td>
-                                <td>${t.contact_name || '—'}<br><span style="color:#64748b;font-size:11px">${t.contact_email || ''}</span></td>
-                                <td>${t.contact_phone || '—'}</td>
-                                <td><span class="amrd-badge amrd-badge-${t.status}">${t.status}</span></td>
-                                <td>${fmtDate(t.onboarded_at)}</td>
-                                <td>${t.site_url ? `<a href="${t.site_url}" target="_blank" rel="noopener" style="color:#008cbb;font-size:12px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:4px">Open ↗</a>` : '<span style="color:#94a3b8">—</span>'}</td>
-                                <td><button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick='openForm(${JSON.stringify(t)})'>${window.__amrd.isReadOnly() ? 'View' : 'Edit'}</button></td>
-                            </tr>`).join('') || '<tr><td colspan="7" style="color:#94a3b8;text-align:center;padding:24px">No tenants yet</td></tr>'}
-                        </tbody>
+                        <tbody id="tenants-tbody"></tbody>
                     </table>
                     </div>
+                    <div id="tenants-pagination"></div>
                 </div>
                 <div id="form-slot"></div>`;
+
+            document.getElementById('btn-search').addEventListener('click', () => {
+                _search = {
+                    name:   document.getElementById('sf-name').value,
+                    email:  document.getElementById('sf-email').value,
+                    status: document.getElementById('sf-status').value,
+                };
+                applySearch();
+            });
+            document.getElementById('btn-reset').addEventListener('click', resetSearch);
+            document.getElementById('btn-export').addEventListener('click', exportTenants);
+            // Enter key in a search field triggers Search, matching the button.
+            ['sf-name', 'sf-email'].forEach(id =>
+                document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btn-search').click(); })
+            );
+
+            renderTable();
         }
 
         function openForm(t = null) {

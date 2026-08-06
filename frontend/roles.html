@@ -18,15 +18,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     let editId = null;
     let viewRoleId = null;
 
-    async function loadRoles() {
-        root.innerHTML = '<p style="color:#94a3b8;padding:20px">Loading…</p>';
-        try {
-            const res = await window.__amrd.apiFetch('/api/admin/roles');
-            roles = res.data || [];
-            render();
-        } catch (e) {
-            root.innerHTML = `<p style="color:#dc2626;padding:20px">Failed to load roles: ${e.message}</p>`;
-        }
+    let _filtered = [];
+    let _page = 1;
+    const PAGE_SIZE = 20;
+    let _search = { q: '', type: '' };
+
+    const columns = [
+        { key: 'name',        label: 'Name' },
+        { key: 'label',       label: 'Label' },
+        { key: 'description', label: 'Description' },
+        { key: 'user_count',  label: 'Direct Users' },
+        { key: 'group_count', label: 'Groups' },
+        { key: 'type_label',  label: 'Type' },
+    ];
+
+    async function fetchAll() {
+        const res = await window.__amrd.apiFetch('/api/admin/roles');
+        roles = res.data || [];
+    }
+
+    async function refresh() {
+        await fetchAll();
+        applySearch();
+        if (viewRoleId) usersPanel(true, viewRoleId);
     }
 
     // ── role modal ────────────────────────────────────────────────────────────
@@ -59,8 +73,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
             roleModal(false);
-            await loadRoles();
-            if (viewRoleId) usersPanel(true, viewRoleId);
+            await refresh();
         } catch (e) { errEl.textContent = e.message; }
     }
 
@@ -81,7 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             await window.__amrd.apiFetch(`/api/admin/roles/${id}`, { method:'DELETE' });
             if (viewRoleId == id) usersPanel(false);
-            loadRoles();
+            await refresh();
         } catch (e) { alert(e.message); }
     }
 
@@ -132,15 +145,37 @@ document.addEventListener('DOMContentLoaded', async () => {
             ${groupItems}`;
     }
 
-    // ── render ────────────────────────────────────────────────────────────────
-    function render() {
+    // ── shell (built once) ──────────────────────────────────────────────────
+    function load() {
         root.innerHTML = `
+        <div class="amrd-search-bar">
+            <div class="amrd-search-field">
+                <label>Name / Label / Description</label>
+                <input id="sf-q" type="text" placeholder="Search…">
+            </div>
+            <div class="amrd-search-field">
+                <label>Type</label>
+                <select id="sf-type">
+                    <option value="">All</option>
+                    <option value="system">System</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </div>
+            <div class="amrd-search-actions">
+                <button class="amrd-btn amrd-btn-primary amrd-btn-sm" id="btn-search">Search</button>
+                <button class="amrd-btn amrd-btn-ghost amrd-btn-sm" id="btn-reset">Reset</button>
+            </div>
+        </div>
+
         <div class="amrd-flex-row">
             <!-- Roles list -->
             <div style="flex:1;min-width:0">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-                    <span style="font-size:14px;color:#64748b">${roles.length} role${roles.length !== 1?'s':''}</span>
-                    <button class="amrd-btn amrd-btn-primary" onclick="openNewRole()">+ New Role</button>
+                <div class="amrd-toolbar">
+                    <span id="roles-count" style="font-size:13px;color:#64748b"></span>
+                    <div style="display:flex;gap:8px">
+                        <button class="amrd-btn amrd-btn-ghost amrd-btn-sm" id="btn-export">Export CSV</button>
+                        <button class="amrd-btn amrd-btn-primary" onclick="openNewRole()">+ New Role</button>
+                    </div>
                 </div>
 
                 <div class="amrd-card" style="padding:0">
@@ -149,41 +184,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <thead><tr>
                             <th>Name</th><th>Label</th><th>Description</th><th>Direct Users</th><th>Groups</th><th>Type</th><th>Actions</th>
                         </tr></thead>
-                        <tbody>
-                            ${roles.map(r => `
-                            <tr style="cursor:pointer" onclick="viewUsers(${r.id})">
-                                <td><code style="background:#f1f5f9;padding:2px 7px;border-radius:4px;font-size:12px">${r.name}</code></td>
-                                <td style="font-weight:600">${r.label}</td>
-                                <td style="color:#64748b;max-width:200px">${r.description || '—'}</td>
-                                <td>
-                                    <span class="amrd-badge" style="background:#dbeafe;color:#1d4ed8;cursor:pointer"
-                                          onclick="event.stopPropagation();viewUsers(${r.id})">
-                                        ${r.user_count || 0} user${(r.user_count||0)!==1?'s':''}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="amrd-badge" style="background:#f0fdf4;color:#15803d;cursor:pointer"
-                                          onclick="event.stopPropagation();viewUsers(${r.id})">
-                                        ${(r.groups||[]).length} group${(r.groups||[]).length!==1?'s':''}
-                                    </span>
-                                </td>
-                                <td>
-                                    ${r.is_system
-                                        ? '<span class="amrd-badge" style="background:#fef3c7;color:#d97706">System</span>'
-                                        : '<span class="amrd-badge" style="background:#f0fdf4;color:#15803d">Custom</span>'}
-                                </td>
-                                <td onclick="event.stopPropagation()">
-                                    <button class="amrd-btn amrd-btn-sm amrd-btn-ghost" onclick="openEditRole(${r.id})">Edit</button>
-                                    ${!r.is_system
-                                        ? `<button class="amrd-btn amrd-btn-sm" style="background:#fee2e2;color:#dc2626;margin-left:6px"
-                                               onclick="deleteRole(${r.id})">Delete</button>`
-                                        : ''}
-                                </td>
-                            </tr>`).join('')}
-                        </tbody>
+                        <tbody id="roles-tbody"></tbody>
                     </table>
                     </div>
                 </div>
+                <div id="roles-pagination"></div>
 
                 <p style="font-size:12px;color:#94a3b8;margin-top:12px">
                     System roles are built-in and cannot be deleted, but their labels and descriptions can be edited.<br>
@@ -239,10 +244,89 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.viewUsers      = (id) => usersPanel(true, id);
         window.closePanel     = () => usersPanel(false);
 
-        if (viewRoleId) usersPanel(true, viewRoleId);
+        document.getElementById('btn-search').addEventListener('click', () => {
+            _search.q    = document.getElementById('sf-q').value;
+            _search.type = document.getElementById('sf-type').value;
+            applySearch();
+        });
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            _search = { q: '', type: '' };
+            document.getElementById('sf-q').value = '';
+            document.getElementById('sf-type').value = '';
+            applySearch();
+        });
+        document.getElementById('btn-export').addEventListener('click', exportRoles);
+        document.getElementById('sf-q').addEventListener('keydown', e => {
+            if (e.key === 'Enter') document.getElementById('btn-search').click();
+        });
     }
 
-    loadRoles();
+    function applySearch() {
+        const q = _search.q.trim().toLowerCase();
+        _filtered = roles.filter(r => {
+            if (q) {
+                const hay = (r.name + ' ' + r.label + ' ' + (r.description || '')).toLowerCase();
+                if (!hay.includes(q)) return false;
+            }
+            if (_search.type === 'system' && !r.is_system) return false;
+            if (_search.type === 'custom' &&  r.is_system) return false;
+            return true;
+        }).map(r => ({
+            ...r,
+            user_count:  r.user_count || 0,
+            group_count: (r.groups || []).length,
+            type_label:  r.is_system ? 'System' : 'Custom',
+        }));
+        _page = 1;
+        renderTable();
+    }
+
+    function renderTable() {
+        const pageRows = window.__amrd.paginate(_filtered, _page, PAGE_SIZE);
+        document.getElementById('roles-tbody').innerHTML = pageRows.length ? pageRows.map(r => `
+            <tr style="cursor:pointer" onclick="viewUsers(${r.id})">
+                <td><code style="background:#f1f5f9;padding:2px 7px;border-radius:4px;font-size:12px">${r.name}</code></td>
+                <td style="font-weight:600">${r.label}</td>
+                <td style="color:#64748b;max-width:200px">${r.description || '—'}</td>
+                <td>
+                    <span class="amrd-badge" style="background:#dbeafe;color:#1d4ed8;cursor:pointer"
+                          onclick="event.stopPropagation();viewUsers(${r.id})">
+                        ${r.user_count} user${r.user_count!==1?'s':''}
+                    </span>
+                </td>
+                <td>
+                    <span class="amrd-badge" style="background:#f0fdf4;color:#15803d;cursor:pointer"
+                          onclick="event.stopPropagation();viewUsers(${r.id})">
+                        ${r.group_count} group${r.group_count!==1?'s':''}
+                    </span>
+                </td>
+                <td>
+                    ${r.is_system
+                        ? '<span class="amrd-badge" style="background:#fef3c7;color:#d97706">System</span>'
+                        : '<span class="amrd-badge" style="background:#f0fdf4;color:#15803d">Custom</span>'}
+                </td>
+                <td onclick="event.stopPropagation()">
+                    <button class="amrd-btn amrd-btn-sm amrd-btn-ghost" onclick="openEditRole(${r.id})">Edit</button>
+                    ${!r.is_system
+                        ? `<button class="amrd-btn amrd-btn-sm" style="background:#fee2e2;color:#dc2626;margin-left:6px"
+                               onclick="deleteRole(${r.id})">Delete</button>`
+                        : ''}
+                </td>
+            </tr>`).join('') : '<tr><td colspan="7" style="color:#94a3b8;text-align:center;padding:24px">No roles found</td></tr>';
+
+        document.getElementById('roles-count').textContent = `${_filtered.length} role${_filtered.length !== 1 ? 's' : ''}`;
+        window.__amrd.renderPagination(document.getElementById('roles-pagination'), {
+            page: _page, pageSize: PAGE_SIZE, total: _filtered.length,
+            onChange: (p) => { _page = p; renderTable(); },
+        });
+    }
+
+    function exportRoles() {
+        window.__amrd.exportCsv('roles.csv', _filtered, columns);
+    }
+
+    load();
+    await refresh();
 });
 </script>
 </body>

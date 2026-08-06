@@ -16,70 +16,141 @@
         const fmt  = v => new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Number(v));
         const now  = new Date();
 
-        let _myTenants    = [];
-        let _currentTenantId = '';
+        let _myTenants = [];
+        let _rows      = [];
+        let _page      = 1;
+        const PAGE_SIZE = 20;
+        let _search = { year: now.getFullYear(), month: now.getMonth() + 1, tenantId: '' };
 
         const tr = await window.__amrd.apiFetch('/api/tenants/mine');
         _myTenants = tr.data || [];
 
-        function tenantSelect(selected) {
-            if (!_myTenants.length) return '';
-            return `<select onchange="setTenantFilter(this.value)" style="padding:4px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;background:#fff">
-                <option value="">All Tenants</option>
-                ${_myTenants.map(t => `<option value="${t.id}"${selected==t.id?' selected':''}>${t.name}</option>`).join('')}
-            </select>`;
-        }
+        const columns = [
+            { key: 'tenant_name',       label: 'Tenant' },
+            { key: 'sales_count',       label: 'Sales (count)' },
+            { key: 'sales_value',       label: 'Sales Value' },
+            { key: 'rental_units',      label: 'Rental Units' },
+            { key: 'rental_income',     label: 'Rental Income' },
+            { key: 'active_properties', label: 'Active Props' },
+            { key: 'collected_at',      label: 'Collected' },
+        ];
 
-        async function load(year, month, tenantId = _currentTenantId) {
-            const gql = await window.__amrd.gqlFetch(
-                `query($year: Int, $month: Int, $tenant_id: ID) {
-                    billingMetrics(year: $year, month: $month, tenant_id: $tenant_id) { id tenant_id tenant_name period_year period_month sales_count sales_value rental_units rental_income active_properties collected_at }
-                }`,
-                { year, month, tenant_id: tenantId || null }
-            );
-            const metrics  = gql?.billingMetrics || [];
-            const viewTenants = tenantId
-                ? _myTenants.filter(t => t.id == tenantId)
-                : _myTenants;
-
+        function load() {
             root.innerHTML = `
-                <div style="display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap">
-                    <div>
-                        <label style="font-size:12px;font-weight:600;color:#374151">Year</label>
-                        <input id="f-year" type="number" value="${year}" style="width:90px;margin-left:8px">
+                <div class="amrd-search-bar">
+                    <div class="amrd-search-field">
+                        <label>Year</label>
+                        <input id="sf-year" type="number" value="${_search.year}">
                     </div>
-                    <div>
-                        <label style="font-size:12px;font-weight:600;color:#374151">Month</label>
-                        <input id="f-month" type="number" min="1" max="12" value="${month}" style="width:70px;margin-left:8px">
+                    <div class="amrd-search-field">
+                        <label>Month</label>
+                        <input id="sf-month" type="number" min="1" max="12" value="${_search.month}">
                     </div>
-                    <button class="amrd-btn amrd-btn-primary amrd-btn-sm" onclick="reload()">Load</button>
-                    ${tenantSelect(tenantId)}
-                    <div style="flex:1"></div>
-                    ${window.__amrd.isReadOnly() ? '' : `<button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="openManual()">+ Manual Entry</button>`}
+                    <div class="amrd-search-field">
+                        <label>Tenant</label>
+                        <select id="sf-tenant">
+                            <option value="">All Tenants</option>
+                            ${_myTenants.map(t => `<option value="${t.id}"${_search.tenantId == t.id ? ' selected' : ''}>${t.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="amrd-search-actions">
+                        <button class="amrd-btn amrd-btn-primary amrd-btn-sm" id="btn-search">Search</button>
+                        <button class="amrd-btn amrd-btn-ghost amrd-btn-sm" id="btn-reset">Reset</button>
+                    </div>
+                </div>
+                <div class="amrd-toolbar">
+                    <span id="metrics-count" style="font-size:13px;color:#64748b"></span>
+                    <div style="display:flex;gap:8px">
+                        <button class="amrd-btn amrd-btn-ghost amrd-btn-sm" id="btn-export">Export CSV</button>
+                        ${window.__amrd.isReadOnly() ? '' : `<button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="openManual()">+ Manual Entry</button>`}
+                    </div>
                 </div>
                 <div class="amrd-card" style="padding:0">
                     <div class="amrd-table-wrap">
                     <table class="amrd-table">
                         <thead><tr><th>Tenant</th><th>Sales (count)</th><th>Sales Value</th><th>Rental Units</th><th>Rental Income</th><th>Active Props</th><th>Collected</th></tr></thead>
-                        <tbody>
-                            ${viewTenants.map(t => {
-                                const m = metrics.find(x => x.tenant_id === t.id);
-                                if (!m) return `<tr><td>${t.name}</td><td colspan="6" style="color:#94a3b8;font-style:italic">No data for this period</td></tr>`;
-                                return `<tr>
-                                    <td><strong>${t.name}</strong></td>
-                                    <td>${m.sales_count}</td>
-                                    <td>${fmt(m.sales_value)}</td>
-                                    <td>${m.rental_units}</td>
-                                    <td>${fmt(m.rental_income)}</td>
-                                    <td>${m.active_properties}</td>
-                                    <td style="color:#94a3b8;font-size:11px">${m.collected_at ? new Date(m.collected_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '—'}</td>
-                                </tr>`;
-                            }).join('') || '<tr><td colspan="7" style="color:#94a3b8;text-align:center;padding:24px">No tenants configured</td></tr>'}
-                        </tbody>
+                        <tbody id="metrics-tbody"></tbody>
                     </table>
                     </div>
                 </div>
+                <div id="metrics-pagination"></div>
                 <div id="form-slot"></div>`;
+
+            document.getElementById('btn-search').addEventListener('click', () => {
+                _search.year     = parseInt(document.getElementById('sf-year').value)  || now.getFullYear();
+                _search.month    = parseInt(document.getElementById('sf-month').value) || (now.getMonth() + 1);
+                _search.tenantId = document.getElementById('sf-tenant').value;
+                runSearch();
+            });
+            document.getElementById('btn-reset').addEventListener('click', () => {
+                _search = { year: now.getFullYear(), month: now.getMonth() + 1, tenantId: '' };
+                document.getElementById('sf-year').value   = _search.year;
+                document.getElementById('sf-month').value  = _search.month;
+                document.getElementById('sf-tenant').value = '';
+                runSearch();
+            });
+            document.getElementById('btn-export').addEventListener('click', exportMetrics);
+            ['sf-year', 'sf-month'].forEach(id => {
+                document.getElementById(id).addEventListener('keydown', e => {
+                    if (e.key === 'Enter') document.getElementById('btn-search').click();
+                });
+            });
+        }
+
+        async function runSearch() {
+            const gql = await window.__amrd.gqlFetch(
+                `query($year: Int, $month: Int, $tenant_id: ID) {
+                    billingMetrics(year: $year, month: $month, tenant_id: $tenant_id) { id tenant_id tenant_name period_year period_month sales_count sales_value rental_units rental_income active_properties collected_at }
+                }`,
+                { year: _search.year, month: _search.month, tenant_id: _search.tenantId || null }
+            );
+            const metrics = gql?.billingMetrics || [];
+            const viewTenants = _search.tenantId
+                ? _myTenants.filter(t => t.id == _search.tenantId)
+                : _myTenants;
+
+            _rows = viewTenants.map(t => {
+                const m = metrics.find(x => x.tenant_id == t.id);
+                return {
+                    tenant_name: t.name,
+                    sales_count: m ? m.sales_count : '',
+                    sales_value: m ? m.sales_value : '',
+                    rental_units: m ? m.rental_units : '',
+                    rental_income: m ? m.rental_income : '',
+                    active_properties: m ? m.active_properties : '',
+                    collected_at: m && m.collected_at ? new Date(m.collected_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '',
+                    _hasData: !!m,
+                };
+            });
+            _page = 1;
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('metrics-tbody');
+            const pageRows = window.__amrd.paginate(_rows, _page, PAGE_SIZE);
+            tbody.innerHTML = pageRows.map(r => {
+                if (!r._hasData) return `<tr><td>${r.tenant_name}</td><td colspan="6" style="color:#94a3b8;font-style:italic">No data for this period</td></tr>`;
+                return `<tr>
+                    <td><strong>${r.tenant_name}</strong></td>
+                    <td>${r.sales_count}</td>
+                    <td>${fmt(r.sales_value)}</td>
+                    <td>${r.rental_units}</td>
+                    <td>${fmt(r.rental_income)}</td>
+                    <td>${r.active_properties}</td>
+                    <td style="color:#94a3b8;font-size:11px">${r.collected_at || '—'}</td>
+                </tr>`;
+            }).join('') || '<tr><td colspan="7" style="color:#94a3b8;text-align:center;padding:24px">No tenants configured</td></tr>';
+
+            document.getElementById('metrics-count').textContent = `${_rows.length} tenant(s)`;
+            window.__amrd.renderPagination(document.getElementById('metrics-pagination'), {
+                page: _page, pageSize: PAGE_SIZE, total: _rows.length,
+                onChange: (p) => { _page = p; renderTable(); },
+            });
+        }
+
+        function exportMetrics() {
+            window.__amrd.exportCsv('billing-metrics.csv', _rows, columns);
         }
 
         function openManual() {
@@ -133,24 +204,18 @@
                         active_properties: parseInt(document.getElementById('f-ap').value)||0,
                     }),
                 });
-                await reload();
+                document.getElementById('form-slot').innerHTML = '';
+                await runSearch();
             } catch (e) {
                 document.getElementById('save-err').textContent = e.message;
             }
         }
 
-        function reload() {
-            const y = parseInt(document.getElementById('f-year')?.value  || now.getFullYear());
-            const m = parseInt(document.getElementById('f-month')?.value || now.getMonth() + 1);
-            load(y, m, _currentTenantId);
-        }
+        window.openManual = openManual;
+        window.saveMetric = saveMetric;
 
-        window.reload          = reload;
-        window.openManual      = openManual;
-        window.saveMetric      = saveMetric;
-        window.setTenantFilter = (t) => { _currentTenantId = t; reload(); };
-
-        await load(now.getFullYear(), now.getMonth() + 1);
+        load();
+        await runSearch();
     });
   </script>
 </body>
