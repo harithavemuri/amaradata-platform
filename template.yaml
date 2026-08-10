@@ -158,6 +158,17 @@ Globals:
         AMRD_DB_WRITE_USER:  !Sub '{{resolve:ssm:/${Tenant}/${Env}/db-write-user}}'
         AMRD_DB_READ_USER:   !Sub '{{resolve:ssm:/${Tenant}/${Env}/db-read-user}}'
 
+        # ── DB passwords: resolved at RUNTIME, not deploy time ──────────────────
+        # backend/db.js asks services/secrets.js for these per pg connection and
+        # caches them briefly, so rotating the secret takes effect on its own
+        # within one TTL. The {{resolve:...}} values below are only a cold-start
+        # fallback for a Secrets Manager outage — they are still baked at deploy
+        # time and therefore go stale after a rotation. Remove them once runtime
+        # resolution has been confirmed in production.
+        AMRD_DB_WRITE_PASSWORD_SECRET_ID: !Sub '/${Tenant}/${Env}/db-write-password'
+        AMRD_DB_READ_PASSWORD_SECRET_ID:  !Sub '/${Tenant}/${Env}/db-read-password'
+        SECRET_CACHE_TTL_MS: '300000'   # 5 min — bounds how long a rotation takes to apply
+
         # Secrets Manager — actual credentials
         AMRD_JWT_SECRET:        !Sub '{{resolve:secretsmanager:/${Tenant}/${Env}/jwt-secret}}'
         GOOGLE_CLIENT_SECRET:   !Sub '{{resolve:secretsmanager:/${Tenant}/${Env}/google-client-secret}}'
@@ -267,6 +278,11 @@ Resources:
       MemorySize: 1024
       Policies:
         - Statement:
+            # Runtime DB-password reads (see backend/services/secrets.js) — scoped
+            # to this tenant/env's own secrets, never the Aurora master password.
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/${Tenant}/${Env}/db-*'
             - Effect: Allow
               Action: ses:SendEmail
               Resource: !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/amaradata.com'
@@ -585,6 +601,58 @@ Resources:
           # Manager's public endpoint (no NAT Gateway / VPC endpoint exists here).
           DB_MASTER_PASSWORD: !Sub '{{resolve:secretsmanager:/${Tenant}/aurora/master-password}}'
           DB_MASTER_USER: amararoot
+
+  # ── Generic DB-password rotation ─────────────────────────────────────────────
+  # One function rotates every tenant/env DB password in this account — the
+  # secret's own name tells it which role to alter, so a new tenant needs no
+  # change here. scripts/attach-secret-rotation.js attaches it to eligible
+  # secrets after each deploy.
+  #
+  # Non-VPC deliberately: rotation needs the Secrets Manager API *and* the
+  # database, and a VPC-attached function has no route to the former without an
+  # interface endpoint.
+  RotateDbSecretFn:
+    Type: AWS::Serverless::Function
+    DependsOn: AppLogGroup
+    Properties:
+      FunctionName: !Sub '${Tenant}-${Env}-rotate-db-secret'
+      Handler: backend/lambda/rotate-db-secret.handler
+      CodeUri: .
+      Description: Rotates PostgreSQL passwords for any tenant/env DB secret
+      Timeout: 120
+      Policies:
+        - Statement:
+            # Spans every tenant's secrets by design — this one function serves
+            # them all. The handler's own parseSecretId() guard is what keeps it
+            # from touching anything that is not a DB password.
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+                - secretsmanager:PutSecretValue
+                - secretsmanager:UpdateSecretVersionStage
+                - secretsmanager:DescribeSecret
+              Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
+            # GetRandomPassword is account-level and takes no resource.
+            - Effect: Allow
+              Action: secretsmanager:GetRandomPassword
+              Resource: '*'
+            # Usernames/hosts live in SSM for amaradata and in Secrets Manager
+            # for rohas; readConfigValue() tries SSM first, so both are needed.
+            - Effect: Allow
+              Action: ssm:GetParameter
+              Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*'
+      Environment:
+        Variables:
+          DB_MASTER_SECRET_ID: /amaradata/aurora/master-password
+          DB_MASTER_USER:      amararoot
+
+  # Lets Secrets Manager invoke the rotation function on demand.
+  RotateDbSecretInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt RotateDbSecretFn.Arn
+      Action: lambda:InvokeFunction
+      Principal: secretsmanager.amazonaws.com
 
   # ── SES — domain identity for amaradata.com ────────────────────────────────────
   # Verifies the entire amaradata.com domain so any @amaradata.com address can send.
