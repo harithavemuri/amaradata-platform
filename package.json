@@ -23,7 +23,7 @@
     "test:throughput": "node scripts/run-throughput-test.js",
     "test:throughput:db": "node scripts/run-throughput-test.js --mode db",
     "test:all": "npm test && npm run test:regression:all && npm run test:release-tracking && npm run smoke",
-    "deploy": "npm test && npm run test:regression:db && npm run test:regression && npm run test:release-tracking && node scripts/tag-release.js && sam build && sam deploy --no-confirm-changeset && node scripts/db-migrate.js && node scripts/attach-secret-rotation.js && aws s3 sync frontend/ s3://amrd-platform-amaradata-prod-797666412164/ --delete && aws cloudfront create-invalidation --distribution-id EVRE22H489D0P --paths \"/*\" && npm run smoke:lifecycle",
+    "deploy": "node scripts/deploy.js",
     "smoke": "node -r dotenv/config scripts/smoke-prod.js",
     "smoke:lifecycle": "node -r dotenv/config scripts/smoke-lifecycle.js",
     "export-db": "node scripts/cli.js export-db",
