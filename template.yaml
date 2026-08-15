@@ -288,6 +288,18 @@ Resources:
       Handler: backend/lambda/api.handler
       CodeUri: .
       MemorySize: 1024
+      # backend/db.js mirrors every DB write to transactiondata/<table>.json —
+      # ApiFn's deployment package (/var/task) is read-only in Lambda, so that
+      # write target has to be S3 here instead of local disk (see
+      # project-nondb-read-only.md). Set only on ApiFn, not in Globals: DBInitFn/
+      # DBMigrateFn are VPC-attached with no confirmed route to S3, and their own
+      # write-mirror attempts during migrations already silently no-op today
+      # against local disk (EROFS, caught) — giving them this env var too would
+      # turn that instant, harmless failure into a real network call that could
+      # hang instead.
+      Environment:
+        Variables:
+          TRANSACTIONDATA_S3_BUCKET: !Ref TransactionDataBucket
       Policies:
         - Statement:
             # Runtime secret reads (see backend/services/secrets.js) — scoped to
@@ -322,6 +334,15 @@ Resources:
               Resource:
                 - !Sub 'arn:aws:s3:::amrd-email-inbound-${AWS::AccountId}'
                 - !Sub 'arn:aws:s3:::amrd-email-inbound-${AWS::AccountId}/*'
+            # transactiondata mirror — own bucket, read+write (see Environment above)
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:PutObject
+                - s3:ListBucket
+              Resource:
+                - !GetAtt TransactionDataBucket.Arn
+                - !Sub '${TransactionDataBucket.Arn}/*'
       Events:
         ApiProxy:
           Type: HttpApi
@@ -360,6 +381,29 @@ Resources:
           }
           return event.request;
         }
+
+  # ── S3 — transactiondata/*.json mirror (private, DB-derived snapshots) ────────
+  # Separate from FrontendBucket deliberately — different lifecycle, purpose,
+  # and access pattern (private data snapshots ApiFn writes/reads, vs public
+  # static assets served through CloudFront). See project-nondb-read-only.md.
+  TransactionDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'amrd-transactiondata-${Tenant}-${Env}-${AWS::AccountId}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      Tags:
+        - { Key: tenant,      Value: !Ref Tenant }
+        - { Key: application, Value: !Ref TagApplication }
+        - { Key: project,     Value: !Ref TagProject }
+        - { Key: component,   Value: shared }
 
   # ── S3 + CloudFront — frontend static files ───────────────────────────────────
   OAC:

@@ -41,6 +41,19 @@ const TRANSACTIONDATA_DIR = process.env.TRANSACTIONDATA_DIR
     ? path.resolve(process.env.TRANSACTIONDATA_DIR)
     : path.join(__dirname, '../transactiondata');
 
+// Lambda's deployment package (/var/task, where TRANSACTIONDATA_DIR resolves
+// by default) is read-only outside /tmp — fs.writeFileSync there throws EROFS.
+// When deployed, template.yaml sets this to a dedicated S3 bucket instead
+// (ApiFn only — see template.yaml's comment on why not Globals); local dev and
+// tests never set it, so they keep writing straight to disk, unchanged. See
+// project-nondb-read-only.md.
+const TRANSACTIONDATA_S3_BUCKET = process.env.TRANSACTIONDATA_S3_BUCKET;
+let _s3Client;
+function _s3() {
+    if (!_s3Client) _s3Client = new (require('@aws-sdk/client-s3').S3Client)({});
+    return _s3Client;
+}
+
 const base = {
     host:              process.env.AMRD_DB_HOST || 'localhost',
     port:              parseInt(process.env.AMRD_DB_PORT || '5432'),
@@ -94,9 +107,39 @@ function writeTargetTable(sql) {
 // (feedback-idempotent-writes.md) — at the cost of an extra SELECT per write.
 async function mirrorTableToFile(table) {
     const { rows } = await query(`SELECT * FROM ${table} ORDER BY id`);
-    fs.mkdirSync(TRANSACTIONDATA_DIR, { recursive: true });
-    fs.writeFileSync(path.join(TRANSACTIONDATA_DIR, `${table}.json`), JSON.stringify(rows, null, 2));
+    const json = JSON.stringify(rows, null, 2);
+    if (TRANSACTIONDATA_S3_BUCKET) {
+        const { PutObjectCommand } = require('@aws-sdk/client-s3');
+        await _s3().send(new PutObjectCommand({
+            Bucket: TRANSACTIONDATA_S3_BUCKET, Key: `${table}.json`, Body: json, ContentType: 'application/json',
+        }));
+    } else {
+        fs.mkdirSync(TRANSACTIONDATA_DIR, { recursive: true });
+        fs.writeFileSync(path.join(TRANSACTIONDATA_DIR, `${table}.json`), json);
+    }
     return rows.length;
+}
+
+// Reads back what mirrorTableToFile() last wrote for one table — used by
+// GET /api/admin/sync-from-db/download to let an admin actually retrieve the
+// synced snapshot when it lives in S3 (no other way to reach it from inside a
+// Lambda's read-only deployment package). Returns null if nothing's been
+// mirrored for this table yet.
+async function readMirroredTableFile(table) {
+    if (TRANSACTIONDATA_S3_BUCKET) {
+        const { GetObjectCommand } = require('@aws-sdk/client-s3');
+        try {
+            const obj = await _s3().send(new GetObjectCommand({ Bucket: TRANSACTIONDATA_S3_BUCKET, Key: `${table}.json` }));
+            const chunks = [];
+            for await (const chunk of obj.Body) chunks.push(chunk);
+            return Buffer.concat(chunks).toString('utf8');
+        } catch (e) {
+            if (e.name === 'NoSuchKey') return null;
+            throw e;
+        }
+    }
+    const file = path.join(TRANSACTIONDATA_DIR, `${table}.json`);
+    return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
 }
 
 async function query(sql, params) {
@@ -146,4 +189,10 @@ async function query(sql, params) {
     return withConnectRetry(run);
 }
 
-module.exports = { query, writePool, readPool, mirrorTableToFile };
+// Exposed so tests can monkey-patch .send on the real (never actually
+// connected-to) client instance, the same way they override .query on
+// writePool/readPool — vi.mock('@aws-sdk/client-s3') does not reliably
+// intercept this module's own nested require() of it (same CJS-require
+// gotcha documented on writePool/readPool above; confirmed empirically: an
+// unmocked run reached real AWS and got a clean NoSuchBucket error).
+module.exports = { query, writePool, readPool, mirrorTableToFile, readMirroredTableFile, _s3 };

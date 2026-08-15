@@ -64,13 +64,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     window.syncFromDb = syncFromDb;
 
+    // Plain <a href> can't carry the Bearer auth header (no cookie session in
+    // this app), so protected downloads fetch as a blob and trigger the save
+    // via a throwaway object URL instead — same pattern as email.html's
+    // downloadFile(). Needed here specifically because in production
+    // mirrorTableToFile() writes to S3, not local disk (see
+    // project-nondb-read-only.md) — this is the only way to actually retrieve
+    // the synced snapshot.
+    async function downloadSyncedFiles() {
+        const link = document.getElementById('amrd-sync-download-link');
+        if (!link) return;
+        const original = link.textContent;
+        try {
+            const token = localStorage.getItem('amrd_token');
+            const res = await fetch('/api/admin/sync-from-db/download', { headers: { Authorization: `Bearer ${token}` } });
+            if (!res.ok) throw new Error('Download failed');
+            const blob = await res.blob();
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href = url;
+            a.download = 'transactiondata.zip';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            link.textContent = '✗ Download failed';
+            setTimeout(() => { link.textContent = original; }, 2500);
+        }
+    }
+    window.downloadSyncedFiles = downloadSyncedFiles;
+
     function render(data) {
         const { versions, environment, mode, tables } = data;
         const modeColor  = mode === 'nondb' ? '#f59e0b' : '#22c55e';
         const envColor   = environment === 'production' ? '#ef4444' : '#3b82f6';
         // sync-from-db 400s in NonDB mode (no DB to sync from) — hide it there.
         const syncButton = mode === 'nondb' ? '' : `
-                    <button id="amrd-sync-from-db-btn" onclick="syncFromDb()" title="Recreate transactiondata/*.json from the current DB state, one table per request" style="padding:6px 16px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#334155;font-size:13px;font-weight:600;cursor:pointer">⇅ Sync DB → Files</button>`;
+                    <button id="amrd-sync-from-db-btn" onclick="syncFromDb()" title="Recreate transactiondata/*.json from the current DB state, one table per request" style="padding:6px 16px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#334155;font-size:13px;font-weight:600;cursor:pointer">⇅ Sync DB → Files</button>
+                    <a id="amrd-sync-download-link" href="javascript:void(0)" onclick="downloadSyncedFiles()" title="Download the synced transactiondata/*.json files as a zip — the only way to retrieve them in production, where they're written to S3 instead of local disk" style="padding:6px 16px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#334155;font-size:13px;font-weight:600;text-decoration:none;display:inline-block">⬇ Download Synced Files</a>`;
 
         const versionRows = [
             { label: 'API Version',  value: versions.api,  note: '' },

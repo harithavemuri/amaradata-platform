@@ -463,6 +463,46 @@ router.post('/sync-from-db/:table', async (req, res) => {
     }
 });
 
+// GET /api/admin/sync-from-db/download — zips up whatever mirrorTableToFile()
+// has synced so far and streams it back. In production this is the only way
+// to actually retrieve the synced snapshot: ApiFn writes it to
+// TRANSACTIONDATA_S3_BUCKET (Lambda's own filesystem is read-only — see
+// project-nondb-read-only.md), so there's no local file for an admin to just
+// go look at. Locally (no bucket configured) this reads straight off
+// TRANSACTIONDATA_DIR instead, via the same db.readMirroredTableFile().
+router.get('/sync-from-db/download', async (req, res) => {
+    if (req.db.mode === 'nondb') {
+        return res.status(400).json({ error: 'Server is running in NonDB mode — no database to sync from.' });
+    }
+    const manifest = require('../../metadata/manifest.json');
+    try {
+        // See email.js's identical comment: archiver@8 is pure ESM, and a
+        // synchronous require() of it crashes on the nodejs22.x Lambda runtime.
+        const { ZipArchive } = await import('archiver');
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', 'attachment; filename="transactiondata.zip"');
+        const archive = new ZipArchive({ zlib: { level: 9 } });
+        archive.on('error', (err) => {
+            console.error('[admin/sync-from-db/download] zip error', err.message);
+            if (!res.headersSent) res.status(500).end();
+        });
+        archive.pipe(res);
+
+        for (const table of manifest.tables) {
+            try {
+                const content = await db.readMirroredTableFile(table);
+                if (content != null) archive.append(content, { name: `${table}.json` });
+            } catch (e) {
+                console.error(`[admin/sync-from-db/download] skipping ${table}:`, e.message);
+            }
+        }
+        await archive.finalize();
+    } catch (e) {
+        console.error('[admin/sync-from-db/download]', e.message);
+        if (!res.headersSent) res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // ── System health & versions ──────────────────────────────────────────────────
 
 // GET /api/admin/health — versions, environment, per-table row counts
