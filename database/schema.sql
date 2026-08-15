@@ -432,6 +432,30 @@ BEGIN
     ALTER TABLE tenants   DROP COLUMN IF EXISTS region_code;
 END $$;
 
+-- ── Migration 2026.08.15.002: Add CSV-import columns to enhancements ────────
+-- CREATE TABLE IF NOT EXISTS never retroactively adds columns to a table that
+-- already existed — enhancements predates the CSV-import fields (source,
+-- issue_id, site_name, fixed, item_type, is_billable, report_date), which
+-- were added to the CREATE TABLE statement above but never got a matching
+-- ALTER TABLE migration. Production's enhancements table was still missing
+-- all seven columns, breaking POST /api/enhancements entirely (discovered by
+-- directly testing the endpoint against production after deploying v1.3.2).
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='enhancements' AND column_name='source') THEN
+        ALTER TABLE enhancements ADD COLUMN source      VARCHAR(20)  NOT NULL DEFAULT 'manual';
+        ALTER TABLE enhancements ADD COLUMN issue_id    BIGINT;
+        ALTER TABLE enhancements ADD COLUMN site_name   VARCHAR(100);
+        ALTER TABLE enhancements ADD COLUMN fixed       VARCHAR(200);
+        ALTER TABLE enhancements ADD COLUMN item_type   VARCHAR(50)  NOT NULL DEFAULT 'enhancement';
+        ALTER TABLE enhancements ADD COLUMN is_billable BOOLEAN      NOT NULL DEFAULT true;
+        ALTER TABLE enhancements ADD COLUMN report_date DATE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'enhancements_tenant_id_issue_id_key') THEN
+        ALTER TABLE enhancements ADD CONSTRAINT enhancements_tenant_id_issue_id_key UNIQUE (tenant_id, issue_id);
+    END IF;
+END $$;
+
 -- Sequence sync: reset all SERIAL sequences to MAX(id)+1 to fix drift after bulk JSON imports.
 -- Safe to run on every migration — setval is idempotent when data hasn't changed.
 SELECT setval('amr_users_id_seq',                 COALESCE((SELECT MAX(id) FROM amr_users), 0) + 1, false);
@@ -497,5 +521,6 @@ INSERT INTO schema_migrations (version, description) VALUES
     ('2026.06.11.003', 'Align with rohas-group: user profile cols, tenant profile cols, group_tenant table, drop role_id/tenant_id/created_by from groups, assigned_at+created_at on group_members'),
     ('2026.06.12.001', 'Drop unused columns: amr_users.picture/locale/region_code, tenants.description/logo_url/region_code'),
     ('2026.08.01.001', 'Add email_folders and email_placements for per-user email folders/trash'),
-    ('2026.08.15.001', 'Add login_audit table for login activity tracking')
+    ('2026.08.15.001', 'Add login_audit table for login activity tracking'),
+    ('2026.08.15.002', 'Add missing CSV-import columns (source, issue_id, site_name, fixed, item_type, is_billable, report_date) to enhancements — CREATE TABLE IF NOT EXISTS never retroactively added them to the pre-existing table')
 ON CONFLICT (version) DO NOTHING;
