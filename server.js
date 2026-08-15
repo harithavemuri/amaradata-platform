@@ -5,22 +5,36 @@ const cors      = require('cors');
 const nondbMode    = require('./backend/middleware/nondb-mode');
 const { requireAuth } = require('./backend/middleware/auth');
 const graphqlHandler  = require('./backend/graphql');
+const secrets         = require('./backend/services/secrets');
+const { isDbUnavailable } = require('./backend/services/http-errors');
 const { version: APP_VERSION } = require('./package.json');
 
 const app  = express();
 const PORT = process.env.PORT || 9000;
+
+// Resolved at runtime through services/secrets.js, not baked into the Lambda
+// env at deploy time (see project-realtime-secret-fetch-standard.md).
+const ORIGIN_SECRET_ID = process.env.ORIGIN_SECRET_ID;
 
 app.use(cors());
 app.use(express.json());
 app.use(nondbMode);
 
 // Block direct API Gateway hits that bypass CloudFront (cost + security protection)
-if (process.env.ORIGIN_SECRET) {
-    app.use((req, res, next) => {
+if (process.env.ORIGIN_SECRET || ORIGIN_SECRET_ID) {
+    app.use(async (req, res, next) => {
         const pub = req.path === '/health' || req.path.startsWith('/api/site-config');
-        if (!pub && req.headers['x-origin-secret'] !== process.env.ORIGIN_SECRET) {
-            return res.status(403).json({ error: 'Forbidden' });
+        if (pub) return next();
+
+        const header  = req.headers['x-origin-secret'];
+        let expected  = await secrets.getSecret(ORIGIN_SECRET_ID, { fallback: process.env.ORIGIN_SECRET });
+        if (header !== expected) {
+            // Could be this instance's cache being stale mid a rotation rather
+            // than a genuinely wrong header — refetch once before rejecting.
+            secrets.invalidate(ORIGIN_SECRET_ID);
+            expected = await secrets.getSecret(ORIGIN_SECRET_ID, { fallback: process.env.ORIGIN_SECRET });
         }
+        if (header !== expected) return res.status(403).json({ error: 'Forbidden' });
         next();
     });
 }
@@ -84,6 +98,9 @@ app.use('/api', (req, res) => res.status(404).json({ error: 'API endpoint not fo
 app.use((err, req, res, _next) => {
     console.error('[express]', err.message);
     if (req.path.startsWith('/api') || req.path === '/graphql') {
+        if (isDbUnavailable(err)) {
+            return res.status(503).json({ error: 'Service temporarily unavailable — please retry shortly.' });
+        }
         return res.status(500).json({ error: 'Internal server error' });
     }
     res.status(500).sendFile(path.join(__dirname, 'frontend', 'login.html'));

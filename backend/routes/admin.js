@@ -3,6 +3,8 @@ const bcrypt = require('bcryptjs');
 const db     = require('../db');
 const { requireSiteAdmin } = require('../middleware/auth');
 const { version: APP_VERSION } = require('../../package.json');
+const { sendError } = require('../services/http-errors');
+const { blockNonDbWrite } = require('../middleware/block-nondb-write');
 
 const VALID_ROLES = ['site_admin', 'admin', 'sales_manager', 'billing', 'staff'];
 
@@ -53,11 +55,11 @@ router.get('/users', async (req, res) => {
             `));
         }
         res.json({ success: true, data: rows });
-    } catch (e) { console.error('[admin] users:', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[admin] users:'); }
 });
 
 // POST /api/admin/users
-router.post('/users', async (req, res) => {
+router.post('/users', blockNonDbWrite, async (req, res) => {
     const { email, name, first_name, last_name, role = 'staff', password } = req.body;
     const username = req.body.username || email;
     if (!email || !name) return res.status(400).json({ error: 'email and name are required' });
@@ -68,16 +70,6 @@ router.post('/users', async (req, res) => {
         const fn = first_name || name.split(' ')[0];
         const ln = last_name  || name.split(' ').slice(1).join(' ') || null;
 
-        if (req.db.mode === 'nondb') {
-            const uLower = username.toLowerCase();
-            const existing = req.db.fileDb.find('amr_users').filter(u => u.username?.toLowerCase() === uLower);
-            if (existing.length) return res.status(409).json({ error: 'Username already exists' });
-            const row = req.db.fileDb.create('amr_users', {
-                username, email, name, first_name: fn, last_name: ln,
-                role, password_hash, is_active: true,
-            });
-            return res.status(201).json({ success: true, data: _safeUser(row) });
-        }
         const { rows } = await db.query(
             `INSERT INTO amr_users (username,email,name,first_name,last_name,role,password_hash)
              VALUES ($1,$2,$3,$4,$5,$6,$7)
@@ -87,13 +79,12 @@ router.post('/users', async (req, res) => {
         res.status(201).json({ success: true, data: rows[0] });
     } catch (e) {
         if (e.code === '23505') return res.status(409).json({ error: 'Username already exists' });
-        console.error('[admin] create-user:', e.message);
-        res.status(500).json({ error: 'Internal server error' });
+        sendError(res, e, '[admin] create-user:');
     }
 });
 
 // PUT /api/admin/users/:id
-router.put('/users/:id', async (req, res) => {
+router.put('/users/:id', blockNonDbWrite, async (req, res) => {
     const { name, first_name, last_name, role, is_active, password } = req.body;
     if (role && !VALID_ROLES.includes(role)) return res.status(400).json({ error: `role must be one of: ${VALID_ROLES.join(', ')}` });
 
@@ -106,11 +97,6 @@ router.put('/users/:id', async (req, res) => {
         if (is_active   !== undefined) updates.is_active   = is_active;
         if (password)                  updates.password_hash = await bcrypt.hash(password, 12);
 
-        if (req.db.mode === 'nondb') {
-            const row = req.db.fileDb.update('amr_users', req.params.id, updates);
-            if (!row) return res.status(404).json({ error: 'User not found' });
-            return res.json({ success: true, data: _safeUser(row) });
-        }
         updates.updated_at = new Date().toISOString();
         const keys = Object.keys(updates);
         const vals = Object.values(updates);
@@ -122,23 +108,18 @@ router.put('/users/:id', async (req, res) => {
         );
         if (!rows[0]) return res.status(404).json({ error: 'User not found' });
         res.json({ success: true, data: rows[0] });
-    } catch (e) { console.error('[admin]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[admin]'); }
 });
 
 // DELETE /api/admin/users/:id  (soft-delete — sets is_active=false)
-router.delete('/users/:id', async (req, res) => {
+router.delete('/users/:id', blockNonDbWrite, async (req, res) => {
     try {
-        if (req.db.mode === 'nondb') {
-            const row = req.db.fileDb.update('amr_users', req.params.id, { is_active: false });
-            if (!row) return res.status(404).json({ error: 'User not found' });
-            return res.json({ success: true });
-        }
         const { rowCount } = await db.query(
             'UPDATE amr_users SET is_active = false, updated_at = NOW() WHERE id = $1', [req.params.id]
         );
         if (!rowCount) return res.status(404).json({ error: 'User not found' });
         res.json({ success: true });
-    } catch (e) { console.error('[admin]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[admin]'); }
 });
 
 // ── User Groups ───────────────────────────────────────────────────────────────
@@ -200,20 +181,14 @@ router.get('/user-groups', async (req, res) => {
             ORDER BY g.created_at, g.name
         `);
         res.json({ success: true, data: rows });
-    } catch (e) { console.error('[admin]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[admin]'); }
 });
 
 // POST /api/admin/user-groups
-router.post('/user-groups', async (req, res) => {
+router.post('/user-groups', blockNonDbWrite, async (req, res) => {
     const { name, description } = req.body;
     if (!name) return res.status(400).json({ error: 'name is required' });
     try {
-        if (req.db.mode === 'nondb') {
-            const existing = req.db.fileDb.find('amr_groups').find(g => g.name?.toLowerCase() === name.toLowerCase());
-            if (existing) return res.status(409).json({ error: 'Group name already exists' });
-            const row = req.db.fileDb.create('amr_groups', { name, description: description || '', is_active: true });
-            return res.status(201).json({ success: true, data: row });
-        }
         const { rows } = await db.query(
             'INSERT INTO amr_groups (name,description) VALUES ($1,$2) RETURNING *',
             [name, description || '']
@@ -221,13 +196,12 @@ router.post('/user-groups', async (req, res) => {
         res.status(201).json({ success: true, data: rows[0] });
     } catch (e) {
         if (e.code === '23505') return res.status(409).json({ error: 'Group name already exists' });
-        console.error('[admin]', e.message);
-        res.status(500).json({ error: 'Internal server error' });
+        sendError(res, e, '[admin]');
     }
 });
 
 // PUT /api/admin/user-groups/:id
-router.put('/user-groups/:id', async (req, res) => {
+router.put('/user-groups/:id', blockNonDbWrite, async (req, res) => {
     const { name, description, is_active } = req.body;
     try {
         const updates = {};
@@ -235,11 +209,6 @@ router.put('/user-groups/:id', async (req, res) => {
         if (description !== undefined) updates.description = description;
         if (is_active   !== undefined) updates.is_active   = is_active;
 
-        if (req.db.mode === 'nondb') {
-            const row = req.db.fileDb.update('amr_groups', req.params.id, updates);
-            if (!row) return res.status(404).json({ error: 'Group not found' });
-            return res.json({ success: true, data: row });
-        }
         updates.updated_at = new Date().toISOString();
         const keys = Object.keys(updates);
         const vals = Object.values(updates);
@@ -252,43 +221,24 @@ router.put('/user-groups/:id', async (req, res) => {
         res.json({ success: true, data: rows[0] });
     } catch (e) {
         if (e.code === '23505') return res.status(409).json({ error: 'Group name already exists' });
-        console.error('[admin]', e.message);
-        res.status(500).json({ error: 'Internal server error' });
+        sendError(res, e, '[admin]');
     }
 });
 
 // DELETE /api/admin/user-groups/:id
-router.delete('/user-groups/:id', async (req, res) => {
+router.delete('/user-groups/:id', blockNonDbWrite, async (req, res) => {
     try {
-        if (req.db.mode === 'nondb') {
-            const row = req.db.fileDb.delete('amr_groups', req.params.id);
-            if (!row) return res.status(404).json({ error: 'Group not found' });
-            req.db.fileDb.find('amr_group_members', { group_id: parseInt(req.params.id) })
-                .forEach(m => req.db.fileDb.delete('amr_group_members', m.id));
-            req.db.fileDb.find('group_tenant', { group_id: parseInt(req.params.id) })
-                .forEach(gt => req.db.fileDb.delete('group_tenant', gt.id));
-            return res.json({ success: true });
-        }
         const { rowCount } = await db.query('DELETE FROM amr_groups WHERE id = $1', [req.params.id]);
         if (!rowCount) return res.status(404).json({ error: 'Group not found' });
         res.json({ success: true });
-    } catch (e) { console.error('[admin]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[admin]'); }
 });
 
 // POST /api/admin/user-groups/:id/members  { user_id }
-router.post('/user-groups/:id/members', async (req, res) => {
+router.post('/user-groups/:id/members', blockNonDbWrite, async (req, res) => {
     const { user_id } = req.body;
     if (!user_id) return res.status(400).json({ error: 'user_id required' });
     try {
-        if (req.db.mode === 'nondb') {
-            const existing = req.db.fileDb.find('amr_group_members', { group_id: parseInt(req.params.id), user_id: parseInt(user_id) });
-            if (existing.length) return res.status(409).json({ error: 'Already a member' });
-            const row = req.db.fileDb.create('amr_group_members', {
-                group_id: parseInt(req.params.id),
-                user_id:  parseInt(user_id),
-            });
-            return res.status(201).json({ success: true, data: row });
-        }
         const { rows } = await db.query(
             `INSERT INTO amr_group_members (group_id, user_id)
              VALUES ($1, $2)
@@ -297,47 +247,28 @@ router.post('/user-groups/:id/members', async (req, res) => {
         );
         if (!rows[0]) return res.status(409).json({ error: 'Already a member' });
         res.status(201).json({ success: true, data: rows[0] });
-    } catch (e) { console.error('[admin]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[admin]'); }
 });
 
 // DELETE /api/admin/user-groups/:id/members/:userId
-router.delete('/user-groups/:id/members/:userId', async (req, res) => {
+router.delete('/user-groups/:id/members/:userId', blockNonDbWrite, async (req, res) => {
     try {
-        if (req.db.mode === 'nondb') {
-            const members = req.db.fileDb.find('amr_group_members', {
-                group_id: parseInt(req.params.id),
-                user_id:  parseInt(req.params.userId),
-            });
-            if (!members.length) return res.status(404).json({ error: 'Member not found' });
-            req.db.fileDb.delete('amr_group_members', members[0].id);
-            return res.json({ success: true });
-        }
         const { rowCount } = await db.query(
             'DELETE FROM amr_group_members WHERE group_id = $1 AND user_id = $2',
             [req.params.id, req.params.userId]
         );
         if (!rowCount) return res.status(404).json({ error: 'Member not found' });
         res.json({ success: true });
-    } catch (e) { console.error('[admin]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[admin]'); }
 });
 
 // ── Group → Tenant assignments (group_tenant) ─────────────────────────────────
 
 // POST /api/admin/user-groups/:id/tenants  { tenant_id, role_id }
-router.post('/user-groups/:id/tenants', async (req, res) => {
+router.post('/user-groups/:id/tenants', blockNonDbWrite, async (req, res) => {
     const { tenant_id, role_id } = req.body;
     if (!tenant_id || !role_id) return res.status(400).json({ error: 'tenant_id and role_id are required' });
     try {
-        if (req.db.mode === 'nondb') {
-            const existing = req.db.fileDb.find('group_tenant', {
-                group_id: parseInt(req.params.id), tenant_id: parseInt(tenant_id), role_id: parseInt(role_id),
-            });
-            if (existing.length) return res.status(409).json({ error: 'Assignment already exists' });
-            const row = req.db.fileDb.create('group_tenant', {
-                group_id: parseInt(req.params.id), tenant_id: parseInt(tenant_id), role_id: parseInt(role_id),
-            });
-            return res.status(201).json({ success: true, data: row });
-        }
         const { rows } = await db.query(
             `INSERT INTO group_tenant (group_id, tenant_id, role_id)
              VALUES ($1, $2, $3)
@@ -346,25 +277,19 @@ router.post('/user-groups/:id/tenants', async (req, res) => {
         );
         if (!rows[0]) return res.status(409).json({ error: 'Assignment already exists' });
         res.status(201).json({ success: true, data: rows[0] });
-    } catch (e) { console.error('[admin]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[admin]'); }
 });
 
 // DELETE /api/admin/user-groups/:id/tenants/:gtId
-router.delete('/user-groups/:id/tenants/:gtId', async (req, res) => {
+router.delete('/user-groups/:id/tenants/:gtId', blockNonDbWrite, async (req, res) => {
     try {
-        if (req.db.mode === 'nondb') {
-            const gt = req.db.fileDb.getById('group_tenant', req.params.gtId);
-            if (!gt || gt.group_id != req.params.id) return res.status(404).json({ error: 'Assignment not found' });
-            req.db.fileDb.delete('group_tenant', req.params.gtId);
-            return res.json({ success: true });
-        }
         const { rowCount } = await db.query(
             'DELETE FROM group_tenant WHERE id = $1 AND group_id = $2',
             [req.params.gtId, req.params.id]
         );
         if (!rowCount) return res.status(404).json({ error: 'Assignment not found' });
         res.json({ success: true });
-    } catch (e) { console.error('[admin]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[admin]'); }
 });
 
 // ── Roles ─────────────────────────────────────────────────────────────────────
@@ -422,21 +347,15 @@ router.get('/roles', async (req, res) => {
             `));
         }
         res.json({ success: true, data: rows });
-    } catch (e) { console.error('[admin] roles:', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[admin] roles:'); }
 });
 
 // POST /api/admin/roles
-router.post('/roles', async (req, res) => {
+router.post('/roles', blockNonDbWrite, async (req, res) => {
     const { name, label, description } = req.body;
     if (!name || !label) return res.status(400).json({ error: 'name and label are required' });
     if (!/^[a-z_]+$/.test(name)) return res.status(400).json({ error: 'name must be lowercase letters and underscores only' });
     try {
-        if (req.db.mode === 'nondb') {
-            const existing = req.db.fileDb.find('amr_roles', { name });
-            if (existing.length) return res.status(409).json({ error: 'Role name already exists' });
-            const row = req.db.fileDb.create('amr_roles', { name, label, description: description || '', is_system: false });
-            return res.status(201).json({ success: true, data: row });
-        }
         const { rows } = await db.query(
             'INSERT INTO amr_roles (name,label,description,is_system) VALUES ($1,$2,$3,false) RETURNING *',
             [name, label, description || '']
@@ -449,18 +368,9 @@ router.post('/roles', async (req, res) => {
 });
 
 // PUT /api/admin/roles/:id
-router.put('/roles/:id', async (req, res) => {
+router.put('/roles/:id', blockNonDbWrite, async (req, res) => {
     const { label, description } = req.body;
     try {
-        if (req.db.mode === 'nondb') {
-            const existing = req.db.fileDb.getById('amr_roles', req.params.id);
-            if (!existing) return res.status(404).json({ error: 'Role not found' });
-            const updates = {};
-            if (label       !== undefined) updates.label       = label;
-            if (description !== undefined) updates.description = description;
-            const row = req.db.fileDb.update('amr_roles', req.params.id, updates);
-            return res.json({ success: true, data: row });
-        }
         const { rows } = await db.query(
             `UPDATE amr_roles SET label = COALESCE($1, label), description = COALESCE($2, description),
              updated_at = NOW() WHERE id = $3 RETURNING *`,
@@ -468,21 +378,12 @@ router.put('/roles/:id', async (req, res) => {
         );
         if (!rows[0]) return res.status(404).json({ error: 'Role not found' });
         res.json({ success: true, data: rows[0] });
-    } catch (e) { console.error('[admin]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[admin]'); }
 });
 
 // DELETE /api/admin/roles/:id  (system roles cannot be deleted)
-router.delete('/roles/:id', async (req, res) => {
+router.delete('/roles/:id', blockNonDbWrite, async (req, res) => {
     try {
-        if (req.db.mode === 'nondb') {
-            const role = req.db.fileDb.getById('amr_roles', req.params.id);
-            if (!role) return res.status(404).json({ error: 'Role not found' });
-            if (role.is_system) return res.status(403).json({ error: 'System roles cannot be deleted' });
-            const users = req.db.fileDb.find('amr_users', { role: role.name });
-            if (users.length) return res.status(409).json({ error: `${users.length} user(s) have this role. Reassign them first.` });
-            req.db.fileDb.delete('amr_roles', req.params.id);
-            return res.json({ success: true });
-        }
         const { rows: [role] } = await db.query('SELECT * FROM amr_roles WHERE id = $1', [req.params.id]);
         if (!role) return res.status(404).json({ error: 'Role not found' });
         if (role.is_system) return res.status(403).json({ error: 'System roles cannot be deleted' });
@@ -492,186 +393,74 @@ router.delete('/roles/:id', async (req, res) => {
         if (cnt > 0) return res.status(409).json({ error: `${cnt} user(s) have this role. Reassign them first.` });
         await db.query('DELETE FROM amr_roles WHERE id = $1', [req.params.id]);
         res.json({ success: true });
-    } catch (e) { console.error('[admin]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[admin]'); }
+});
+
+// ── Login Audit ───────────────────────────────────────────────────────────────
+
+// GET /api/admin/login-audit — most recent login events, enriched with user info
+router.get('/login-audit', async (req, res) => {
+    try {
+        if (req.db.mode === 'nondb') {
+            const users = req.db.fileDb.find('amr_users');
+            const rows = req.db.fileDb.find('login_audit')
+                .slice()
+                .sort((a, b) => new Date(b.logged_in_at) - new Date(a.logged_in_at))
+                .slice(0, 500)
+                .map(a => {
+                    const u = users.find(u => u.id == a.user_id);
+                    return { ...a, username: u?.username || null, name: u?.name || null, email: u?.email || null };
+                });
+            return res.json({ success: true, data: rows });
+        }
+        const { rows } = await db.query(`
+            SELECT la.*, u.username, u.name, u.email
+            FROM login_audit la
+            JOIN amr_users u ON u.id = la.user_id
+            ORDER BY la.logged_in_at DESC
+            LIMIT 500
+        `);
+        res.json({ success: true, data: rows });
+    } catch (e) { sendError(res, e, '[admin/login-audit]'); }
 });
 
 // ── Sync ──────────────────────────────────────────────────────────────────────
 
-// POST /api/admin/sync-to-db
-router.post('/sync-to-db', async (req, res) => {
-    if (req.db.mode === 'nondb') {
-        return res.status(400).json({ error: 'Server is running in NonDB mode — no database to sync to.' });
-    }
-
-    const fs       = require('fs');
-    const path     = require('path');
+// GET /api/admin/sync-tables — the list of tables eligible for DB→file sync
+// (metadata/manifest.json), so the admin-health.html button can drive the
+// per-table loop below without hardcoding the table list client-side.
+router.get('/sync-tables', (req, res) => {
     const manifest = require('../../metadata/manifest.json');
-    const DATA_DIR = process.env.TRANSACTIONDATA_DIR
-        ? path.resolve(process.env.TRANSACTIONDATA_DIR)
-        : path.join(__dirname, '../../transactiondata');
-
-    // Pre-load actual DB column names for each table (avoids inserting stale/extra JSON fields)
-    const dbCols = {};
-    for (const table of manifest.tables) {
-        try {
-            const { rows: cols } = await db.query(
-                `SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=$1`,
-                [table]
-            );
-            dbCols[table] = new Set(cols.map(r => r.column_name));
-        } catch { dbCols[table] = null; }
-    }
-
-    const results = [];
-    const BATCH = 200;
-
-    for (const table of manifest.tables) {
-        const file = path.join(DATA_DIR, `${table}.json`);
-        if (!fs.existsSync(file)) {
-            results.push({ table, skipped: true, reason: 'no file' });
-            continue;
-        }
-
-        let rows;
-        try { rows = JSON.parse(fs.readFileSync(file, 'utf8')); }
-        catch (e) { results.push({ table, skipped: true, reason: `parse error: ${e.message}` }); continue; }
-
-        if (!rows.length) { results.push({ table, rows: 0, inserted: 0, updated: 0 }); continue; }
-
-        const allowedCols = dbCols[table];
-
-        // Strip non-DB fields and unknown columns from each row
-        const cleaned = rows
-            .map(r => Object.fromEntries(
-                Object.entries(r).filter(([k, v]) =>
-                    k !== '_metadata' &&
-                    !Array.isArray(v) &&
-                    (typeof v !== 'object' || v === null) &&
-                    (!allowedCols || allowedCols.has(k))
-                )
-            ))
-            .filter(r => r.id);
-
-        if (!cleaned.length) { results.push({ table, rows: rows.length, inserted: 0, updated: 0 }); continue; }
-
-        // Use the first row's columns as the canonical set for the whole table
-        const cols      = Object.keys(cleaned[0]);
-        const setCols   = cols.filter(c => c !== 'id' && c !== 'created_at');
-        const setClause = setCols.map(c => `${c} = EXCLUDED.${c}`).join(', ');
-
-        let inserted = 0, updated = 0, errors = 0;
-
-        for (let i = 0; i < cleaned.length; i += BATCH) {
-            const batch = cleaned.slice(i, i + BATCH);
-            const vals  = [];
-            const rowPlaceholders = batch.map((r, ri) => {
-                cols.forEach(c => vals.push(r[c] !== undefined ? r[c] : null));
-                return `(${cols.map((_, ci) => `$${ri * cols.length + ci + 1}`).join(', ')})`;
-            });
-            try {
-                const result = await db.query(
-                    `INSERT INTO ${table} (${cols.join(', ')})
-                     VALUES ${rowPlaceholders.join(', ')}
-                     ON CONFLICT (id) DO UPDATE SET ${setClause}
-                     RETURNING (xmax = 0) AS was_inserted`,
-                    vals
-                );
-                for (const r of result.rows) r.was_inserted ? inserted++ : updated++;
-            } catch (e) {
-                errors += batch.length;
-                console.error(`sync ${table} batch[${i}..${i + batch.length - 1}]: ${e.message}`);
-            }
-        }
-        results.push({ table, rows: rows.length, inserted, updated, errors });
-
-        // Reset sequence so next auto-insert gets an id above the max we just synced
-        if (inserted + updated > 0) {
-            try {
-                await db.query(
-                    `SELECT setval(pg_get_serial_sequence($1, 'id'), COALESCE((SELECT MAX(id) FROM "${table}"), 0) + 1, false)`,
-                    [table]
-                );
-            } catch { /* table may not have a serial id — safe to ignore */ }
-        }
-    }
-
-    res.json({ success: true, data: results });
+    res.json({ success: true, data: manifest.tables });
 });
 
-// GET /api/admin/sync-status?tables=tenants,invoices
-//
-// Read-only dry-run for the "Sync to DB" button: reports whether any row in
-// the given tables' transactiondata/*.json differs from (or is missing from)
-// the DB, so the frontend can hide the button when there's genuinely nothing
-// to sync. Deliberately independent of sync-to-db's own write logic — that
-// route always overwrites on conflict regardless of whether values actually
-// changed (ON CONFLICT DO UPDATE), so it can't answer "is a sync needed"
-// itself. String-coerced comparison is intentionally loose (tolerates
-// type/formatting differences between JSON and pg's native types) — a false
-// "needs sync" just shows the button unnecessarily, which is harmless; a
-// false negative would hide real admin functionality, which isn't.
-router.get('/sync-status', async (req, res) => {
+// POST /api/admin/sync-from-db/:table — re-exports ONE table from the live DB
+// to transactiondata/<table>.json on demand. Deliberately one table per
+// request rather than looping every manifest table inside a single request
+// (the previous design) — that risked ApiFn's 29s Lambda timeout and a large
+// aggregate response as the number/size of tables grows. admin-health.html's
+// "Sync DB → Files" button now drives the per-table loop itself (sequential
+// fetch calls), so every individual Lambda invocation stays small and bounded
+// regardless of how many tables or rows exist. There is deliberately no
+// files→DB direction anymore — transactiondata/ is meant to stay a DB-derived
+// read-only mirror, not a source of truth pushed back into the DB (see
+// project-db-write-file-mirror.md). Reuses backend/db.js's mirrorTableToFile(),
+// the same per-table logic the automatic write-mirror uses after every write.
+router.post('/sync-from-db/:table', async (req, res) => {
     if (req.db.mode === 'nondb') {
-        return res.json({ success: true, data: { needsSync: false } });
+        return res.status(400).json({ error: 'Server is running in NonDB mode — no database to sync from.' });
     }
-
-    const fs       = require('fs');
-    const path     = require('path');
     const manifest = require('../../metadata/manifest.json');
-    const DATA_DIR = process.env.TRANSACTIONDATA_DIR
-        ? path.resolve(process.env.TRANSACTIONDATA_DIR)
-        : path.join(__dirname, '../../transactiondata');
-
-    const requested = (req.query.tables || '').split(',').map(t => t.trim()).filter(Boolean);
-    const tables    = requested.filter(t => manifest.tables.includes(t));
-    if (!tables.length) return res.json({ success: true, data: { needsSync: false } });
-
+    const { table } = req.params;
+    if (!manifest.tables.includes(table)) {
+        return res.status(400).json({ error: `Unknown table "${table}"` });
+    }
     try {
-        let needsSync = false;
-
-        for (const table of tables) {
-            const file = path.join(DATA_DIR, `${table}.json`);
-            if (!fs.existsSync(file)) continue;
-
-            let rows;
-            try { rows = JSON.parse(fs.readFileSync(file, 'utf8')); }
-            catch { continue; }
-            if (!rows.length) continue;
-
-            const { rows: colRows } = await db.query(
-                `SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=$1`,
-                [table]
-            );
-            const allowedCols = new Set(colRows.map(r => r.column_name));
-
-            const cleaned = rows
-                .map(r => Object.fromEntries(
-                    Object.entries(r).filter(([k, v]) =>
-                        k !== '_metadata' && k !== 'created_at' && k !== 'updated_at' &&
-                        !Array.isArray(v) && (typeof v !== 'object' || v === null) &&
-                        allowedCols.has(k)
-                    )
-                ))
-                .filter(r => r.id);
-            if (!cleaned.length) continue;
-
-            const ids = cleaned.map(r => r.id);
-            const { rows: dbRows } = await db.query(`SELECT * FROM ${table} WHERE id = ANY($1)`, [ids]);
-            const dbById = new Map(dbRows.map(r => [String(r.id), r]));
-
-            for (const r of cleaned) {
-                const dbRow = dbById.get(String(r.id));
-                if (!dbRow) { needsSync = true; break; }
-                const differs = Object.entries(r).some(([k, v]) =>
-                    k !== 'id' && String(dbRow[k] ?? '') !== String(v ?? '')
-                );
-                if (differs) { needsSync = true; break; }
-            }
-            if (needsSync) break;
-        }
-
-        res.json({ success: true, data: { needsSync } });
-    } catch (e) { console.error('[admin/sync-status]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+        const rows = await db.mirrorTableToFile(table);
+        res.json({ success: true, table, rows });
+    } catch (e) {
+        res.status(500).json({ success: false, table, error: e.message });
+    }
 });
 
 // ── System health & versions ──────────────────────────────────────────────────
@@ -729,8 +518,7 @@ router.get('/health', async (req, res) => {
             },
         });
     } catch (err) {
-        console.error('[admin/health]', err.message);
-        res.status(500).json({ error: 'Internal server error' });
+        sendError(res, err, '[admin/health]');
     }
 });
 

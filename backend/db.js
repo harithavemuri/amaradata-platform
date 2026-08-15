@@ -16,12 +16,30 @@ types.setTypeParser(701,  parseFloat_); // FLOAT8
 // Return DATE as "YYYY-MM-DD" string instead of a Date object so GraphQL
 // String fields don't fall back to String(dateObj) (locale-dependent garbage).
 types.setTypeParser(1082, v => v);      // DATE
+// enhancements.issue_id is BIGINT (OID 20) — pg returns it as a string for the
+// same precision-safety reason as NUMERIC above, but every caller in this repo
+// (routes, jobs/sync-tenant-fixes.js, tests) treats it as a plain JS number and
+// compares it with ===, so a string here silently breaks those comparisons.
+// Values are timestamp-derived issue ids, always well within safe-integer range.
+types.setTypeParser(20, v => v === null ? null : parseInt(v, 10)); // BIGINT / INT8
+
+const fs   = require('fs');
+const path = require('path');
 
 const { getSecret, invalidate } = require('./services/secrets');
-const { withAuthRetry }         = require('./services/db-retry');
+const { withAuthRetry, withConnectRetry, isConnectivityError } = require('./services/db-retry');
 
 const WRITE_PASSWORD_SECRET_ID = process.env.AMRD_DB_WRITE_PASSWORD_SECRET_ID;
 const READ_PASSWORD_SECRET_ID  = process.env.AMRD_DB_READ_PASSWORD_SECRET_ID;
+
+// Every successful write mirrors its table's current state to
+// transactiondata/<table>.json, same target directory jobs/export-db-to-files.js
+// and NonDB mode's FileDbService use (see project-db-write-file-mirror.md).
+const MANIFEST           = require('../metadata/manifest.json');
+const MIRRORED_TABLES    = new Set(MANIFEST.tables);
+const TRANSACTIONDATA_DIR = process.env.TRANSACTIONDATA_DIR
+    ? path.resolve(process.env.TRANSACTIONDATA_DIR)
+    : path.join(__dirname, '../transactiondata');
 
 const base = {
     host:              process.env.AMRD_DB_HOST || 'localhost',
@@ -60,7 +78,28 @@ const readPool = new Pool({
 writePool.on('error', (err) => console.error('DB write-pool error', err));
 readPool.on('error',  (err) => console.error('DB read-pool error',  err));
 
-function query(sql, params) {
+// Table name a write statement targets, or null if it's not a plain
+// INSERT/UPDATE/DELETE (e.g. schema DDL — CREATE/DROP/ALTER/TRUNCATE are
+// never mirrored, there's no single-row-file semantic for them).
+function writeTargetTable(sql) {
+    const m = /^\s*(?:INSERT INTO|UPDATE|DELETE FROM)\s+"?(\w+)"?/i.exec(sql);
+    return m ? m[1].toLowerCase() : null;
+}
+
+// Re-reads the whole table and overwrites its JSON file, rather than patching
+// in just the changed row(s) from a RETURNING clause (many writes in this
+// codebase don't use RETURNING at all, e.g. plain DELETEs). A full re-read is
+// simpler and self-correcting — it converges to the same result no matter how
+// many times or in what order it runs, matching the idempotency requirement
+// (feedback-idempotent-writes.md) — at the cost of an extra SELECT per write.
+async function mirrorTableToFile(table) {
+    const { rows } = await query(`SELECT * FROM ${table} ORDER BY id`);
+    fs.mkdirSync(TRANSACTIONDATA_DIR, { recursive: true });
+    fs.writeFileSync(path.join(TRANSACTIONDATA_DIR, `${table}.json`), JSON.stringify(rows, null, 2));
+    return rows.length;
+}
+
+async function query(sql, params) {
     const isWrite = /^\s*(INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|TRUNCATE)/i.test(sql);
     const pool     = isWrite ? writePool : readPool;
     const secretId = isWrite ? WRITE_PASSWORD_SECRET_ID : READ_PASSWORD_SECRET_ID;
@@ -68,10 +107,43 @@ function query(sql, params) {
     // A rotated password only breaks *new* pool connections (existing sessions
     // survive ALTER ROLE), so an auth failure here means the cached value is
     // stale — drop it and retry once with a freshly fetched password.
-    return withAuthRetry(
+    const run = () => withAuthRetry(
         () => pool.query(sql, params),
         () => invalidate(secretId),
     );
+
+    if (isWrite) {
+        let result;
+        try {
+            // Never auto-retry a write on a connectivity failure — the write's
+            // outcome is unknown, so a blind retry risks double-applying it.
+            // Surface a typed, clean "try again" error instead of the raw pg
+            // error; callers are safe to retry only because writes are required
+            // to be idempotent (see feedback-idempotent-writes.md).
+            result = await run();
+        } catch (err) {
+            if (!isConnectivityError(err)) throw err;
+            const unavailable = new Error('Database temporarily unavailable — please retry shortly.');
+            unavailable.dbUnavailable = true;
+            unavailable.cause = err;
+            throw unavailable;
+        }
+
+        const table = writeTargetTable(sql);
+        if (table && MIRRORED_TABLES.has(table)) {
+            // Best-effort: the DB write already succeeded and is the source of
+            // truth — a mirror failure (e.g. read-only filesystem in some
+            // deploy target) is logged, never turned into an error response
+            // for a write that genuinely succeeded.
+            try { await mirrorTableToFile(table); }
+            catch (e) { console.error(`[db] mirror-to-file failed for ${table}:`, e.message); }
+        }
+        return result;
+    }
+
+    // Reads: retry transparently through a cold/unreachable DB (e.g. Aurora
+    // resuming from scale-to-zero) so a brief hiccup never surfaces to the caller.
+    return withConnectRetry(run);
 }
 
-module.exports = { query, writePool, readPool };
+module.exports = { query, writePool, readPool, mirrorTableToFile };

@@ -2,9 +2,16 @@ const router                              = require('express').Router();
 const bcrypt                              = require('bcryptjs');
 const crypto                              = require('crypto');
 const db                                  = require('../db');
-const { sign, signRefresh, verifyRefresh, requireAuth } = require('../middleware/auth');
+const { sign, signRefresh, verifyRefresh, requireAuth, getJwtSecret } = require('../middleware/auth');
 const GoogleOAuth                         = require('../auth/google-auth');
 const { sendEmail }                       = require('../services/ses');
+const secrets                             = require('../services/secrets');
+const { sendError }                       = require('../services/http-errors');
+const { blockNonDbWrite }                 = require('../middleware/block-nondb-write');
+
+// Resolved at runtime through services/secrets.js, not baked into the Lambda
+// env at deploy time (see project-realtime-secret-fetch-standard.md).
+const SSO_SECRET_ID = process.env.SSO_SECRET_ID;
 
 // Role priority — lower number = higher privilege
 const ROLE_PRIORITY = { site_admin: 1, admin: 2, sales_manager: 3, billing: 4, staff: 5 };
@@ -62,29 +69,38 @@ router.post('/login', async (req, res) => {
         if (!user || !(await bcrypt.compare(password, user.password_hash)))
             return res.status(401).json({ error: 'Invalid credentials' });
 
+        // Login audit — bookkeeping side effect of a successful login, not a
+        // "data write" this app otherwise blocks in NonDB mode (see
+        // backend/middleware/block-nondb-write.js's doc comment).
         if (req.db.mode === 'nondb') {
             req.db.fileDb.update('amr_users', user.id, { last_login_at: new Date().toISOString() });
+            req.db.fileDb.create('login_audit', {
+                user_id: user.id, method: 'password', ip_address: req.ip, logged_in_at: new Date().toISOString(),
+            });
         } else {
             await db.query('UPDATE amr_users SET last_login_at = NOW() WHERE id = $1', [user.id]);
+            await db.query(
+                'INSERT INTO login_audit (user_id, method, ip_address) VALUES ($1, $2, $3)',
+                [user.id, 'password', req.ip]
+            );
         }
 
         const role = await resolveEffectiveRole(user, req.db.mode, req.db.fileDb);
         const safe = { id: user.id, username: user.username, email: user.email, name: user.name, role };
-        res.json({ success: true, token: sign(safe), refresh_token: signRefresh(safe), user: safe });
+        res.json({ success: true, token: await sign(safe), refresh_token: await signRefresh(safe), user: safe });
     } catch (e) {
-        console.error('[auth]', e.message);
-        res.status(500).json({ error: 'Internal server error' });
+        sendError(res, e, '[auth]');
     }
 });
 
 // POST /api/auth/refresh
-router.post('/refresh', (req, res) => {
+router.post('/refresh', async (req, res) => {
     const { refresh_token } = req.body;
     if (!refresh_token) return res.status(400).json({ error: 'refresh_token required' });
     try {
-        const payload = verifyRefresh(refresh_token);
+        const payload = await verifyRefresh(refresh_token);
         const safe    = { id: payload.id, email: payload.email, name: payload.name, role: payload.role };
-        res.json({ success: true, token: sign(safe), refresh_token: signRefresh(safe) });
+        res.json({ success: true, token: await sign(safe), refresh_token: await signRefresh(safe) });
     } catch {
         res.status(401).json({ error: 'Invalid or expired refresh token' });
     }
@@ -96,21 +112,16 @@ router.post('/logout', (req, res) => {
 });
 
 // POST /api/auth/create-user  (first-time setup / admin only)
-router.post('/create-user', async (req, res) => {
+router.post('/create-user', blockNonDbWrite, async (req, res) => {
     const { email, password, name, role = 'staff', setup_key } = req.body;
     const username = req.body.username || email;  // default username to email for backward compat
-    if (setup_key !== process.env.AMRD_JWT_SECRET) return res.status(403).json({ error: 'Forbidden' });
+    try {
+        if (setup_key !== await getJwtSecret()) return res.status(403).json({ error: 'Forbidden' });
+    } catch {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
     try {
         const hash = await bcrypt.hash(password, 12);
-        if (req.db.mode === 'nondb') {
-            const uLower = username.toLowerCase();
-            const existing = req.db.fileDb.find('amr_users').filter(u => u.username?.toLowerCase() === uLower);
-            if (existing.length) return res.status(409).json({ error: 'Username already exists' });
-            const row = req.db.fileDb.create('amr_users', {
-                username, email, name, role, password_hash: hash, is_active: true,
-            });
-            return res.status(201).json({ success: true, data: { id: row.id, username: row.username, email: row.email, name: row.name, role: row.role } });
-        }
         const { rows } = await db.query(
             'INSERT INTO amr_users (username, email, name, role, password_hash) VALUES ($1,$2,$3,$4,$5) RETURNING id,username,email,name,role',
             [username, email, name, role, hash]
@@ -118,8 +129,7 @@ router.post('/create-user', async (req, res) => {
         res.status(201).json({ success: true, data: rows[0] });
     } catch (e) {
         if (e.code === '23505') return res.status(409).json({ error: 'Username already exists' });
-        console.error('[auth]', e.message);
-        res.status(500).json({ error: 'Internal server error' });
+        sendError(res, e, '[auth]');
     }
 });
 
@@ -188,26 +198,26 @@ router.post('/google/exchange', async (req, res) => {
 
         let user;
         if (req.db.mode === 'nondb') {
+            // Updating an existing user's last_login_at/google_id/logo_url on
+            // re-login is the same kind of bookkeeping side effect plain
+            // /login's last_login_at update is (see block-nondb-write.js) —
+            // allowed even though NonDB mode is otherwise read-only. Creating
+            // a brand-new account (first-time Google sign-in) is a real write
+            // and is blocked below.
             const emailLower = userInfo.email.toLowerCase();
             const existing = req.db.fileDb.find('amr_users').filter(u => u.email?.toLowerCase() === emailLower);
-            if (existing.length) {
-                user = existing[0];
-                req.db.fileDb.update('amr_users', user.id, {
-                    last_login_at: new Date().toISOString(),
-                    google_id:     userInfo.id,
-                    logo_url:      userInfo.picture,
-                });
-            } else {
-                user = req.db.fileDb.create('amr_users', {
-                    username:  userInfo.email,
-                    email:     userInfo.email,
-                    name:      userInfo.name,
-                    role:      'staff',
-                    google_id: userInfo.id,
-                    logo_url:  userInfo.picture,
-                    is_active: true,
-                });
+            if (!existing.length) {
+                return res.status(403).json({ error: 'NonDB mode is read-only — writes are not supported.' });
             }
+            user = existing[0];
+            req.db.fileDb.update('amr_users', user.id, {
+                last_login_at: new Date().toISOString(),
+                google_id:     userInfo.id,
+                logo_url:      userInfo.picture,
+            });
+            req.db.fileDb.create('login_audit', {
+                user_id: user.id, method: 'google', ip_address: req.ip, logged_in_at: new Date().toISOString(),
+            });
         } else {
             const { rows } = await db.query(
                 'SELECT * FROM amr_users WHERE lower(email) = lower($1) AND is_active = true', [userInfo.email]
@@ -226,6 +236,10 @@ router.post('/google/exchange', async (req, res) => {
                 );
                 user = r[0];
             }
+            await db.query(
+                'INSERT INTO login_audit (user_id, method, ip_address) VALUES ($1, $2, $3)',
+                [user.id, 'google', req.ip]
+            );
         }
 
         const role = await resolveEffectiveRole(user, req.db.mode, req.db.fileDb);
@@ -240,31 +254,24 @@ router.post('/google/exchange', async (req, res) => {
         res.json({
             success: true,
             data: {
-                token:         sign(safe),
-                refresh_token: signRefresh(safe),
+                token:         await sign(safe),
+                refresh_token: await signRefresh(safe),
                 user:          safe,
             },
         });
     } catch (e) {
-        console.error('[auth] google/exchange:', e.message);
-        res.status(500).json({ error: 'Internal server error' });
+        sendError(res, e, '[auth] google/exchange:');
     }
 });
 
 // POST /api/auth/forgot-password
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', blockNonDbWrite, async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'email required' });
 
     try {
-        let user;
-        if (req.db.mode === 'nondb') {
-            const emailLower = email.toLowerCase();
-            user = req.db.fileDb.find('amr_users').find(u => u.email?.toLowerCase() === emailLower && u.is_active !== false);
-        } else {
-            const { rows } = await db.query('SELECT * FROM amr_users WHERE lower(email) = lower($1) AND is_active = true', [email]);
-            user = rows[0];
-        }
+        const { rows } = await db.query('SELECT * FROM amr_users WHERE lower(email) = lower($1) AND is_active = true', [email]);
+        const user = rows[0];
 
         // Only send if the user has a password (not Google-only accounts)
         if (user && user.password_hash) {
@@ -274,19 +281,11 @@ router.post('/forgot-password', async (req, res) => {
             const resetLink   = `${frontendUrl}/reset-password?token=${token}`;
             const company     = process.env.COMPANY_NAME || 'AmaraData';
 
-            if (req.db.mode === 'nondb') {
-                req.db.fileDb.find('amr_password_reset_tokens')
-                    .filter(t => t.user_id === user.id)
-                    .forEach(t => req.db.fileDb.delete('amr_password_reset_tokens', t.id));
-                req.db.fileDb.create('amr_password_reset_tokens', { user_id: user.id, token, expires_at: expiresAt });
-                console.log(`[reset-link] ${resetLink}`);
-            } else {
-                await db.query('DELETE FROM amr_password_reset_tokens WHERE user_id = $1', [user.id]);
-                await db.query(
-                    'INSERT INTO amr_password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
-                    [user.id, token, expiresAt]
-                );
-            }
+            await db.query('DELETE FROM amr_password_reset_tokens WHERE user_id = $1', [user.id]);
+            await db.query(
+                'INSERT INTO amr_password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
+                [user.id, token, expiresAt]
+            );
 
             await sendEmail({
                 to:      user.email,
@@ -316,52 +315,47 @@ router.post('/forgot-password', async (req, res) => {
         // Always return 200 — don't reveal whether the email is registered
         res.json({ success: true, message: "If that email is registered, you'll receive a reset link shortly." });
     } catch (e) {
-        console.error('forgot-password error:', e.message);
-        res.status(500).json({ error: 'Failed to process request' });
+        sendError(res, e, 'forgot-password error:', 'Failed to process request');
     }
 });
 
 // POST /api/auth/reset-password
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', blockNonDbWrite, async (req, res) => {
     const { token, password } = req.body;
     if (!token || !password) return res.status(400).json({ error: 'token and password required' });
     if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
 
     try {
-        if (req.db.mode === 'nondb') {
-            const tokenRow = req.db.fileDb.find('amr_password_reset_tokens')
-                .find(t => t.token === token && new Date(t.expires_at) > new Date());
-            if (!tokenRow) return res.status(400).json({ error: 'Invalid or expired reset link' });
-            const user = req.db.fileDb.getById('amr_users', tokenRow.user_id);
-            if (!user || user.is_active === false) return res.status(400).json({ error: 'User not found' });
-            const hash = await bcrypt.hash(password, 12);
-            req.db.fileDb.update('amr_users', user.id, { password_hash: hash });
-            req.db.fileDb.delete('amr_password_reset_tokens', tokenRow.id);
-        } else {
-            const { rows } = await db.query(
-                `SELECT t.id, t.user_id, u.is_active
-                 FROM amr_password_reset_tokens t
-                 JOIN amr_users u ON u.id = t.user_id
-                 WHERE t.token = $1 AND t.expires_at > NOW()`,
-                [token]
-            );
-            const tokenRow = rows[0];
-            if (!tokenRow || !tokenRow.is_active) return res.status(400).json({ error: 'Invalid or expired reset link' });
-            const hash = await bcrypt.hash(password, 12);
-            await db.query('UPDATE amr_users SET password_hash = $2, updated_at = NOW() WHERE id = $1', [tokenRow.user_id, hash]);
-            await db.query('DELETE FROM amr_password_reset_tokens WHERE token = $1', [token]);
-        }
+        const { rows } = await db.query(
+            `SELECT t.id, t.user_id, u.is_active
+             FROM amr_password_reset_tokens t
+             JOIN amr_users u ON u.id = t.user_id
+             WHERE t.token = $1 AND t.expires_at > NOW()`,
+            [token]
+        );
+        const tokenRow = rows[0];
+        if (!tokenRow || !tokenRow.is_active) return res.status(400).json({ error: 'Invalid or expired reset link' });
+        const hash = await bcrypt.hash(password, 12);
+        await db.query('UPDATE amr_users SET password_hash = $2, updated_at = NOW() WHERE id = $1', [tokenRow.user_id, hash]);
+        await db.query('DELETE FROM amr_password_reset_tokens WHERE token = $1', [token]);
 
         res.json({ success: true, message: 'Password updated. You can now sign in.' });
     } catch (e) {
-        console.error('reset-password error:', e.message);
-        res.status(500).json({ error: 'Failed to reset password' });
+        sendError(res, e, 'reset-password error:', 'Failed to reset password');
     }
 });
 
 // POST /api/auth/sso/issue — issue a 60-second SSO token for tenant sites (requires auth)
-router.post('/sso/issue', requireAuth, (req, res) => {
-    const ssoSecret = process.env.SSO_SECRET;
+router.post('/sso/issue', requireAuth, async (req, res) => {
+    // getSecret() throws when neither SSO_SECRET_ID nor the SSO_SECRET fallback is
+    // set at all — that's the same "not configured" case this route has always
+    // reported as a clean 503, not a 500, so it's caught rather than left to bubble.
+    let ssoSecret;
+    try {
+        ssoSecret = await secrets.getSecret(SSO_SECRET_ID, { fallback: process.env.SSO_SECRET });
+    } catch {
+        return res.status(503).json({ error: 'SSO not configured' });
+    }
     if (!ssoSecret) return res.status(503).json({ error: 'SSO not configured' });
 
     const { aud } = req.body;  // e.g. "rohas" — caller specifies target tenant

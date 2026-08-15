@@ -149,17 +149,6 @@ describe('platform.js — renderSidebar', () => {
             expect(html).toContain('Roles');
         });
 
-        it('site_admin sees Sync to DB button in topbar', () => {
-            setStaff(SITEADMIN_STAFF);
-            loadPlatform();
-            window.__amrd.renderSidebar('Home');
-            expect(document.body.innerHTML).toContain('Sync to DB');
-        });
-
-        it('non-site_admin does NOT see Sync to DB button', () => {
-            window.__amrd.renderSidebar('Home');
-            expect(document.body.innerHTML).not.toContain('Sync to DB');
-        });
     });
 
     // ── NonDB badge slot ──────────────────────────────────────────────────────

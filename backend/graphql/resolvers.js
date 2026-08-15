@@ -1,4 +1,4 @@
-const { readPool } = require('../db');
+const { query } = require('../db');
 
 module.exports = {
     tenants: async ({ status }, { db }) => {
@@ -12,14 +12,14 @@ module.exports = {
         const params = [];
         if (status) { sql += ' AND status=$1'; params.push(status); }
         sql += ' ORDER BY name';
-        const { rows } = await readPool.query(sql, params);
+        const { rows } = await query(sql, params);
         return rows;
     },
 
     tenant: async ({ id }, { db }) => {
         if (db.mode === 'nondb') return db.fileDb.getById('tenants', id);
         const cols = 'id,name,slug,contact_name,contact_email,contact_phone,status,onboarded_at,site_url,created_at';
-        const { rows } = await readPool.query(`SELECT ${cols} FROM tenants WHERE id=$1`, [id]);
+        const { rows } = await query(`SELECT ${cols} FROM tenants WHERE id=$1`, [id]);
         return rows[0] || null;
     },
 
@@ -40,7 +40,7 @@ module.exports = {
         if (tenant_id) { sql += ` AND i.tenant_id=$${n++}`; params.push(tenant_id); }
         if (status)    { sql += ` AND i.status=$${n++}`;    params.push(status); }
         sql += ' ORDER BY i.issue_date DESC';
-        const { rows } = await readPool.query(sql, params);
+        const { rows } = await query(sql, params);
         return rows;
     },
 
@@ -54,12 +54,12 @@ module.exports = {
                 .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
             return { ...inv, tenant_name: t.name, line_items: items };
         }
-        const { rows: [inv] } = await readPool.query(
+        const { rows: [inv] } = await query(
             `SELECT i.*, t.name AS tenant_name
              FROM invoices i JOIN tenants t ON t.id = i.tenant_id WHERE i.id=$1`, [id]
         );
         if (!inv) return null;
-        const { rows: items } = await readPool.query(
+        const { rows: items } = await query(
             'SELECT * FROM invoice_line_items WHERE invoice_id=$1 ORDER BY sort_order', [id]
         );
         return { ...inv, line_items: items };
@@ -86,7 +86,7 @@ module.exports = {
         if (source)    { sql += ` AND e.source=$${n++}`;    params.push(source); }
         if (item_type) { sql += ` AND e.item_type=$${n++}`; params.push(item_type); }
         sql += ' ORDER BY e.created_at DESC';
-        const { rows } = await readPool.query(sql, params);
+        const { rows } = await query(sql, params);
         return rows;
     },
 
@@ -111,7 +111,7 @@ module.exports = {
         if (year)      { sql += ` AND m.period_year=$${n++}`;  params.push(year); }
         if (month)     { sql += ` AND m.period_month=$${n++}`; params.push(month); }
         sql += ' ORDER BY m.period_year DESC, m.period_month DESC';
-        const { rows } = await readPool.query(sql, params);
+        const { rows } = await query(sql, params);
         return rows;
     },
 
@@ -120,7 +120,7 @@ module.exports = {
             return db.fileDb.find('subscription_plans')
                 .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         }
-        const { rows } = await readPool.query('SELECT * FROM subscription_plans ORDER BY name');
+        const { rows } = await query('SELECT * FROM subscription_plans ORDER BY name');
         return rows;
     },
 
@@ -141,7 +141,7 @@ module.exports = {
         const params = [];
         if (tenant_id) { sql += ' AND ts.tenant_id=$1'; params.push(tenant_id); }
         sql += ' ORDER BY ts.effective_from DESC';
-        const { rows } = await readPool.query(sql, params);
+        const { rows } = await query(sql, params);
         return rows;
     },
 };

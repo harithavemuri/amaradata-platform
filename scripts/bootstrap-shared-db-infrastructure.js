@@ -279,6 +279,59 @@ async function ensureTenantDatabaseAndRoles({ tenant, dbName, writerUser, reader
     }
 }
 
+// Human operators who administer the cluster directly, as opposed to the
+// per-tenant application roles above. These get rds_superuser — Aurora's
+// closest equivalent to superuser, since RDS withholds true SUPERUSER.
+const ADMIN_ROLES = ['haritha.vemuri'];
+
+/**
+ * Create a cluster-admin login, deliberately WITHOUT a password.
+ *
+ * The role is created with LOGIN but no password, so it cannot authenticate
+ * until a human sets one out-of-band:
+ *
+ *   ALTER ROLE "haritha.vemuri" WITH PASSWORD '<chosen-password>';
+ *
+ * This script never generates, stores, or prints a password for an operator
+ * account — unlike the application roles above, whose passwords it writes to
+ * Secrets Manager because the apps have to read them back. A human credential
+ * has no such requirement, so the fewer systems that ever hold it, the better.
+ *
+ * Idempotent: an existing role is left completely alone, including its password.
+ */
+async function ensureAdminRole(role) {
+    console.log(`\n--- Cluster admin: ${role} ---`);
+    const host           = await getHostEndpoint();
+    const masterPassword = await getSecret(CLUSTER.masterSecretId);
+
+    const client = new Client({
+        host, port: CLUSTER.port, database: 'postgres',
+        user: CLUSTER.masterUsername, password: masterPassword,
+    });
+    await client.connect();
+
+    try {
+        const { rows } = await client.query('SELECT 1 FROM pg_roles WHERE rolname = $1', [role]);
+        if (rows.length) {
+            console.log(`[ok] role ${role} already exists -- not touching it`);
+        } else {
+            console.log(`[create] role ${role} (LOGIN, no password set)`);
+            await client.query(`CREATE ROLE ${client.escapeIdentifier(role)} LOGIN`);
+            console.log(`[ok] role created -- it cannot log in until a password is set`);
+        }
+
+        // Granting is separate from creation so an existing role picks up the
+        // grant too; GRANT is a no-op when already a member.
+        await client.query(`GRANT rds_superuser TO ${client.escapeIdentifier(role)}`);
+        console.log(`[ok] granted rds_superuser to ${role}`);
+
+        console.log(`\n  Set the password yourself before first use:`);
+        console.log(`    ALTER ROLE "${role}" WITH PASSWORD '<chosen-password>';`);
+    } finally {
+        await client.end();
+    }
+}
+
 let _hostCache;
 async function getHostEndpoint() {
     if (_hostCache) return _hostCache;
@@ -293,6 +346,7 @@ async function main() {
     await ensureDBCluster();
     await ensureDBInstance();
     for (const t of TENANTS) await ensureTenantDatabaseAndRoles(t);
+    for (const r of ADMIN_ROLES) await ensureAdminRole(r);
     console.log('\n=== Done. Existing credentials were never modified. ===');
     console.log('Reminder: after creating any NEW role/database here, the owning');
     console.log('app needs `npm run deploy` (or its equivalent) to pick up the new');

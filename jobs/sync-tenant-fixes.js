@@ -223,4 +223,4 @@ if (require.main === module) {
     main().catch(e => { console.error('[sync-tenant-fixes]', e.message); process.exit(1); });
 }
 
-module.exports = { splitCsvLine, normalizeHeader, parseCsv, extractEligibleRows, groupByTenant };
+module.exports = { splitCsvLine, normalizeHeader, parseCsv, extractEligibleRows, groupByTenant, findResultCsvs };

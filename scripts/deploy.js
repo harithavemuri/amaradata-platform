@@ -36,9 +36,17 @@ const PHASES = [
     { name: 'Unit + integration — NonDB mode', cmd: 'npx', args: ['vitest', 'run', '--config', 'vitest.config.nondb.js'] },
     { name: 'Unittests',                       cmd: 'npx', args: ['vitest', 'run', '--config', 'testing/unittests/vitest.config.js'] },
 
-    // DB mode before NonDB, always — standing rule, never reorder.
-    { name: 'Regression — DB mode',    cmd: 'npx', args: ['playwright', 'test', '--config', REGRESSION_CFG], env: { REGRESSION_DB: '1' }, freePorts: true },
-    { name: 'Regression — NonDB mode', cmd: 'npx', args: ['playwright', 'test', '--config', REGRESSION_CFG], freePorts: true },
+    // Regression is DB-mode only here: NonDB mode is read-only (see
+    // project-nondb-read-only.md), so the edit-save-*.spec.js suite (which
+    // creates/edits records through the real UI) no longer applies to it —
+    // that behavior is covered instead at the API/integration layer by
+    // src/test/nondb-readonly.test.js (part of the "Unit + integration —
+    // NonDB mode" phase above), per this repo's testing-pyramid rule: exercise
+    // behavior at the lowest layer that can prove it, not duplicated at every
+    // layer. A narrower NonDB-safe Playwright subset (e.g. accessibility,
+    // login smoke) could be added back later if browser-level coverage of
+    // those specific checks is wanted.
+    { name: 'Regression — DB mode',    cmd: 'npx', args: ['playwright', 'test', '--config', REGRESSION_CFG], freePorts: true },
     { name: 'Release-tracking checks', cmd: 'npx', args: ['playwright', 'test', '--config', RELEASE_CFG], freePorts: true },
 
     { name: 'Tag release',      cmd: 'node', args: ['scripts/tag-release.js'] },

@@ -1,16 +1,19 @@
 const { defineConfig, devices } = require('@playwright/test');
 const { resolveReporterMode } = require('./helpers/perf-aggregate.js');
 
-// Set REGRESSION_DB=1 to run against the amaradata-platform_test PostgreSQL database.
-// Default (unset) runs in NonDB mode — reads playwright-testdata/ JSON files.
+// Default (unset) runs against the amaradata-platform_test PostgreSQL database.
+// Set REGRESSION_NONDB=1 to run in NonDB mode instead — reads playwright-testdata/
+// JSON files. NonDB mode is read-only (see project-nondb-read-only.md), so the
+// edit-save-*.spec.js suite (and anything else that creates/edits records) only
+// makes sense against a real DB now — that's why DB mode is the default.
 //
-//   NonDB (default):  npx playwright test --config=testing/regression_testsuite/playwright.config.js
-//   DB mode (Windows): $env:REGRESSION_DB=1; npx playwright test --config=...
-//   DB mode (Unix):    REGRESSION_DB=1 npx playwright test --config=...
+//   DB (default):        npx playwright test --config=testing/regression_testsuite/playwright.config.js
+//   NonDB (Windows):      $env:REGRESSION_NONDB=1; npx playwright test --config=...
+//   NonDB (Unix):         REGRESSION_NONDB=1 npx playwright test --config=...
 //
 // DB mode requires the _test database to exist and have the schema applied:
 //   psql -U postgres -p 5435 -d amaradata-platform_test -f database/schema.sql
-const DB_MODE     = process.env.REGRESSION_DB === '1';
+const DB_MODE     = process.env.REGRESSION_NONDB !== '1';
 const TEST_DB_NAME = process.env.TEST_DB_NAME || 'amaradata-platform_test';
 
 module.exports = defineConfig({

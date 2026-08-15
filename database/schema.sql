@@ -331,6 +331,20 @@ CREATE INDEX IF NOT EXISTS idx_email_folders_user      ON email_folders(user_id)
 CREATE INDEX IF NOT EXISTS idx_email_placements_user   ON email_placements(user_id);
 CREATE INDEX IF NOT EXISTS idx_email_placements_folder ON email_placements(folder_id);
 
+-- Login audit trail — one row per successful login (password or Google OAuth).
+-- Written even in NonDB mode, alongside the last_login_at bookkeeping update —
+-- see feedback-idempotent-writes.md / project-nondb-read-only.md for why this
+-- write is exempt from NonDB mode otherwise being read-only.
+CREATE TABLE IF NOT EXISTS login_audit (
+    id           SERIAL      PRIMARY KEY,
+    user_id      INTEGER     NOT NULL REFERENCES amr_users(id) ON DELETE CASCADE,
+    method       VARCHAR(20) NOT NULL DEFAULT 'password', -- password | google
+    ip_address   VARCHAR(64),
+    logged_in_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_login_audit_user ON login_audit(user_id);
+
 -- issue_fixes retired — issue fix data is now stored in enhancements (source='csv')
 
 -- Indexes
@@ -444,6 +458,7 @@ SELECT setval('amr_password_reset_tokens_id_seq',  COALESCE((SELECT MAX(id) FROM
 SELECT setval('group_tenant_id_seq',               COALESCE((SELECT MAX(id) FROM group_tenant), 0) + 1, false);
 SELECT setval('email_folders_id_seq',              COALESCE((SELECT MAX(id) FROM email_folders), 0) + 1, false);
 SELECT setval('email_placements_id_seq',           COALESCE((SELECT MAX(id) FROM email_placements), 0) + 1, false);
+SELECT setval('login_audit_id_seq',                COALESCE((SELECT MAX(id) FROM login_audit), 0) + 1, false);
 
 -- Seed: default plan
 INSERT INTO subscription_plans (name, description, sales_pct, rental_pct, hourly_rate, min_monthly_fee)
@@ -481,5 +496,6 @@ INSERT INTO schema_migrations (version, description) VALUES
     ('2026.06.11.002', 'Add tenant_id to amr_group_members for direct per-tenant access lookup'),
     ('2026.06.11.003', 'Align with rohas-group: user profile cols, tenant profile cols, group_tenant table, drop role_id/tenant_id/created_by from groups, assigned_at+created_at on group_members'),
     ('2026.06.12.001', 'Drop unused columns: amr_users.picture/locale/region_code, tenants.description/logo_url/region_code'),
-    ('2026.08.01.001', 'Add email_folders and email_placements for per-user email folders/trash')
+    ('2026.08.01.001', 'Add email_folders and email_placements for per-user email folders/trash'),
+    ('2026.08.15.001', 'Add login_audit table for login activity tracking')
 ON CONFLICT (version) DO NOTHING;

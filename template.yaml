@@ -169,6 +169,18 @@ Globals:
         AMRD_DB_READ_PASSWORD_SECRET_ID:  !Sub '/${Tenant}/${Env}/db-read-password'
         SECRET_CACHE_TTL_MS: '300000'   # 5 min — bounds how long a rotation takes to apply
 
+        # ── Non-DB secrets: also resolved at RUNTIME now, same reasoning as the DB
+        # passwords above (see project-realtime-secret-fetch-standard.md) — backend/
+        # middleware/auth.js, backend/auth/google-auth.js, server.js, and backend/
+        # routes/auth.js's SSO-issue route all ask services/secrets.js for these per
+        # use and cache briefly, so a rotation takes effect without a redeploy. The
+        # {{resolve:...}} values below remain as the cold-start / Secrets-Manager-
+        # outage fallback, same convention as the DB passwords.
+        AMRD_JWT_SECRET_ID:      !Sub '/${Tenant}/${Env}/jwt-secret'
+        GOOGLE_CLIENT_SECRET_ID: !Sub '/${Tenant}/${Env}/google-client-secret'
+        ORIGIN_SECRET_ID:        !Sub '/${Tenant}/${Env}/origin-secret'
+        SSO_SECRET_ID:           !Sub '/shared/${Env}/sso-secret'
+
         # Secrets Manager — actual credentials
         AMRD_JWT_SECRET:        !Sub '{{resolve:secretsmanager:/${Tenant}/${Env}/jwt-secret}}'
         GOOGLE_CLIENT_SECRET:   !Sub '{{resolve:secretsmanager:/${Tenant}/${Env}/google-client-secret}}'
@@ -278,11 +290,23 @@ Resources:
       MemorySize: 1024
       Policies:
         - Statement:
-            # Runtime DB-password reads (see backend/services/secrets.js) — scoped
-            # to this tenant/env's own secrets, never the Aurora master password.
+            # Runtime secret reads (see backend/services/secrets.js) — scoped to
+            # this tenant/env's own secrets, never the Aurora master password.
+            # db-* covers the DB passwords; the second entry covers jwt-secret,
+            # google-client-secret, and origin-secret (see AMRD_JWT_SECRET_ID etc.
+            # above) now that those are also resolved at runtime, not just deploy time.
             - Effect: Allow
               Action: secretsmanager:GetSecretValue
-              Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/${Tenant}/${Env}/db-*'
+              Resource:
+                - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/${Tenant}/${Env}/db-*'
+                - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/${Tenant}/${Env}/jwt-secret-*'
+                - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/${Tenant}/${Env}/google-client-secret-*'
+                - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/${Tenant}/${Env}/origin-secret-*'
+            # SSO_SECRET lives under /shared/<env>/, not this tenant's own prefix —
+            # separate statement since it's a different resource path shape.
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/shared/${Env}/sso-secret-*'
             - Effect: Allow
               Action: ses:SendEmail
               Resource: !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/amaradata.com'

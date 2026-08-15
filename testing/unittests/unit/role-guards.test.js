@@ -36,9 +36,9 @@ describe('role guard matrix (unit, no HTTP)', () => {
         describe(guardName, () => {
             for (const role of ROLES) {
                 const shouldPass = allowed.has(role);
-                it(`${role} -> ${shouldPass ? 'passes (calls next)' : 'blocked (403)'}`, () => {
+                it(`${role} -> ${shouldPass ? 'passes (calls next)' : 'blocked (403)'}`, async () => {
                     const { req, res, next } = mockReqRes(tokenFor(role));
-                    fn(req, res, next);
+                    await fn(req, res, next);
                     if (shouldPass) {
                         expect(next).toHaveBeenCalledOnce();
                         expect(res._status).toBeNull();
@@ -49,24 +49,24 @@ describe('role guard matrix (unit, no HTTP)', () => {
                 });
             }
 
-            it('no token -> 401, next not called', () => {
+            it('no token -> 401, next not called', async () => {
                 const { req, res, next } = mockReqRes(null);
-                fn(req, res, next);
+                await fn(req, res, next);
                 expect(next).not.toHaveBeenCalled();
                 expect(res._status).toBe(401);
             });
 
-            it('invalid token -> 401, next not called', () => {
+            it('invalid token -> 401, next not called', async () => {
                 const { req, res, next } = mockReqRes('not-a-real-jwt');
-                fn(req, res, next);
+                await fn(req, res, next);
                 expect(next).not.toHaveBeenCalled();
                 expect(res._status).toBe(401);
             });
 
-            it('refresh-type token -> 401, next not called', () => {
+            it('refresh-type token -> 401, next not called', async () => {
                 const refreshToken = jwt.sign({ id: 1, role: 'site_admin', type: 'refresh' }, SECRET, { expiresIn: '1h' });
                 const { req, res, next } = mockReqRes(refreshToken);
-                fn(req, res, next);
+                await fn(req, res, next);
                 expect(next).not.toHaveBeenCalled();
                 expect(res._status).toBe(401);
             });

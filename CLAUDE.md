@@ -58,13 +58,15 @@ npm run test:watch                          # watch mode
 npx vitest run src/test/auth-routes.test.js # run a single test file
 ```
 
-Tests use Vitest + jsdom + supertest. Setup: `src/test/setup.js` (sets `NONDB_MODE=true`).
+Tests use Vitest + jsdom + supertest. Setup: `src/test/setup.js` (points at the real `_test` Postgres DB — see `test-db-config.js`).
+
+NonDB mode is read-only (see above) — the test tiers below reflect that: full CRUD-workflow coverage runs DB-mode only, and NonDB mode gets narrower, dedicated read/reject-write checks instead of a second full run of everything.
 
 Five test layers, mirroring rohas-group's structure:
 1. **Unit** — `testing/unittests/unit/` — pure logic, no HTTP/DB/filesystem beyond a throwaway temp dir (token sign/verify, `FileDbService`, CSV parsing in `jobs/sync-tenant-fixes.js`).
-2. **API/integration** — `src/test/*.test.js` (route tests, run once against DB and once against NonDB) and `testing/unittests/{api,integration}` (its own `vitest.config.js`, DB mode only).
-3. **Playwright regression** — `testing/regression_testsuite/`, full UI flows against a locally-started server.
-4. **Release-tracking** — `testing/release-tracking/checks/TC-*.spec.js`, one check per historically-fixed issue (see below).
+2. **API/integration** — `src/test/*.test.js` (DB mode, `vitest.config.js`) plus `src/test/nondb-readonly.test.js` (`vitest.config.nondb.js`) — the latter seeds fixtures directly as files and asserts GET routes still read them, every write route returns 403, and the login-audit exception still writes. `testing/unittests/{api,integration}` (its own `vitest.config.js`) is DB mode only, same as `src/test`.
+3. **Playwright regression** — `testing/regression_testsuite/`, full UI flows against a locally-started server, DB mode by default.
+4. **Release-tracking** — `testing/release-tracking/checks/TC-*.spec.js`, one check per historically-fixed issue (see below), DB mode.
 5. **Smoke** — `scripts/smoke-prod.js`, read-only API checks against a live URL (`SMOKE_URL`, defaults to production).
 
 Follow the unit > integration > E2E > smoke pyramid — place new tests at the lowest layer that can exercise the behavior.
@@ -73,9 +75,9 @@ Follow the unit > integration > E2E > smoke pyramid — place new tests at the l
 
 **Test DB failsafe:** `src/test/global-setup.js` calls `assertTestDb()` — if the DB name doesn't end with `_test`, the suite aborts. All 14 tables are TRUNCATEd (cascade) at suite start.
 
-**Regression tests (Playwright):** Lives in `testing/regression_testsuite/`. Runs against port 9001 (not 9000). Defaults to NonDB mode; set `REGRESSION_DB=1` to use a real DB (`npm run test:regression:all` / `npm run deploy` run DB mode first, then NonDB).
+**Regression tests (Playwright):** Lives in `testing/regression_testsuite/`. Runs against port 9001 (not 9000). Defaults to DB mode (NonDB mode can no longer run the `edit-save-*.spec.js` suite, since it creates/edits through the real UI — see `project-nondb-read-only.md`); set `REGRESSION_NONDB=1` to run the narrower NonDB-safe specs instead (`npm run test:regression:all` runs DB mode first, then NonDB — standing DB-first rule).
 
-**Release-tracking checks (Playwright):** Lives in `testing/release-tracking/checks/`, one `TC-<n>-*.spec.js` per historically-fixed, verified issue — see `release-test-map.json` for the index. By default these spin up their own isolated local NonDB server (port 9002, `testing/release-tracking/server-entry.js` + `global-setup.js`) so they're safe to run without prod credentials or touching real data. Set `PW_BASE_URL` to point a run at a real deployed environment instead — in that mode auth comes from `SMOKE_TEST_USER`/`SMOKE_TEST_ADMIN_PASSWORD` (same convention as `scripts/smoke-prod.js`) and no local server is started. New checks: prefix any data they create with `zzzzzz` (`feedback-test-data-prefix`) and delete it in `afterEach` via `DELETE /api/enhancements/:id` (or the relevant route) — the prefix is a safety net, not a substitute for cleanup.
+**Release-tracking checks (Playwright):** Lives in `testing/release-tracking/checks/`, one `TC-<n>-*.spec.js` per historically-fixed, verified issue — see `release-test-map.json` for the index. By default these spin up their own isolated local DB-mode server (port 9002, against the same `_test` Postgres DB, `testing/release-tracking/server-entry.js` + `global-setup.js`) so they're safe to run without prod credentials or touching real data — `global-setup.js` TRUNCATEs the same tables `src/test/global-setup.js` does before seeding. Set `PW_BASE_URL` to point a run at a real deployed environment instead — in that mode auth comes from `SMOKE_TEST_USER`/`SMOKE_TEST_ADMIN_PASSWORD` (same convention as `scripts/smoke-prod.js`) and no local server is started. New checks: prefix any data they create with `zzzzzz` (`feedback-test-data-prefix`) and delete it in `afterEach` via `DELETE /api/enhancements/:id` (or the relevant route) — the prefix is a safety net, not a substitute for cleanup.
 
 **E2E edit/save coverage (permanent requirement):** Every editable/addable admin screen must have an `edit-save-<screen>.spec.js` in `testing/regression_testsuite/` that (1) creates/edits through the real UI, (2) verifies persistence via an API readback (`testing/regression_testsuite/helpers/edit-save.js`'s `apiGet`/`apiPost`/`apiPut`/`apiPatch`) — not just a DOM toast/row check, (3) cleans up in `afterEach` via `apiDelete` where a DELETE route exists, and documents why not where it doesn't (`tenants`, `invoices`, `billing_metrics` have no DELETE route — suite-level DB truncation at `global-setup.js` covers it instead, since these run only once per whole `npx playwright test` invocation, not per file). Screens covered: `tenants` (`tenants.spec.js`; its zero-tenant "empty state" checks live separately in `00-tenants-empty-state.spec.js` — numeric prefix is deliberate, so it always runs first, before any other file's tenant-creating tests can pollute a check that needs a genuinely empty table), `enhancements`, `roles` (role `name` must match `/^[a-z_]+$/` — use `helpers/edit-save.js`'s `randomRoleName()`, not a `Date.now()`-based name), `user-groups` (incl. member/tenant sub-resources — `amr_roles` starts empty in a fresh test DB, so the tenant-assignment sub-test creates its own role rather than assuming one exists), `users`, `invoices` (add-save + status-transition, no PUT route exists), `metrics` (upsert-style: same tenant+period submitted twice is the "edit" path). `email.html` is excluded from this pattern specifically for its send/reply actions (not a persisted-and-later-edited record), but folders *are* such a record, so `email.spec.js`'s `Email — folders` describe block follows the same create→API-readback convention inline rather than in a separate `edit-save-email.spec.js` file — see "Email page testing" below. Add a new spec here whenever a new editable screen ships. **Gotcha:** NonDB mode stores IDs pulled from a DOM `<select>` as raw strings — compare with `==`, not `===`, when matching a numeric id/tenant_id against an API readback result (same reason `FileDbService.find()` uses `==` internally).
 
@@ -102,11 +104,26 @@ Neither the load test nor the throughput test is wired into `npm run deploy` or 
 Always deploy via `npm run deploy` — it gates on tests passing before building and deploying:
 
 ```bash
-npm run deploy                              # unit/integration → regression(DB→NonDB) → release-tracking → tag → sam build/deploy → S3 sync → CF invalidate → post-deploy smoke
+npm run deploy                              # scripts/deploy.js — see phase list below
+node scripts/deploy.js --dry-run            # print the phase plan, run nothing
 sam build && sam deploy --config-env staging  # staging only
 ```
 
 Never run `sam deploy` directly; the `npm run deploy` test gate is mandatory.
+
+**`scripts/deploy.js` is a phase runner, not an npm `&&` chain.** Each phase `spawnSync`s its real command (`npx`/`node`/`sam`/`aws`) directly instead of nesting another `npm run`, because the old chain intermittently died at a phase boundary with no output at all (exit 1, empty stderr) — reproduced three times on this machine, and the sibling `rohas-group` repo hit the identical failure (its commit `0d12fa2`). There is deliberately no flag to skip the test gate. Phases, in order: unit+integration DB mode → unit+integration NonDB mode → unittests → regression DB mode → regression NonDB mode → release-tracking checks → tag release → `sam build` → `sam deploy` → DB migrate → attach secret rotation → sync frontend to S3 → invalidate CloudFront → post-deploy smoke. Ports 9001/9002 are force-freed (via `Get-NetTCPConnection`/`Stop-Process`) before each Playwright phase, since a killed prior run can leave one held. A failure before `sam deploy` means nothing was deployed; a failure at or after it means production may be partially updated — the script says which happened.
+
+**`scripts/db-migrate.js` vs `backend/lambda/db-migrate.js`:** two different things despite the name. `backend/lambda/db-migrate.js` is the actual `DBMigrateFn` Lambda handler that runs the schema migration inside the VPC. `scripts/db-migrate.js` is what `deploy.js`'s "DB migrate" phase runs locally — it `InvokeCommand`s the deployed `amaradata-prod-db-migrate` function, retrying up to 3 times with a 30s wait on Aurora cold-start (`connection timeout`/`Connection terminated` errors are retried; anything else exits immediately).
+
+### DB password rotation
+
+DB passwords are read from Secrets Manager at request time, not baked into Lambda env vars at deploy time — a rotated secret used to have no effect until the next deploy (CloudFormation's `{{resolve:secretsmanager:...}}` only resolves at deploy time), which meant rotating a live secret broke every running app until a redeploy.
+
+- **`backend/services/secrets.js`** — cached `getSecret(secretId, { fallback })`: in-memory TTL cache (`SECRET_CACHE_TTL_MS`, default 5 min) so the pg pools (which call it on every new connection) don't put a metered `GetSecretValue` call on a hot path; concurrent cache misses for the same secret share one in-flight fetch; a Secrets Manager outage serves the last-known value rather than failing; no `secretId` falls back to a plain env var (local dev / NonDB / tests need no AWS creds at all).
+- **`backend/services/db-retry.js`** — `withAuthRetry(run, onAuthFailure)`: Postgres leaves already-open connections alone across a rotation, so a stale cached password only surfaces on the *next new* connection as SQLSTATE `28P01`/`28000`. `backend/db.js` wraps connection attempts in this: on an auth error it calls `secrets.js`'s `invalidate()` and retries exactly once — a second failure is treated as a genuinely wrong credential, not retried further.
+- **`backend/lambda/rotate-db-secret.js`** (`RotateDbSecretFn` in `template.yaml`) — one generic rotation Lambda serves every tenant/env; it derives which DB role to rotate and where to find that role's username/host purely from the secret's own name (`/<tenant>/<env>/db-[read-|write-]password`), so onboarding a new tenant needs no code change here. Implements the standard 4-step Secrets Manager contract (`createSecret`→`setSecret`→`testSecret`→`finishSecret`); nothing is promoted to `AWSCURRENT` until a real login with the new password has succeeded. Refuses to rotate anything that isn't that exact name shape — explicitly excludes `db-host`/`db-user`/`db-read-user`/`db-write-user` (config, not credentials) and the Aurora master password itself (`/amaradata/aurora/master-password` — rotating the credential this Lambda authenticates with would break the mechanism). Non-VPC by design, since it needs the Secrets Manager API and a VPC-attached function has no route to it without an interface endpoint.
+- **`scripts/attach-secret-rotation.js`** — the "attach secret rotation" deploy phase; finds every secret in the account matching the rotatable name shape (via the same `isRotatableDbSecret()` the Lambda enforces at runtime) and calls `aws secretsmanager rotate-secret` to attach `RotateDbSecretFn` to it, with `--no-rotate-immediately` (attaching must never *perform* a rotation) and a schedule padded out to 365 days (Secrets Manager requires a schedule once a rotation Lambda is attached, but the intent here is manual/on-demand only). Non-fatal per-secret — one tenant's misconfigured secret doesn't block the rest. Skips silently (exit 0) if the Lambda doesn't exist yet, which is expected on the very first deploy.
+- **Rotating on demand:** `aws secretsmanager rotate-secret --secret-id <name> --region ap-south-1`. Only DB role passwords are rotatable this way — `jwt-secret`, `google-client-secret`, `origin-secret`, `sso-secret`, and `pii-encryption-key` have no rotation mechanism in this codebase.
 
 **Release tagging:** `scripts/tag-release.js` creates and pushes an annotated `vX.Y.Z` git tag (matching `package.json`'s `version`) before `sam build` — no-ops if the tag already exists (bump `version` for a new release).
 
@@ -159,8 +176,14 @@ Single Node/Express server (`server.js`, port 9000) serving both a REST API (`/a
 | DB → JSON export job (backs `npm run export-db`) | `jobs/export-db-to-files.js` |
 | Tenant fix/enhancement sync job (backs `npm run sync-tenant-fixes`) | `jobs/sync-tenant-fixes.js` |
 | Target-aware enhancements seed wrapper (backs `npm run seed:local` / `seed:production`) | `scripts/seed-enhancements.js` |
+| Deploy phase runner (backs `npm run deploy`) | `scripts/deploy.js` |
 | Git tag-before-deploy | `scripts/tag-release.js` |
+| Local invoker for the deployed DB-migrate Lambda | `scripts/db-migrate.js` (not the same file as `backend/lambda/db-migrate.js`) |
 | Smoke-account enable/disable lifecycle | `scripts/smoke-lifecycle.js` |
+| Cached Secrets Manager reader (DB password runtime lookup) | `backend/services/secrets.js` |
+| Auth-failure retry-once-after-invalidate wrapper | `backend/services/db-retry.js` |
+| Generic DB-password rotation Lambda (`RotateDbSecretFn`) | `backend/lambda/rotate-db-secret.js` |
+| Attach rotation to eligible secrets (deploy phase) | `scripts/attach-secret-rotation.js` |
 | Smoke/release-check credential template | `.env.test.example` (copy to `.env.test`, gitignored) |
 | Shared edit-save Playwright helpers | `testing/regression_testsuite/helpers/edit-save.js` |
 | Performance-benchmark fixture + reporter | `testing/regression_testsuite/helpers/perf-tracking.js`, `performance-reporter.cjs`, `perf-aggregate.js` |
@@ -185,9 +208,9 @@ Single Node/Express server (`server.js`, port 9000) serving both a REST API (`/a
 | `/health` | inline in `server.js` | Public |
 | `POST /graphql` | `backend/graphql/` | `requireAuth` |
 
-### Dual-mode data layer (mandatory)
+### Dual-mode data layer — reads only; NonDB mode is read-only
 
-Every route must support both PostgreSQL and file-based (NonDB) mode. Check `req.db.mode` at the top of each handler:
+**NonDB mode is read-only.** Every GET route still supports both PostgreSQL and file-based (NonDB) mode — check `req.db.mode` at the top of the handler:
 
 ```js
 if (req.db.mode === 'nondb') {
@@ -197,7 +220,17 @@ if (req.db.mode === 'nondb') {
 }
 ```
 
-`backend/db.js` maintains separate write (max 10) and read (max 10) pools; `query()` inspects the SQL verb to route automatically (INSERT/UPDATE/DELETE/CREATE/DROP/ALTER/TRUNCATE → write pool; everything else → read pool).
+But every write route (POST/PUT/PATCH/DELETE) instead inserts `backend/middleware/block-nondb-write.js`'s `blockNonDbWrite` into its middleware chain and has **no** `req.db.mode === 'nondb'` branch at all — it always goes straight to `db.query()`:
+
+```js
+router.post('/', requireAdmin, blockNonDbWrite, async (req, res) => {
+    // db.query() only — no nondb branch
+});
+```
+
+`blockNonDbWrite` returns `403 { error: 'NonDB mode is read-only — writes are not supported.' }` before the handler runs at all. The **only** exception is the `last_login_at`/`login_audit` bookkeeping write in `POST /api/auth/login` and the existing-user branch of `POST /api/auth/google/exchange` — those still write via `req.db.fileDb` even in NonDB mode, since they're a side effect of authenticating, not a "data write" (see `project-nondb-read-only.md`).
+
+`backend/db.js` maintains separate write (max 10) and read (max 10) pools; `query()` inspects the SQL verb to route automatically (INSERT/UPDATE/DELETE/CREATE/DROP/ALTER/TRUNCATE → write pool; everything else → read pool). Every successful write also mirrors its table to `transactiondata/<table>.json` (see `project-db-write-file-mirror.md`) and, on a connectivity failure, fails fast with a `dbUnavailable`-flagged 503 rather than retrying (see `project-db-resilience-strategy.md`) — reads retry transparently instead.
 
 When adding a new DB table:
 1. Add `CREATE TABLE` to `database/schema.sql`
@@ -244,7 +277,7 @@ Each tenant repo (sibling directory of amaradata-platform, e.g. `rohas-group`) t
 
 `scripts/seed-enhancements.js` (`npm run seed:local` / `seed:production`) wraps the same job with an explicit `--target`, mirroring rohas-group's `apply-local-migrations.py` pattern of a single script that names its destination rather than relying on whatever `.env` happens to be loaded:
 - **`--target=local`**: runs `jobs/sync-tenant-fixes.js` directly against the local (non-`_test`) Postgres DB via `.env`'s `AMRD_DB_*` creds — a real DB write, safe to re-run (upsert).
-- **`--target=production`**: RDS is VPC-only and never publicly reachable from a local machine (see `.project-constraints`), so this can never open a direct prod DB connection. Instead it regenerates `transactiondata/enhancements.json` locally, then — only with `--yes` — calls the already-deployed `POST /api/admin/sync-to-db` (same mechanism as the admin UI's "Sync to DB" button, auth via `SMOKE_BOOTSTRAP_ADMIN_USER`/`PASSWORD` in `.env.test`) to pull that data into the live DB. That endpoint reads the *deployed* server's own bundled JSON, so the regenerated file must be committed and deployed first — running with `--yes` before that is a no-op, not an error.
+- **`--target=production`**: RDS is VPC-only and never publicly reachable from a local machine (see `.project-constraints`), so this can never open a direct prod DB connection. Instead it reads the same sibling-repo CSVs `jobs/sync-tenant-fixes.js` scans locally, groups eligible rows by tenant, and — only with `--yes` — POSTs each tenant's rows straight to the already-deployed `POST /api/enhancements/import` (auth via `SMOKE_BOOTSTRAP_ADMIN_USER`/`PASSWORD` in `.env.test`), which already has VPC access. Without `--yes` it's a dry-run that just prints row counts per tenant. No intermediate file/deploy step needed — this goes straight from the local CSVs to the live DB.
 
 ### Frontend
 

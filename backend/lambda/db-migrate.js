@@ -1,6 +1,7 @@
-const { Pool } = require('pg');
-const fs   = require('fs');
-const path = require('path');
+const { Pool }             = require('pg');
+const fs                   = require('fs');
+const path                 = require('path');
+const { withConnectRetry } = require('../services/db-retry');
 
 // Split SQL into individual statements, correctly handling:
 //   - single-line comments  (-- ...)        semicolons inside are not delimiters
@@ -97,6 +98,13 @@ exports.handler = async () => {
     const password = (process.env.DB_MASTER_PASSWORD || '').trim();
     const user     = process.env.DB_MASTER_USER || 'postgres';
 
+    // Per-attempt timeout is shorter than the old single 60000ms shot: DBMigrateFn
+    // has a 120s Lambda timeout (template.yaml), and a cold Aurora Serverless v2
+    // resume can take up to ~30s, so several shorter attempts recover faster and
+    // still fit the budget (3 attempts x 20s connect + backoff <= ~75s, leaving
+    // room to actually run the migration). scripts/db-migrate.js's own retry loop
+    // (re-invoking this whole Lambda up to 3x with a 30s wait) is a second,
+    // outer line of defense on top of this — not a replacement for it.
     const pool = new Pool({
         host:                   process.env.AMRD_DB_HOST,
         port:                   5432,
@@ -104,7 +112,7 @@ exports.handler = async () => {
         user,
         password,
         max:                    2,
-        connectionTimeoutMillis: 60000,
+        connectionTimeoutMillis: 20000,
     });
 
     const schema = fs.readFileSync(
@@ -116,7 +124,11 @@ exports.handler = async () => {
     const statements = splitSql(schema);
 
     let ran = 0, errs = [];
-    const client = await pool.connect();
+    const client = await withConnectRetry(
+        () => pool.connect(),
+        { retries: 3, delayMs: 5000, onRetry: (err, attempt) =>
+            console.warn(`[db-migrate] connectivity error on attempt ${attempt}, retrying: ${err.message}`) },
+    );
     try {
         for (const stmt of statements) {
             try {
@@ -144,3 +156,5 @@ exports.handler = async () => {
     console.log(`[db-migrate] done: ${ran} statements run, ${errs.length} non-critical skipped`);
     return { success: true, message: `${ran} statements applied, ${errs.length} skipped (already exist)` };
 };
+
+module.exports.splitSql = splitSql;

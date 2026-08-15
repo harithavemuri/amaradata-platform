@@ -1,0 +1,10 @@
+{
+  "table": "login_audit",
+  "columns": [
+    { "name": "id",           "type": "serial",      "primaryKey": true },
+    { "name": "user_id",      "type": "integer",     "notNull": true, "references": "amr_users(id)" },
+    { "name": "method",       "type": "varchar(20)", "notNull": true, "default": "password" },
+    { "name": "ip_address",   "type": "varchar(64)" },
+    { "name": "logged_in_at", "type": "timestamptz", "notNull": true }
+  ]
+}

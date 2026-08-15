@@ -29,10 +29,48 @@ document.addEventListener('DOMContentLoaded', async () => {
         return `<span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600;background:${color}20;color:${color}">${text}</span>`;
     }
 
+    // One request per table (POST /api/admin/sync-from-db/:table), driven from
+    // here rather than looped server-side in a single request — a single
+    // request handling every table risked ApiFn's 29s Lambda timeout and a
+    // large aggregate response as the number/size of tables grows. Sequential
+    // (not Promise.all) so this stays predictable under the shared write pool
+    // and each table's progress is visible as it happens.
+    async function syncFromDb() {
+        const btn = document.getElementById('amrd-sync-from-db-btn');
+        if (!btn) return;
+        const original = btn.textContent;
+        btn.disabled = true;
+        try {
+            const tablesRes = await window.__amrd.apiFetch('/api/admin/sync-tables');
+            const tables    = tablesRes.data || [];
+            const failed    = [];
+
+            for (let i = 0; i < tables.length; i++) {
+                btn.textContent = `⇅ Syncing… (${i + 1}/${tables.length})`;
+                try {
+                    const res = await window.__amrd.apiFetch(`/api/admin/sync-from-db/${tables[i]}`, { method: 'POST' });
+                    if (!res.success) failed.push(tables[i]);
+                } catch (e) {
+                    failed.push(tables[i]);
+                }
+            }
+
+            btn.textContent = failed.length ? `⚠ ${failed.length} failed` : '✓ Synced';
+        } catch (e) {
+            btn.textContent = '✗ Failed';
+        } finally {
+            setTimeout(() => { btn.disabled = false; btn.textContent = original; }, 2500);
+        }
+    }
+    window.syncFromDb = syncFromDb;
+
     function render(data) {
         const { versions, environment, mode, tables } = data;
         const modeColor  = mode === 'nondb' ? '#f59e0b' : '#22c55e';
         const envColor   = environment === 'production' ? '#ef4444' : '#3b82f6';
+        // sync-from-db 400s in NonDB mode (no DB to sync from) — hide it there.
+        const syncButton = mode === 'nondb' ? '' : `
+                    <button id="amrd-sync-from-db-btn" onclick="syncFromDb()" title="Recreate transactiondata/*.json from the current DB state, one table per request" style="padding:6px 16px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#334155;font-size:13px;font-weight:600;cursor:pointer">⇅ Sync DB → Files</button>`;
 
         const versionRows = [
             { label: 'API Version',  value: versions.api,  note: '' },
@@ -57,7 +95,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ${badge(environment, envColor)}
                     ${badge(mode === 'nondb' ? 'NonDB mode' : 'DB mode', modeColor)}
                 </div>
-                <button onclick="load()" style="padding:6px 16px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#334155;font-size:13px;font-weight:600;cursor:pointer">↻ Refresh</button>
+                <div style="display:flex;gap:8px">
+                    ${syncButton}
+                    <button onclick="load()" style="padding:6px 16px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#334155;font-size:13px;font-weight:600;cursor:pointer">↻ Refresh</button>
+                </div>
             </div>
 
             <div class="amrd-card" style="margin-bottom:20px">

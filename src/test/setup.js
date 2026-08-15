@@ -18,6 +18,12 @@ process.env.AMRD_DB_NAME     = testDb.database;
 process.env.AMRD_DB_USER     = testDb.user;
 process.env.AMRD_DB_PASSWORD = testDb.password;
 
+// backend/db.js mirrors every successful write to transactiondata/<table>.json
+// (see project-db-write-file-mirror.md) — redirect it here, same as
+// testing/unittests/setup.js, so DB-mode tests never overwrite the real,
+// committed transactiondata/ files.
+process.env.TRANSACTIONDATA_DIR  = 'testing/testdata';
+
 process.env.AMRD_JWT_SECRET      = 'test-jwt-secret-32-chars-minimum!!';
 process.env.SSO_SECRET           = 'test-sso-secret-32-chars-minimum!!';
 process.env.ROHAS_URL            = 'http://localhost:8002';

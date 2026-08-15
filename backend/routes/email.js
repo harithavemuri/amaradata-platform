@@ -5,6 +5,8 @@ const { SESClient, SendRawEmailCommand } = require('@aws-sdk/client-ses');
 const { simpleParser } = require('mailparser');
 const nodemailer = require('nodemailer');
 const db = require('../db');
+const { sendError } = require('../services/http-errors');
+const { blockNonDbWrite } = require('../middleware/block-nondb-write');
 
 const EMAIL_REGION = 'us-east-1';
 const ses = new SESClient({ region: EMAIL_REGION });
@@ -112,21 +114,14 @@ router.get('/folders', requireAdmin, async (req, res) => {
     try {
         const folders = await listFolders(req, req.staff.id);
         res.json({ success: true, data: folders });
-    } catch (e) { console.error('[email]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[email]'); }
 });
 
 // POST /api/email/folders  { name }
-router.post('/folders', requireAdmin, async (req, res) => {
+router.post('/folders', requireAdmin, blockNonDbWrite, async (req, res) => {
     const name = (req.body.name || '').trim();
     if (!name) return res.status(400).json({ error: 'name required' });
     try {
-        if (req.db.mode === 'nondb') {
-            const dup = req.db.fileDb.find('email_folders')
-                .find(f => f.user_id == req.staff.id && f.name.toLowerCase() === name.toLowerCase());
-            if (dup) return res.status(409).json({ error: 'A folder with that name already exists' });
-            const row = req.db.fileDb.create('email_folders', { user_id: req.staff.id, name, is_trash: false });
-            return res.status(201).json({ success: true, data: row });
-        }
         const { rows } = await db.query(
             `INSERT INTO email_folders (user_id, name) VALUES ($1,$2) RETURNING *`,
             [req.staff.id, name]
@@ -134,30 +129,20 @@ router.post('/folders', requireAdmin, async (req, res) => {
         res.status(201).json({ success: true, data: rows[0] });
     } catch (e) {
         if (e.code === '23505') return res.status(409).json({ error: 'A folder with that name already exists' });
-        console.error('[email]', e.message); res.status(500).json({ error: 'Internal server error' });
+        sendError(res, e, '[email]');
     }
 });
 
 // DELETE /api/email/folders/:id — deletes the folder; emails inside revert to Inbox
-router.delete('/folders/:id', requireAdmin, async (req, res) => {
+router.delete('/folders/:id', requireAdmin, blockNonDbWrite, async (req, res) => {
     try {
-        if (req.db.mode === 'nondb') {
-            const folder = req.db.fileDb.getById('email_folders', req.params.id);
-            if (!folder || folder.user_id != req.staff.id) return res.status(404).json({ error: 'Not found' });
-            if (folder.is_trash) return res.status(400).json({ error: 'Cannot delete the Trash folder' });
-            req.db.fileDb.find('email_placements')
-                .filter(p => p.folder_id == folder.id)
-                .forEach(p => req.db.fileDb.delete('email_placements', p.id));
-            req.db.fileDb.delete('email_folders', folder.id);
-            return res.json({ success: true });
-        }
         const { rows } = await db.query('SELECT * FROM email_folders WHERE id=$1 AND user_id=$2', [req.params.id, req.staff.id]);
         if (!rows[0]) return res.status(404).json({ error: 'Not found' });
         if (rows[0].is_trash) return res.status(400).json({ error: 'Cannot delete the Trash folder' });
         // email_placements.folder_id has ON DELETE SET NULL — emails revert to Inbox automatically.
         await db.query('DELETE FROM email_folders WHERE id=$1', [req.params.id]);
         res.json({ success: true });
-    } catch (e) { console.error('[email]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[email]'); }
 });
 
 // GET /api/email/thread/download?ids=a,b,c — zip of selected emails' raw .eml
@@ -244,7 +229,7 @@ router.get('/inbox', requireAdmin, async (req, res) => {
         }));
 
         res.json({ success: true, data: emails });
-    } catch (e) { console.error('[email]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[email]'); }
 });
 
 // GET /api/email/:id
@@ -271,7 +256,7 @@ router.get('/:id', requireAdmin, async (req, res) => {
                 size:        a.size        || a.content?.length || 0,
             })),
         }});
-    } catch (e) { console.error('[email]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[email]'); }
 });
 
 // GET /api/email/:id/attachment/:index
@@ -285,7 +270,7 @@ router.get('/:id/attachment/:index', requireAdmin, async (req, res) => {
         res.setHeader('Content-Type', att.contentType || 'application/octet-stream');
         res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(att.filename || 'attachment')}"`);
         res.send(att.content);
-    } catch (e) { console.error('[email]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[email]'); }
 });
 
 // GET /api/email/:id/download — the raw .eml file for a single email
@@ -296,7 +281,7 @@ router.get('/:id/download', requireAdmin, async (req, res) => {
         res.setHeader('Content-Type', 'message/rfc822');
         res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(req.params.id)}.eml"`);
         res.send(raw);
-    } catch (e) { console.error('[email]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[email]'); }
 });
 
 // GET /api/email/:id/thread — related email ids in the same reply chain, found
@@ -360,11 +345,11 @@ router.get('/:id/thread', requireAdmin, async (req, res) => {
             .map(e => ({ id: e.id, subject: e.subject, date: e.date }));
 
         res.json({ success: true, data: thread });
-    } catch (e) { console.error('[email]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[email]'); }
 });
 
 // PUT /api/email/:id/move  { folder_id: null|<id> } — null moves back to Inbox
-router.put('/:id/move', requireAdmin, async (req, res) => {
+router.put('/:id/move', requireAdmin, blockNonDbWrite, async (req, res) => {
     const folderId = req.body.folder_id ?? null;
     try {
         if (folderId !== null) {
@@ -375,22 +360,22 @@ router.put('/:id/move', requireAdmin, async (req, res) => {
         }
         await setPlacement(req, req.staff.id, req.params.id, folderId);
         res.json({ success: true });
-    } catch (e) { console.error('[email]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[email]'); }
 });
 
 // DELETE /api/email/:id — move to Trash (recoverable via PUT .../move)
-router.delete('/:id', requireAdmin, async (req, res) => {
+router.delete('/:id', requireAdmin, blockNonDbWrite, async (req, res) => {
     try {
         const trash = await getOrCreateTrash(req, req.staff.id);
         await setPlacement(req, req.staff.id, req.params.id, trash.id);
         res.json({ success: true });
-    } catch (e) { console.error('[email]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[email]'); }
 });
 
 // DELETE /api/email/:id/permanent — actually deletes the S3 object. Requires
 // the email to currently be in the caller's Trash first, matching "permanent
 // delete is a separate, deliberate action" — not reachable directly from Inbox.
-router.delete('/:id/permanent', requireAdmin, async (req, res) => {
+router.delete('/:id/permanent', requireAdmin, blockNonDbWrite, async (req, res) => {
     if (!BUCKET) return res.status(503).json({ error: 'EMAIL_BUCKET not configured' });
     try {
         const trash     = await getOrCreateTrash(req, req.staff.id);
@@ -401,15 +386,9 @@ router.delete('/:id/permanent', requireAdmin, async (req, res) => {
         await s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: `${PREFIX}${req.params.id}` }));
         // The S3 object is genuinely gone — clean up placement rows for every
         // user that had one, not just the caller.
-        if (req.db.mode === 'nondb') {
-            req.db.fileDb.find('email_placements')
-                .filter(p => p.email_id === req.params.id)
-                .forEach(p => req.db.fileDb.delete('email_placements', p.id));
-        } else {
-            await db.query('DELETE FROM email_placements WHERE email_id=$1', [req.params.id]);
-        }
+        await db.query('DELETE FROM email_placements WHERE email_id=$1', [req.params.id]);
         res.json({ success: true });
-    } catch (e) { console.error('[email]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[email]'); }
 });
 
 // POST /api/email/send
@@ -432,7 +411,7 @@ router.post('/send', requireAdmin, async (req, res) => {
         });
         await sendRaw(raw, [to, ...(cc ? [cc] : [])]);
         res.json({ success: true });
-    } catch (e) { console.error('[email]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[email]'); }
 });
 
 // POST /api/email/:id/reply
@@ -462,7 +441,7 @@ router.post('/:id/reply', requireAdmin, async (req, res) => {
         });
         await sendRaw(mimeRaw, [replyTo]);
         res.json({ success: true });
-    } catch (e) { console.error('[email]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[email]'); }
 });
 
 module.exports = router;

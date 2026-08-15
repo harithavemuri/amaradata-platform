@@ -16,6 +16,7 @@
     "contact_submissions",
     "amr_password_reset_tokens",
     "email_folders",
-    "email_placements"
+    "email_placements",
+    "login_audit"
   ]
 }

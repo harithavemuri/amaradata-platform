@@ -1,6 +1,8 @@
 const router = require('express').Router();
 const db     = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const { sendError } = require('../services/http-errors');
+const { blockNonDbWrite } = require('../middleware/block-nondb-write');
 const sesService       = require('../services/ses');
 
 function makeRef() {
@@ -52,7 +54,7 @@ async function sendAdminEmail(submission) {
 }
 
 // POST /api/contact  (public — no auth required)
-router.post('/', async (req, res) => {
+router.post('/', blockNonDbWrite, async (req, res) => {
     const { name, email, phone, company, message } = req.body;
     if (!name || !email || !message) {
         return res.status(400).json({ error: 'name, email and message are required' });
@@ -61,22 +63,13 @@ router.post('/', async (req, res) => {
     const submitted_at = new Date().toISOString();
 
     try {
-        let row;
-        if (req.db.mode === 'nondb') {
-            row = req.db.fileDb.create('contact_submissions', {
-                ref_number, name, email,
-                phone: phone || null, company: company || null, message,
-                status: 'new', submitted_at, updated_at: submitted_at,
-            });
-        } else {
-            const { rows } = await db.query(
-                `INSERT INTO contact_submissions
-                 (ref_number,name,email,phone,company,message,status,submitted_at,updated_at)
-                 VALUES ($1,$2,$3,$4,$5,$6,'new',NOW(),NOW()) RETURNING *`,
-                [ref_number, name, email, phone || null, company || null, message]
-            );
-            row = rows[0];
-        }
+        const { rows } = await db.query(
+            `INSERT INTO contact_submissions
+             (ref_number,name,email,phone,company,message,status,submitted_at,updated_at)
+             VALUES ($1,$2,$3,$4,$5,$6,'new',NOW(),NOW()) RETURNING *`,
+            [ref_number, name, email, phone || null, company || null, message]
+        );
+        const row = rows[0];
 
         // Must be awaited, not fire-and-forget: AWS Lambda freezes the execution
         // environment immediately after the HTTP response is sent, killing any
@@ -86,7 +79,7 @@ router.post('/', async (req, res) => {
         await sendAdminEmail(row);
 
         res.status(201).json({ success: true, ref_number: row.ref_number });
-    } catch (e) { console.error('[contact]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[contact]'); }
 });
 
 // GET /api/contact  (admin — view all submissions)
@@ -100,7 +93,7 @@ router.get('/', requireAuth, async (req, res) => {
             `SELECT * FROM contact_submissions ORDER BY submitted_at DESC`
         );
         res.json({ success: true, data: rows });
-    } catch (e) { console.error('[contact]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[contact]'); }
 });
 
 module.exports = router;

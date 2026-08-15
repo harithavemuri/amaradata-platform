@@ -123,7 +123,7 @@ test.describe('Dashboard — sidebar fully rendered (admin role)', () => {
     // wouldn't catch a real production regression the way a Postgres-backed
     // page load would.
     test('dashboard loads within the 3s page-load SLA', async ({ page }) => {
-        test.skip(process.env.REGRESSION_DB !== '1', 'performance SLA only asserted in DB mode');
+        test.skip(process.env.REGRESSION_NONDB === '1', 'performance SLA only asserted in DB mode');
         const loadMs = await page.evaluate(() => {
             const nav = performance.getEntriesByType('navigation')[0];
             return nav.loadEventEnd - nav.startTime;
@@ -231,10 +231,6 @@ test.describe('Dashboard — sidebar fully rendered (admin role)', () => {
     // ── Topbar ────────────────────────────────────────────────────────────────
     test('topbar shows "Dashboard" as page title', async ({ page }) => {
         await expect(page.locator('.amrd-topbar-title')).toHaveText('Dashboard');
-    });
-
-    test('"Sync to DB" button is NOT shown for admin role (site_admin only)', async ({ page }) => {
-        await expect(page.locator('#amrd-sync-btn')).not.toBeVisible();
     });
 
     test('sidebar collapse toggle is visible and toggles the sidebar', async ({ page }) => {

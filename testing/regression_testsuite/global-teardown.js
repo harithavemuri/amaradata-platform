@@ -1,10 +1,10 @@
 // Runs once after all tests.
-// - NonDB mode (default): removes playwright-testdata/ directory.
-// - DB mode (REGRESSION_DB=1): asserts _test suffix, cleans up empty result dirs.
+// - DB mode (default): asserts _test suffix, cleans up empty result dirs.
+// - NonDB mode (REGRESSION_NONDB=1): removes playwright-testdata/ directory.
 const { rmSync, existsSync, readdirSync, statSync, rmdirSync } = require('fs');
 const { resolve } = require('path');
 
-const DB_MODE       = process.env.REGRESSION_DB === '1';
+const DB_MODE       = process.env.REGRESSION_NONDB !== '1';
 const TEST_DATA_DIR = resolve(__dirname, '..', 'playwright-testdata');
 const RESULTS_DIR   = resolve(__dirname, 'test-results');
 

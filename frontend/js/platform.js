@@ -107,17 +107,6 @@
     /* ── NonDB indicator ──────────────────────────────────────────── */
     let _nonDbShown = false;
     function _showNonDbBadge(reason) {
-        // Sync to DB (POST /api/admin/sync-to-db) 400s whenever the server is
-        // in NonDB mode — it has no DB to sync into. The button itself is
-        // rendered role-only (site_admin) at topbar build time, before any API
-        // response has revealed the mode, so hide it here reactively the same
-        // way the badge below gets shown reactively, rather than leaving a
-        // button visible that's guaranteed to error if clicked.
-        const btn = document.getElementById('amrd-sync-btn');
-        if (btn) btn.style.display = 'none';
-        const out = document.getElementById('amrd-sync-result');
-        if (out) out.style.display = 'none';
-
         if (_nonDbShown) return;
         _nonDbShown = true;
         const label = reason === 'fallback' ? '⚠ DB Fallback' : '⚠ NonDB Mode';
@@ -205,21 +194,8 @@
 
     const SYSTEM_NAV = [
         { href: '/admin-health', icon: 'health', label: 'System Health' },
+        { href: '/login-audit',  icon: 'audit',  label: 'Login Audit' },
     ];
-
-    // Per-page table mapping for the Sync to DB button's per-page visibility
-    // check (GET /api/admin/sync-status) — pages with no entry (or an empty
-    // list) have no page-specific table to check, so the button is hidden
-    // outright rather than calling the endpoint.
-    const PAGE_TABLES = {
-        '/tenants':      ['tenants'],
-        '/invoices':     ['invoices', 'invoice_line_items'],
-        '/enhancements': ['enhancements'],
-        '/metrics':      ['billing_metrics'],
-        '/users':        ['amr_users'],
-        '/user-groups':  ['amr_groups', 'amr_group_members', 'group_tenant'],
-        '/roles':        ['amr_roles'],
-    };
 
     const ICONS = {
         home:    `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>`,
@@ -232,6 +208,7 @@
         roles:   `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>`,
         email:   `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>`,
         health:  `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>`,
+        audit:   `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>`,
     };
 
     function _icon(k) {
@@ -397,63 +374,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#008cbb;box-sh
                 <span class="amrd-topbar-title">${pageTitle || ''}</span>
             </div>
             <div style="display:flex;align-items:center;gap:10px">
-                ${staff?.role === 'site_admin' ? `
-                    <button id="amrd-sync-btn" style="padding:5px 14px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#334155;font-size:12px;font-weight:600;cursor:pointer;" title="Sync JSON files → PostgreSQL DB">⇅ Sync to DB</button>
-                    <span id="amrd-sync-result" style="font-size:12px"></span>
-                ` : ''}
                 <span id="amrd-nondb-slot"></span>
             </div>`;
-        if (staff?.role === 'site_admin') {
-            topbar.querySelector('#amrd-sync-btn').addEventListener('click', async () => {
-                const btn = topbar.querySelector('#amrd-sync-btn');
-                const out = topbar.querySelector('#amrd-sync-result');
-                btn.disabled = true;
-                btn.textContent = '⇅ Syncing…';
-                out.style.color = '#64748b';
-                out.textContent = '';
-                try {
-                    const res = await apiFetch('/api/admin/sync-to-db', { method: 'POST' });
-                    const totals = res.data.reduce((acc, t) => {
-                        acc.inserted += t.inserted || 0;
-                        acc.updated  += t.updated  || 0;
-                        acc.errors   += t.errors   || 0;
-                        return acc;
-                    }, { inserted: 0, updated: 0, errors: 0 });
-                    out.style.color = totals.errors ? '#dc2626' : '#16a34a';
-                    out.textContent = `${totals.inserted} inserted, ${totals.updated} updated`
-                        + (totals.errors ? `, ${totals.errors} errors` : ' ✓');
-                } catch (e) {
-                    out.style.color = '#dc2626';
-                    out.textContent = e.message;
-                } finally {
-                    btn.disabled = false;
-                    btn.textContent = '⇅ Sync to DB';
-                }
-            });
-
-            // Hide the button when this specific page's own table(s) have
-            // nothing pending — sync-to-db is a global operation, but showing
-            // it on every screen regardless of whether THAT screen's data has
-            // any local changes to push is noise. Checked per-page (by table),
-            // not globally across all tables — see PAGE_TABLES.
-            const pageTables = PAGE_TABLES[activePath.split('/')[1] ? `/${activePath.split('/')[1]}` : activePath];
-            if (!pageTables || !pageTables.length) {
-                const btn = topbar.querySelector('#amrd-sync-btn');
-                const out = topbar.querySelector('#amrd-sync-result');
-                if (btn) btn.style.display = 'none';
-                if (out) out.style.display = 'none';
-            } else {
-                apiFetch(`/api/admin/sync-status?tables=${pageTables.join(',')}`)
-                    .then(res => {
-                        if (res?.data?.needsSync) return;
-                        const btn = topbar.querySelector('#amrd-sync-btn');
-                        const out = topbar.querySelector('#amrd-sync-result');
-                        if (btn) btn.style.display = 'none';
-                        if (out) out.style.display = 'none';
-                    })
-                    .catch(() => { /* leave the button visible — err on the side of not hiding real functionality */ });
-            }
-        }
         const content = document.createElement('div');
         content.className = 'amrd-content';
         while (document.body.firstChild) content.appendChild(document.body.firstChild);

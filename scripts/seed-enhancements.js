@@ -14,24 +14,30 @@
  *
  * --target=production: RDS is VPC-only and never publicly accessible (see
  *   .project-constraints / feedback-db-security) — this can NEVER connect to
- *   the prod DB directly from a local machine. Instead it (1) regenerates
- *   transactiondata/enhancements.json locally from the tenant CSVs, then
- *   (2) calls the already-deployed POST /api/admin/sync-to-db endpoint —
- *   the same Lambda-mediated sync the admin UI's "Sync to DB" button uses,
- *   which already has VPC access. Step 2 only picks up data that has
- *   actually been committed + deployed, since it reads the LIVE SERVER'S
- *   OWN bundled transactiondata/*.json, not this machine's files, so it is
- *   a no-op until the regenerated JSON is deployed first. Requires --yes —
- *   this is a real, persistent write to a live database.
+ *   the prod DB directly from a local machine. Instead it reads the same
+ *   sibling-repo CSVs jobs/sync-tenant-fixes.js scans locally, groups
+ *   eligible rows by tenant (reusing that job's exported parseCsv/
+ *   extractEligibleRows/groupByTenant/findResultCsvs), and — only with
+ *   --yes — POSTs each tenant's rows straight to the already-deployed
+ *   POST /api/enhancements/import (same route + upsert semantics
+ *   jobs/sync-tenant-fixes.js's own DB-mode path uses, and the same route
+ *   the CSV importer on the Enhancements screen uses), which already has
+ *   VPC access. This is a real, persistent write to a live database, hence
+ *   --yes is required; without it, this only prints what would be pushed.
  *
  * Usage:
  *   node scripts/seed-enhancements.js --target=local
- *   node scripts/seed-enhancements.js --target=production          (regenerates JSON only)
- *   node scripts/seed-enhancements.js --target=production --yes    (also pushes to prod)
+ *   node scripts/seed-enhancements.js --target=production          (dry-run preview)
+ *   node scripts/seed-enhancements.js --target=production --yes    (actually pushes to prod)
  */
 
 const { spawnSync } = require('child_process');
 const path = require('path');
+const fs   = require('fs');
+
+const {
+    findResultCsvs, parseCsv, extractEligibleRows, groupByTenant,
+} = require('../jobs/sync-tenant-fixes.js');
 
 const args      = process.argv.slice(2);
 const targetArg = args.find(a => a.startsWith('--target='));
@@ -53,36 +59,58 @@ function runSyncJob(nonDb) {
     });
 }
 
+// Scans the same sibling-repo CSVs sync-tenant-fixes.js does, and groups
+// eligible rows by tenant name — the shared first step for both the preview
+// and the actual --yes push below.
+function collectRowsByTenant() {
+    const csvFiles = findResultCsvs();
+    const byTenant  = {};
+    let unmatchedCount = 0;
+
+    for (const csvPath of csvFiles) {
+        const rows     = parseCsv(fs.readFileSync(csvPath, 'utf8'));
+        const eligible = extractEligibleRows(rows);
+        unmatchedCount += eligible.filter(r => !r.tenant_name).length;
+
+        const grouped = groupByTenant(eligible.filter(r => r.tenant_name));
+        for (const [tenantName, tenantRows] of Object.entries(grouped)) {
+            (byTenant[tenantName] ||= []).push(...tenantRows);
+        }
+    }
+    return { byTenant, unmatchedCount, csvCount: csvFiles.length };
+}
+
 async function runProduction() {
-    console.log('=== Regenerating transactiondata/enhancements.json from tenant CSVs ===');
-    const genResult = runSyncJob(true);
-    if ((genResult.status ?? 1) !== 0) {
-        console.error('Regeneration failed — aborting before touching production.');
-        process.exit(1);
+    const { byTenant, unmatchedCount, csvCount } = collectRowsByTenant();
+
+    if (!csvCount) {
+        console.log('No tenant results CSVs found — nothing to sync.');
+        return;
+    }
+    if (unmatchedCount) {
+        console.log(`! ${unmatchedCount} row(s) skipped across all CSVs — no Tenant Name column value.`);
     }
 
-    console.log('\ntransactiondata/enhancements.json has been regenerated locally.');
-    console.log('It must be committed and deployed (npm run deploy) BEFORE the production');
-    console.log('sync below does anything useful — /api/admin/sync-to-db reads the LIVE');
-    console.log("SERVER'S OWN bundled transactiondata files, not this machine's.");
-
     if (!confirmed) {
-        console.log('\nRe-run with --yes once the updated file is committed and deployed, to');
-        console.log('push it into the production database:');
+        console.log('=== Dry run — nothing pushed (pass --yes to actually sync to production) ===');
+        for (const [tenantName, rows] of Object.entries(byTenant)) {
+            console.log(`  ${tenantName}: ${rows.length} row(s) would be synced`);
+        }
+        console.log('\nRe-run with --yes to push these to the production database:');
         console.log('  node scripts/seed-enhancements.js --target=production --yes');
         return;
     }
 
     require('dotenv').config({ path: path.join(__dirname, '..', '.env.test') });
-    const BASE         = (process.env.SMOKE_URL || 'https://amaradata.com').replace(/\/$/, '');
-    const BOOT_USER     = process.env.SMOKE_BOOTSTRAP_ADMIN_USER;
-    const BOOT_PASSWORD = process.env.SMOKE_BOOTSTRAP_ADMIN_PASSWORD;
+    const BASE          = (process.env.SMOKE_URL || 'https://amaradata.com').replace(/\/$/, '');
+    const BOOT_USER      = process.env.SMOKE_BOOTSTRAP_ADMIN_USER;
+    const BOOT_PASSWORD  = process.env.SMOKE_BOOTSTRAP_ADMIN_PASSWORD;
     if (!BOOT_USER || !BOOT_PASSWORD) {
         console.error('Set SMOKE_BOOTSTRAP_ADMIN_USER / SMOKE_BOOTSTRAP_ADMIN_PASSWORD in .env.test before running --target=production --yes.');
         process.exit(1);
     }
 
-    console.log(`\n=== Pushing to production DB via ${BASE}/api/admin/sync-to-db ===`);
+    console.log(`=== Pushing to production DB via ${BASE}/api/enhancements/import ===`);
     const loginRes  = await fetch(`${BASE}/api/auth/login`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json;v=1' },
@@ -93,15 +121,25 @@ async function runProduction() {
         throw new Error(`Bootstrap login failed: HTTP ${loginRes.status} — ${loginJson.error || 'no token in response'}`);
     }
 
-    const syncRes  = await fetch(`${BASE}/api/admin/sync-to-db`, {
-        method:  'POST',
-        headers: { Authorization: `Bearer ${loginJson.token}`, Accept: 'application/json;v=1' },
-    });
-    const syncJson = await syncRes.json().catch(() => ({}));
-    if (!syncRes.ok) {
-        throw new Error(`POST /api/admin/sync-to-db failed: HTTP ${syncRes.status} — ${syncJson.error || ''}`);
+    for (const [tenantName, rows] of Object.entries(byTenant)) {
+        const res  = await fetch(`${BASE}/api/enhancements/import`, {
+            method:  'POST',
+            headers: {
+                Authorization:  `Bearer ${loginJson.token}`,
+                'Content-Type': 'application/json',
+                Accept:         'application/json;v=1',
+            },
+            body: JSON.stringify({ tenant_name: tenantName, rows }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            console.error(`  ${tenantName}: FAILED — HTTP ${res.status} — ${json.error || ''}`);
+            continue;
+        }
+        const d = json.data || {};
+        console.log(`  ${tenantName}: ${d.inserted || 0} inserted, ${d.updated || 0} updated, ${d.skipped || 0} skipped`
+            + (d.errors?.length ? `, ${d.errors.length} errors` : ''));
     }
-    console.log(JSON.stringify(syncJson, null, 2));
     console.log('\nProduction sync complete.');
 }
 

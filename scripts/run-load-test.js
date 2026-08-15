@@ -68,7 +68,10 @@ function runOneUser(userIndex) {
 }
 
 async function seedOnce() {
-    process.env.REGRESSION_DB = '1';
+    // DB mode is the default now (see project-nondb-read-only.md) — no env
+    // var needed. Explicitly un-set REGRESSION_NONDB in case it's inherited
+    // from the caller's shell, since this load test always requires DB mode.
+    delete process.env.REGRESSION_NONDB;
     const globalSetup = require('../testing/regression_testsuite/global-setup.js');
     await globalSetup();
 }

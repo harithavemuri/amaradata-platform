@@ -386,13 +386,26 @@ describe('Admin routes (site_admin only)', () => {
         });
     });
 
-    // ── Sync-to-DB ───────────────────────────────────────────────────────────
-    describe('POST /api/admin/sync-to-db', () => {
-        it('→ 400 in NonDB mode, 200 with results in DB mode', async () => {
+    // ── Sync from DB (files←DB, the only sync direction now — see
+    // project-db-write-file-mirror.md; the old files→DB sync-to-db + its
+    // sync-status dry-run were removed). One request per table — see
+    // admin.js's POST /sync-from-db/:table comment for why (Lambda timeout /
+    // response-size avoidance) — so admin-health.html drives the loop itself.
+    describe('GET /api/admin/sync-tables', () => {
+        it('→ 200 with the manifest table list', async () => {
+            const res = await request(app).get('/api/admin/sync-tables').set(auth('siteAdmin'));
+            assertJson(res);
+            expect(res.status).toBe(200);
+            expect(res.body.data).toContain('tenants');
+        });
+    });
+
+    describe('POST /api/admin/sync-from-db/:table', () => {
+        it('→ 400 in NonDB mode, 200 with row count in DB mode', async () => {
             const health = await request(app).get('/api/admin/health').set(auth('siteAdmin'));
             assertJson(health);
             const isNonDb = health.body.data?.mode === 'nondb';
-            const res = await request(app).post('/api/admin/sync-to-db').set(auth('siteAdmin'));
+            const res = await request(app).post('/api/admin/sync-from-db/tenants').set(auth('siteAdmin'));
             assertJson(res);
             if (isNonDb) {
                 expect(res.status).toBe(400);
@@ -400,98 +413,53 @@ describe('Admin routes (site_admin only)', () => {
             } else {
                 expect(res.status).toBe(200);
                 expect(res.body.success).toBe(true);
-                expect(Array.isArray(res.body.data)).toBe(true);
+                expect(res.body.table).toBe('tenants');
+                expect(typeof res.body.rows).toBe('number');
             }
         }, 30000);
+
+        it('→ 400 for a table not in the manifest', async () => {
+            const health = await request(app).get('/api/admin/health').set(auth('siteAdmin'));
+            const isNonDb = health.body.data?.mode === 'nondb';
+            const res = await request(app).post('/api/admin/sync-from-db/not_a_real_table').set(auth('siteAdmin'));
+            assertJson(res);
+            expect(res.status).toBe(400);
+            if (!isNonDb) expect(res.body.error).toMatch(/Unknown table/);
+        });
     });
 
-    // ── Sync status (dry-run, for hiding the Sync to DB button) ────────────────
-    describe('GET /api/admin/sync-status', () => {
+    describe('GET /api/admin/login-audit', () => {
         it('without auth → 401', async () => {
-            const res = await request(app).get('/api/admin/sync-status?tables=tenants');
+            const res = await request(app).get('/api/admin/login-audit');
             assertJson(res);
             expect(res.status).toBe(401);
         });
 
         it('with staff role → 403', async () => {
-            const res = await request(app).get('/api/admin/sync-status?tables=tenants').set(auth('staff'));
+            const res = await request(app).get('/api/admin/login-audit').set(auth('staff'));
             assertJson(res);
             expect(res.status).toBe(403);
         });
 
-        it('no tables param → needsSync:false', async () => {
-            const res = await request(app).get('/api/admin/sync-status').set(auth('siteAdmin'));
+        it('a real login is recorded and shows up enriched with user info', async () => {
+            const username = `audit-user-${uid()}`;
+            const password = 'correctpassword1';
+            const created  = await request(app).post('/api/admin/users')
+                .set(auth('siteAdmin'))
+                .send({ email: `${username}@t.com`, name: 'Audit Test User', role: 'staff', username, password });
+            expect(created.status).toBe(201);
+
+            const login = await request(app).post('/api/auth/login').send({ username, password });
+            assertJson(login);
+            expect(login.status).toBe(200);
+
+            const res = await request(app).get('/api/admin/login-audit').set(auth('siteAdmin'));
             assertJson(res);
             expect(res.status).toBe(200);
-            expect(res.body.data.needsSync).toBe(false);
-        });
-
-        it('unknown table name → needsSync:false', async () => {
-            const res = await request(app).get('/api/admin/sync-status?tables=not_a_real_table').set(auth('siteAdmin'));
-            assertJson(res);
-            expect(res.status).toBe(200);
-            expect(res.body.data.needsSync).toBe(false);
-        });
-
-        // These two only exercise the real diff logic in DB mode — sync-status
-        // short-circuits to needsSync:false immediately in NonDB mode (there's
-        // no separate "DB" to be out of sync with), so both branches still pass
-        // there, just without touching the fixture file at all.
-        describe('DB-mode diff detection (fixture-based, isolated from real transactiondata/)', () => {
-            const fs   = require('fs');
-            const os   = require('os');
-            const path = require('path');
-            let tmpDir, prevDir, tenantId, tenantSlug;
-
-            let isNonDb;
-
-            beforeAll(async () => {
-                const health = await request(app).get('/api/admin/health').set(auth('siteAdmin'));
-                isNonDb = health.body.data?.mode === 'nondb';
-
-                const t = await request(app).post('/api/tenants')
-                    .set(auth('siteAdmin')).send({ name: 'Sync Status Tenant', slug: `sync-status-${uid()}` });
-                tenantId   = t.body.data.id;
-                tenantSlug = t.body.data.slug;
-            });
-
-            beforeEach(() => {
-                tmpDir  = fs.mkdtempSync(path.join(os.tmpdir(), 'amrd-sync-status-'));
-                prevDir = process.env.TRANSACTIONDATA_DIR;
-                process.env.TRANSACTIONDATA_DIR = tmpDir;
-            });
-
-            afterEach(() => {
-                process.env.TRANSACTIONDATA_DIR = prevDir;
-                fs.rmSync(tmpDir, { recursive: true, force: true });
-            });
-
-            it('fixture row matches the DB exactly → needsSync:false', async () => {
-                fs.writeFileSync(path.join(tmpDir, 'tenants.json'), JSON.stringify([
-                    { id: tenantId, name: 'Sync Status Tenant', slug: tenantSlug },
-                ]));
-                const res = await request(app).get('/api/admin/sync-status?tables=tenants').set(auth('siteAdmin'));
-                assertJson(res);
-                expect(res.body.data.needsSync).toBe(false);
-            });
-
-            it('fixture row differs from the DB → needsSync:true (DB mode only — NonDB has no separate DB to diff against)', async () => {
-                fs.writeFileSync(path.join(tmpDir, 'tenants.json'), JSON.stringify([
-                    { id: tenantId, name: 'Changed Name Not In DB', slug: tenantSlug },
-                ]));
-                const res = await request(app).get('/api/admin/sync-status?tables=tenants').set(auth('siteAdmin'));
-                assertJson(res);
-                expect(res.body.data.needsSync).toBe(isNonDb ? false : true);
-            });
-
-            it('fixture has a row id not present in the DB → needsSync:true (DB mode only)', async () => {
-                fs.writeFileSync(path.join(tmpDir, 'tenants.json'), JSON.stringify([
-                    { id: 999999999, name: 'Nonexistent', slug: `nonexistent-${uid()}` },
-                ]));
-                const res = await request(app).get('/api/admin/sync-status?tables=tenants').set(auth('siteAdmin'));
-                assertJson(res);
-                expect(res.body.data.needsSync).toBe(isNonDb ? false : true);
-            });
+            const entry = res.body.data.find(a => a.email === `${username}@t.com`);
+            expect(entry).toBeTruthy();
+            expect(entry.method).toBe('password');
+            expect(entry.name).toBe('Audit Test User');
         });
     });
 });

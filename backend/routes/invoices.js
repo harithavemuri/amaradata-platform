@@ -1,6 +1,8 @@
 const router = require('express').Router();
 const db     = require('../db');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { sendError } = require('../services/http-errors');
+const { blockNonDbWrite } = require('../middleware/block-nondb-write');
 
 // GET /api/invoices
 router.get('/', async (req, res) => {
@@ -10,11 +12,11 @@ router.get('/', async (req, res) => {
         }
         const { rows } = await db.query('SELECT * FROM invoices ORDER BY issue_date DESC');
         res.json({ success: true, data: rows });
-    } catch (e) { console.error('[invoices]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[invoices]'); }
 });
 
 // POST /api/invoices  (generate invoice from billing metrics)
-router.post('/', requireAdmin, async (req, res) => {
+router.post('/', requireAdmin, blockNonDbWrite, async (req, res) => {
     const { tenant_id, period_year, period_month, issue_date, due_date, notes, line_items = [] } = req.body;
     if (!tenant_id || !issue_date || !due_date)
         return res.status(400).json({ error: 'tenant_id, issue_date, due_date required' });
@@ -24,24 +26,6 @@ router.post('/', requireAdmin, async (req, res) => {
         const tax      = +(subtotal * tax_pct / 100).toFixed(2);
         const total    = +(subtotal + tax).toFixed(2);
 
-        if (req.db.mode === 'nondb') {
-            const count = req.db.fileDb.count('invoices');
-            const num   = `AMR-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
-            const inv   = req.db.fileDb.create('invoices', {
-                invoice_number: num, tenant_id, period_year: period_year||null,
-                period_month: period_month||null, issue_date, due_date, status: 'draft',
-                subtotal, tax_pct, tax_amount: tax, total_amount: total,
-                notes: notes||null, created_by: req.staff?.id || null,
-            });
-            for (let i = 0; i < line_items.length; i++) {
-                const l = line_items[i];
-                req.db.fileDb.create('invoice_line_items', {
-                    invoice_id: inv.id, billing_type: l.billing_type||'service', description: l.description,
-                    quantity: l.quantity||1, unit_price: l.unit_price||0, amount: l.amount||0, sort_order: i,
-                });
-            }
-            return res.status(201).json({ success: true, data: inv });
-        }
         const { rows: [{ count }] } = await db.query('SELECT COUNT(*) FROM invoices');
         const num = `AMR-${new Date().getFullYear()}-${String(parseInt(count) + 1).padStart(4, '0')}`;
         const { rows: [inv] } = await db.query(
@@ -60,28 +44,23 @@ router.post('/', requireAdmin, async (req, res) => {
             );
         }
         res.status(201).json({ success: true, data: inv });
-    } catch (e) { console.error('[invoices]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[invoices]'); }
 });
 
 // PATCH /api/invoices/:id/status
-router.patch('/:id/status', requireAdmin, async (req, res) => {
+router.patch('/:id/status', requireAdmin, blockNonDbWrite, async (req, res) => {
     const { status } = req.body;
     const valid = ['draft','sent','paid','overdue','cancelled'];
     if (!valid.includes(status)) return res.status(400).json({ error: 'Invalid status' });
     try {
         const paid_at = status === 'paid' ? new Date().toISOString() : null;
-        if (req.db.mode === 'nondb') {
-            const row = req.db.fileDb.update('invoices', req.params.id, { status, paid_at });
-            if (!row) return res.status(404).json({ error: 'Not found' });
-            return res.json({ success: true, data: row });
-        }
         const { rows } = await db.query(
             `UPDATE invoices SET status=$1, paid_at=$2, updated_at=NOW() WHERE id=$3 RETURNING *`,
             [status, paid_at, req.params.id]
         );
         if (!rows[0]) return res.status(404).json({ error: 'Not found' });
         res.json({ success: true, data: rows[0] });
-    } catch (e) { console.error('[invoices]', e.message); res.status(500).json({ error: 'Internal server error' }); }
+    } catch (e) { sendError(res, e, '[invoices]'); }
 });
 
 module.exports = router;

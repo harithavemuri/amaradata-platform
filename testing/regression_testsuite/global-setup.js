@@ -1,12 +1,12 @@
 // Runs once before all tests.
-// - NonDB mode (default): resets playwright-testdata/ JSON files, seeds admin user.
-// - DB mode (REGRESSION_DB=1): truncates _test database tables, seeds admin user.
+// - DB mode (default): truncates _test database tables, seeds admin user.
+// - NonDB mode (REGRESSION_NONDB=1): resets playwright-testdata/ JSON files, seeds admin user.
 const { mkdirSync, writeFileSync } = require('fs');
 const { resolve }                  = require('path');
 const { Client }                   = require('pg');
 const { SEED_USERS, SETUP_KEY }    = require('./helpers/seed-users');
 
-const DB_MODE       = process.env.REGRESSION_DB === '1';
+const DB_MODE       = process.env.REGRESSION_NONDB !== '1';
 const TEST_DATA_DIR = resolve(__dirname, '..', 'playwright-testdata');
 const BASE_URL      = 'http://localhost:9001';
 
