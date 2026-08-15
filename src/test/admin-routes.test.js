@@ -426,6 +426,19 @@ describe('Admin routes (site_admin only)', () => {
             expect(res.status).toBe(400);
             if (!isNonDb) expect(res.body.error).toMatch(/Unknown table/);
         });
+
+        it('records a matching entry in GET /api/admin/sync-progress', async () => {
+            const health = await request(app).get('/api/admin/health').set(auth('siteAdmin'));
+            if (health.body.data?.mode === 'nondb') return;
+
+            await request(app).post('/api/admin/sync-from-db/tenants').set(auth('siteAdmin'));
+
+            const res = await request(app).get('/api/admin/sync-progress').set(auth('siteAdmin'));
+            assertJson(res);
+            expect(res.status).toBe(200);
+            expect(res.body.data.tables.tenants).toMatchObject({ success: true });
+            expect(typeof res.body.data.tables.tenants.synced_at).toBe('string');
+        });
     });
 
     describe('GET /api/admin/login-audit', () => {

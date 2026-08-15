@@ -457,10 +457,28 @@ router.post('/sync-from-db/:table', async (req, res) => {
     }
     try {
         const rows = await db.mirrorTableToFile(table);
+        await db.updateSyncProgress(table, { success: true, rows, synced_at: new Date().toISOString() });
         res.json({ success: true, table, rows });
     } catch (e) {
+        // Best-effort: a failure recording progress must never mask the real
+        // sync failure being reported below.
+        await db.updateSyncProgress(table, { success: false, error: e.message, synced_at: new Date().toISOString() }).catch(() => {});
         res.status(500).json({ success: false, table, error: e.message });
     }
+});
+
+// GET /api/admin/sync-progress — .progress.json's current contents (per-table
+// success/failure + timestamp from the most recent sync-from-db run), so
+// admin-health.html can show "last synced" per table and recover mid-sync
+// state after a page reload — see db.js's updateSyncProgress() comment.
+router.get('/sync-progress', async (req, res) => {
+    if (req.db.mode === 'nondb') {
+        return res.json({ success: true, data: { tables: {} } });
+    }
+    try {
+        const progress = await db.readSyncProgress();
+        res.json({ success: true, data: progress });
+    } catch (e) { sendError(res, e, '[admin/sync-progress]'); }
 });
 
 // GET /api/admin/sync-from-db/download — zips up whatever mirrorTableToFile()

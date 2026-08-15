@@ -99,6 +99,38 @@ function writeTargetTable(sql) {
     return m ? m[1].toLowerCase() : null;
 }
 
+// Shared S3-vs-local-disk read/write, keyed by raw filename (not just
+// "<table>.json") so mirrorTableToFile()/readMirroredTableFile() and the
+// sync-progress tracking below can both use it.
+async function _writeRaw(key, content) {
+    if (TRANSACTIONDATA_S3_BUCKET) {
+        const { PutObjectCommand } = require('@aws-sdk/client-s3');
+        await _s3().send(new PutObjectCommand({
+            Bucket: TRANSACTIONDATA_S3_BUCKET, Key: key, Body: content, ContentType: 'application/json',
+        }));
+    } else {
+        fs.mkdirSync(TRANSACTIONDATA_DIR, { recursive: true });
+        fs.writeFileSync(path.join(TRANSACTIONDATA_DIR, key), content);
+    }
+}
+
+async function _readRaw(key) {
+    if (TRANSACTIONDATA_S3_BUCKET) {
+        const { GetObjectCommand } = require('@aws-sdk/client-s3');
+        try {
+            const obj = await _s3().send(new GetObjectCommand({ Bucket: TRANSACTIONDATA_S3_BUCKET, Key: key }));
+            const chunks = [];
+            for await (const chunk of obj.Body) chunks.push(chunk);
+            return Buffer.concat(chunks).toString('utf8');
+        } catch (e) {
+            if (e.name === 'NoSuchKey') return null;
+            throw e;
+        }
+    }
+    const file = path.join(TRANSACTIONDATA_DIR, key);
+    return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
+}
+
 // Re-reads the whole table and overwrites its JSON file, rather than patching
 // in just the changed row(s) from a RETURNING clause (many writes in this
 // codebase don't use RETURNING at all, e.g. plain DELETEs). A full re-read is
@@ -107,16 +139,7 @@ function writeTargetTable(sql) {
 // (feedback-idempotent-writes.md) — at the cost of an extra SELECT per write.
 async function mirrorTableToFile(table) {
     const { rows } = await query(`SELECT * FROM ${table} ORDER BY id`);
-    const json = JSON.stringify(rows, null, 2);
-    if (TRANSACTIONDATA_S3_BUCKET) {
-        const { PutObjectCommand } = require('@aws-sdk/client-s3');
-        await _s3().send(new PutObjectCommand({
-            Bucket: TRANSACTIONDATA_S3_BUCKET, Key: `${table}.json`, Body: json, ContentType: 'application/json',
-        }));
-    } else {
-        fs.mkdirSync(TRANSACTIONDATA_DIR, { recursive: true });
-        fs.writeFileSync(path.join(TRANSACTIONDATA_DIR, `${table}.json`), json);
-    }
+    await _writeRaw(`${table}.json`, JSON.stringify(rows, null, 2));
     return rows.length;
 }
 
@@ -126,20 +149,35 @@ async function mirrorTableToFile(table) {
 // Lambda's read-only deployment package). Returns null if nothing's been
 // mirrored for this table yet.
 async function readMirroredTableFile(table) {
-    if (TRANSACTIONDATA_S3_BUCKET) {
-        const { GetObjectCommand } = require('@aws-sdk/client-s3');
-        try {
-            const obj = await _s3().send(new GetObjectCommand({ Bucket: TRANSACTIONDATA_S3_BUCKET, Key: `${table}.json` }));
-            const chunks = [];
-            for await (const chunk of obj.Body) chunks.push(chunk);
-            return Buffer.concat(chunks).toString('utf8');
-        } catch (e) {
-            if (e.name === 'NoSuchKey') return null;
-            throw e;
-        }
-    }
-    const file = path.join(TRANSACTIONDATA_DIR, `${table}.json`);
-    return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
+    return _readRaw(`${table}.json`);
+}
+
+// .progress.json — one shared record of the most recent explicit sync-from-db
+// run's per-table outcome, so admin-health.html can show which table is
+// currently syncing and when each table was last synced, even across a page
+// reload (the sync itself is driven client-side as a sequence of per-table
+// requests — see admin.js's POST /sync-from-db/:table comment — so this is
+// the only server-side record of that sequence's progress). Deliberately
+// scoped to the explicit sync route only, not the automatic per-write mirror
+// above, which would otherwise PUT this on every single DB write.
+const SYNC_PROGRESS_KEY = '.progress.json';
+
+async function updateSyncProgress(table, entry) {
+    let progress = { tables: {} };
+    try {
+        const raw = await _readRaw(SYNC_PROGRESS_KEY);
+        if (raw) progress = JSON.parse(raw);
+    } catch { /* corrupt or unreadable — start fresh rather than fail the sync */ }
+    progress.tables = progress.tables || {};
+    progress.tables[table] = entry;
+    progress.updated_at = new Date().toISOString();
+    await _writeRaw(SYNC_PROGRESS_KEY, JSON.stringify(progress, null, 2));
+    return progress;
+}
+
+async function readSyncProgress() {
+    const raw = await _readRaw(SYNC_PROGRESS_KEY);
+    return raw ? JSON.parse(raw) : { tables: {} };
 }
 
 async function query(sql, params) {
@@ -195,4 +233,7 @@ async function query(sql, params) {
 // intercept this module's own nested require() of it (same CJS-require
 // gotcha documented on writePool/readPool above; confirmed empirically: an
 // unmocked run reached real AWS and got a clean NoSuchBucket error).
-module.exports = { query, writePool, readPool, mirrorTableToFile, readMirroredTableFile, _s3 };
+module.exports = {
+    query, writePool, readPool, mirrorTableToFile, readMirroredTableFile,
+    updateSyncProgress, readSyncProgress, _s3,
+};

@@ -123,6 +123,29 @@ describe('db.query — write-to-file mirror', () => {
     });
 });
 
+describe('db.js — sync progress tracking (.progress.json)', () => {
+    it('readSyncProgress() returns an empty tables map before anything has synced', async () => {
+        // No .progress.json has been written into tmpDir by any earlier test
+        // in this file (they all write <table>.json, not the dotfile).
+        await expect(dbModule.readSyncProgress()).resolves.toEqual({ tables: {} });
+    });
+
+    it('updateSyncProgress() creates the file on first call and merges on subsequent ones', async () => {
+        await dbModule.updateSyncProgress('tenants', { success: true, rows: 5, synced_at: '2026-01-01T00:00:00.000Z' });
+        let progress = await dbModule.readSyncProgress();
+        expect(progress.tables.tenants).toEqual({ success: true, rows: 5, synced_at: '2026-01-01T00:00:00.000Z' });
+
+        await dbModule.updateSyncProgress('invoices', { success: false, error: 'boom', synced_at: '2026-01-01T00:01:00.000Z' });
+        progress = await dbModule.readSyncProgress();
+        // Both entries survive — a later table's update must not clobber an earlier one.
+        expect(progress.tables.tenants.rows).toBe(5);
+        expect(progress.tables.invoices).toEqual({ success: false, error: 'boom', synced_at: '2026-01-01T00:01:00.000Z' });
+
+        const written = JSON.parse(fs.readFileSync(path.join(tmpDir, '.progress.json'), 'utf8'));
+        expect(written.tables.tenants.rows).toBe(5);
+    });
+});
+
 describe('services/http-errors — sendError', () => {
     it('responds 503 with a retry message for a dbUnavailable error', async () => {
         const { sendError } = require_('../../../backend/services/http-errors.js');

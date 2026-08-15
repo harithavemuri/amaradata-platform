@@ -17,12 +17,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function load() {
         root.innerHTML = '<p style="color:#94a3b8;padding:20px">Loading…</p>';
         try {
-            const res  = await window.__amrd.apiFetch('/api/admin/health');
-            const data = res.data;
-            render(data);
+            const [healthRes, progressRes] = await Promise.all([
+                window.__amrd.apiFetch('/api/admin/health'),
+                window.__amrd.apiFetch('/api/admin/sync-progress').catch(() => ({ data: { tables: {} } })),
+            ]);
+            render(healthRes.data, progressRes.data?.tables || {});
         } catch (e) {
             root.innerHTML = `<p style="color:#dc2626;padding:20px">Failed to load health data: ${e.message}</p>`;
         }
+    }
+
+    function fmtSyncedAt(entry) {
+        if (!entry) return '<span style="color:#94a3b8">never</span>';
+        const when = new Date(entry.synced_at).toLocaleString();
+        return entry.success
+            ? `<span style="color:#16a34a">✓</span> ${when}`
+            : `<span style="color:#dc2626" title="${(entry.error || '').replace(/"/g, '&quot;')}">✗ failed</span> ${when}`;
     }
 
     function badge(text, color) {
@@ -34,24 +44,60 @@ document.addEventListener('DOMContentLoaded', async () => {
     // request handling every table risked ApiFn's 29s Lambda timeout and a
     // large aggregate response as the number/size of tables grows. Sequential
     // (not Promise.all) so this stays predictable under the shared write pool
-    // and each table's progress is visible as it happens.
+    // and each table's progress is visible as it happens. The table currently
+    // being exported is shown both on the button and highlighted directly in
+    // the Table Row Counts grid below, with its "Last Synced" cell updated as
+    // each request completes — .progress.json (backend/db.js's
+    // updateSyncProgress()) is the server-side record of this, so it also
+    // survives a page reload mid-sync.
+    //
+    // Resumable by default: if a table's own sync request hits ApiFn's 29s
+    // Lambda timeout (or the tab is closed/reloaded mid-sync), that table
+    // simply never gets a .progress.json entry — re-clicking the button skips
+    // every table already marked success:true and only retries what's left,
+    // rather than redoing the whole table list from the start. The "Force
+    // full re-sync" checkbox overrides this for when the DB has changed since
+    // the last sync and every table genuinely needs a fresh export, not just
+    // the incomplete ones.
     async function syncFromDb() {
         const btn = document.getElementById('amrd-sync-from-db-btn');
+        const forceAll = document.getElementById('amrd-sync-force')?.checked || false;
         if (!btn) return;
         const original = btn.textContent;
         btn.disabled = true;
         try {
-            const tablesRes = await window.__amrd.apiFetch('/api/admin/sync-tables');
-            const tables    = tablesRes.data || [];
-            const failed    = [];
+            const [tablesRes, progressRes] = await Promise.all([
+                window.__amrd.apiFetch('/api/admin/sync-tables'),
+                window.__amrd.apiFetch('/api/admin/sync-progress').catch(() => ({ data: { tables: {} } })),
+            ]);
+            const allTables = tablesRes.data || [];
+            const progress   = progressRes.data?.tables || {};
+            const tables     = forceAll ? allTables : allTables.filter(t => !progress[t]?.success);
+            const failed     = [];
+
+            if (!tables.length) {
+                btn.textContent = '✓ Already up to date';
+                setTimeout(() => { btn.disabled = false; btn.textContent = original; }, 2500);
+                return;
+            }
 
             for (let i = 0; i < tables.length; i++) {
-                btn.textContent = `⇅ Syncing… (${i + 1}/${tables.length})`;
+                const table = tables[i];
+                btn.textContent = `⇅ Syncing ${table}… (${i + 1}/${tables.length})`;
+                const row = document.querySelector(`tr[data-table="${table}"]`);
+                const cell = row?.querySelector('.amrd-sync-cell');
+                if (cell) cell.innerHTML = '<span style="color:#3b82f6">⇅ syncing…</span>';
+                if (row) row.style.background = '#eff6ff';
+
                 try {
-                    const res = await window.__amrd.apiFetch(`/api/admin/sync-from-db/${tables[i]}`, { method: 'POST' });
-                    if (!res.success) failed.push(tables[i]);
+                    const res = await window.__amrd.apiFetch(`/api/admin/sync-from-db/${table}`, { method: 'POST' });
+                    if (!res.success) failed.push(table);
+                    if (cell) cell.innerHTML = fmtSyncedAt({ success: res.success, synced_at: new Date().toISOString(), error: res.error });
                 } catch (e) {
-                    failed.push(tables[i]);
+                    failed.push(table);
+                    if (cell) cell.innerHTML = fmtSyncedAt({ success: false, synced_at: new Date().toISOString(), error: e.message });
+                } finally {
+                    if (row) row.style.background = '';
                 }
             }
 
@@ -95,13 +141,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     window.downloadSyncedFiles = downloadSyncedFiles;
 
-    function render(data) {
+    function render(data, syncProgress) {
+        syncProgress = syncProgress || {};
         const { versions, environment, mode, tables } = data;
         const modeColor  = mode === 'nondb' ? '#f59e0b' : '#22c55e';
         const envColor   = environment === 'production' ? '#ef4444' : '#3b82f6';
         // sync-from-db 400s in NonDB mode (no DB to sync from) — hide it there.
         const syncButton = mode === 'nondb' ? '' : `
-                    <button id="amrd-sync-from-db-btn" onclick="syncFromDb()" title="Recreate transactiondata/*.json from the current DB state, one table per request" style="padding:6px 16px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#334155;font-size:13px;font-weight:600;cursor:pointer">⇅ Sync DB → Files</button>
+                    <button id="amrd-sync-from-db-btn" onclick="syncFromDb()" title="Recreate transactiondata/*.json from the current DB state, one table per request. Skips tables already synced unless 'Force full re-sync' is checked." style="padding:6px 16px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#334155;font-size:13px;font-weight:600;cursor:pointer">⇅ Sync DB → Files</button>
+                    <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#64748b;cursor:pointer" title="By default, re-clicking Sync only retries tables that failed or timed out last time. Check this to re-sync every table regardless of prior progress — e.g. after DB data changed.">
+                        <input id="amrd-sync-force" type="checkbox" style="cursor:pointer">Force full re-sync
+                    </label>
                     <a id="amrd-sync-download-link" href="javascript:void(0)" onclick="downloadSyncedFiles()" title="Download the synced transactiondata/*.json files as a zip — the only way to retrieve them in production, where they're written to S3 instead of local disk" style="padding:6px 16px;border:1px solid #d1d5db;border-radius:7px;background:#fff;color:#334155;font-size:13px;font-weight:600;text-decoration:none;display:inline-block">⬇ Download Synced Files</a>`;
 
         const versionRows = [
@@ -116,9 +166,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             </tr>`).join('');
 
         const tableRows = Object.entries(tables || {}).map(([t, n]) => `
-            <tr>
+            <tr data-table="${t}">
                 <td style="padding:8px 16px;color:#64748b;font-size:13px;font-family:monospace">${t}</td>
                 <td style="padding:8px 16px;font-weight:600;text-align:right;font-size:14px">${n !== null ? n.toLocaleString() : '<span style="color:#94a3b8">—</span>'}</td>
+                <td class="amrd-sync-cell" style="padding:8px 16px;font-size:12px;color:#64748b">${fmtSyncedAt(syncProgress[t])}</td>
             </tr>`).join('');
 
         root.innerHTML = `
@@ -143,6 +194,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="amrd-card">
                 <h3 style="margin:0 0 12px;font-size:14px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em">Table Row Counts</h3>
                 <table style="width:100%;border-collapse:collapse">
+                    <thead><tr>
+                        <th style="padding:8px 16px;text-align:left;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em">Table</th>
+                        <th style="padding:8px 16px;text-align:right;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em">Rows</th>
+                        <th style="padding:8px 16px;text-align:left;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em">Last Synced to Files</th>
+                    </tr></thead>
                     <tbody>${tableRows}</tbody>
                 </table>
             </div>`;
