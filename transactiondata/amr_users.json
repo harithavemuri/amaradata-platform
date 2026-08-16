@@ -3,7 +3,7 @@
     "id": 1,
     "email": "harithavemuri@gmail.com",
     "name": "Haritha Vemuri",
-    "role": "site_admin",
+    "role": "super_admin",
     "password_hash": "$2a$12$6MDUgnQmcEf3XEMf/MUCle5urdxWkU3O54d2rI8Syvk98RuEa7rJq",
     "google_id": "116652221844399706730",
     "logo_url": "https://lh3.googleusercontent.com/a/ACg8ocKno_sBgRDelPRcHXdySBu5BWy__trV8yeSXca5WQUHNG4uVAgI=s96-c",
@@ -33,9 +33,9 @@
   },
   {
     "id": 3,
-    "email": "harithavemuri@gmail.com",
+    "email": "smoketest.admin@amaradata.com",
     "name": "Smoke Test Admin",
-    "role": "site_admin",
+    "role": "super_admin",
     "password_hash": "$2a$12$FQbKNm5AlKLsMC8VNc1BcegcIu8p9djZaeFAhYB2lEopCY7ruaFi.",
     "google_id": null,
     "logo_url": null,
@@ -46,6 +46,22 @@
     "username": "smoketest.admin",
     "first_name": "Smoke Test",
     "last_name": "Admin"
+  },
+  {
+    "id": 6,
+    "email": "smoketest.siteadmin@amaradata.com",
+    "name": "Smoke Test Bootstrap Admin",
+    "role": "super_admin",
+    "password_hash": "$2a$12$FQbKNm5AlKLsMC8VNc1BcegcIu8p9djZaeFAhYB2lEopCY7ruaFi.",
+    "google_id": null,
+    "logo_url": null,
+    "is_active": true,
+    "last_login_at": null,
+    "created_at": "2026-01-01T05:00:00.000Z",
+    "updated_at": "2026-01-01T05:00:00.000Z",
+    "username": "smoketest.siteadmin",
+    "first_name": "Smoke Test",
+    "last_name": "Bootstrap Admin"
   },
   {
     "id": 4,

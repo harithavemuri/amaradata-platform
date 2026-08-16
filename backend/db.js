@@ -28,6 +28,7 @@ const path = require('path');
 
 const { getSecret, invalidate } = require('./services/secrets');
 const { withAuthRetry, withConnectRetry, isConnectivityError } = require('./services/db-retry');
+const dbHealth = require('./services/db-health');
 
 const WRITE_PASSWORD_SECRET_ID = process.env.AMRD_DB_WRITE_PASSWORD_SECRET_ID;
 const READ_PASSWORD_SECRET_ID  = process.env.AMRD_DB_READ_PASSWORD_SECRET_ID;
@@ -204,11 +205,18 @@ async function query(sql, params) {
             result = await run();
         } catch (err) {
             if (!isConnectivityError(err)) throw err;
+            // Marks the circuit breaker down so subsequent *requests* (not
+            // this one) get routed straight to NonDB-mode reads instead of
+            // each independently retrying against a DB that's still down —
+            // see services/db-health.js. Writes themselves are never affected
+            // by the breaker: every write always attempts the real DB.
+            dbHealth.markDown(err);
             const unavailable = new Error('Database temporarily unavailable — please retry shortly.');
             unavailable.dbUnavailable = true;
             unavailable.cause = err;
             throw unavailable;
         }
+        dbHealth.markUp();
 
         const table = writeTargetTable(sql);
         if (table && MIRRORED_TABLES.has(table)) {
@@ -223,8 +231,19 @@ async function query(sql, params) {
     }
 
     // Reads: retry transparently through a cold/unreachable DB (e.g. Aurora
-    // resuming from scale-to-zero) so a brief hiccup never surfaces to the caller.
-    return withConnectRetry(run);
+    // resuming from scale-to-zero) so a brief hiccup never surfaces to the
+    // caller. Every failed attempt (including ones that go on to succeed on a
+    // later retry) marks the breaker down — onRetry fires before each retry
+    // sleep, and a final exhausted-retries throw is caught below — so every
+    // connectivity error is logged via db-health regardless of outcome.
+    try {
+        const result = await withConnectRetry(run, { onRetry: (err) => dbHealth.markDown(err) });
+        dbHealth.markUp();
+        return result;
+    } catch (err) {
+        if (isConnectivityError(err)) dbHealth.markDown(err);
+        throw err;
+    }
 }
 
 // Exposed so tests can monkey-patch .send on the real (never actually

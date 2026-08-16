@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 );
 
 -- Internal AmaraData staff users
--- Roles: site_admin | admin | sales_manager | billing | staff
+-- Roles: super_admin | admin | sales_manager | billing | staff
 CREATE TABLE IF NOT EXISTS amr_users (
     id              SERIAL PRIMARY KEY,
     username        VARCHAR(255) UNIQUE NOT NULL,
@@ -46,8 +46,20 @@ CREATE TABLE IF NOT EXISTS amr_roles (
     updated_at  TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- ── Migration 2026.08.15.003: Rename site_admin role to super_admin ─────────
+-- Must run BEFORE the seed INSERT below (same reasoning as the amr_groups
+-- rename above it in this file) — the seed INSERT now targets 'super_admin'
+-- directly, so on an existing DB that still has a 'site_admin' row this
+-- UPDATE has to claim that name FIRST, or the seed INSERT's ON CONFLICT DO
+-- NOTHING would silently create a second, separate 'super_admin' row and
+-- leave this UPDATE to hit a duplicate-key error against amr_roles_name_key
+-- (reproduced locally: this was the original placement, further down the
+-- file, and it broke on a DB that already had 'site_admin' seeded).
+UPDATE amr_roles SET name = 'super_admin', label = 'Super Admin' WHERE name = 'site_admin';
+UPDATE amr_users SET role = 'super_admin' WHERE role = 'site_admin';
+
 INSERT INTO amr_roles (name, label, description, is_system) VALUES
-    ('site_admin',    'Site Admin',    'Full platform access including user and role management', true),
+    ('super_admin',   'Super Admin',   'Full platform access including user and role management', true),
     ('admin',         'Admin',         'Tenant, invoice and enhancement management', true),
     ('sales_manager', 'Sales Manager', 'View and manage tenant sales pipeline', true),
     ('billing',       'Billing',       'Access to invoices and payments', true),
@@ -491,15 +503,35 @@ ON CONFLICT DO NOTHING;
 
 -- Seed: smoke-test service accounts (password: ez3Find@@123, bcrypt rounds=12)
 -- UPDATE resets to known password if user already exists; conditional INSERT creates if absent.
+-- smoketest.admin previously shared harithavemuri@gmail.com — the real personal
+-- Google-linked account (see amr_users id=1). Decoupled to its own address so
+-- smoke tests never touch the real account.
 UPDATE amr_users
 SET password_hash = '$2a$12$FQbKNm5AlKLsMC8VNc1BcegcIu8p9djZaeFAhYB2lEopCY7ruaFi.',
-    role = 'site_admin', is_active = true, updated_at = NOW()
+    email = 'smoketest.admin@amaradata.com',
+    role = 'super_admin', is_active = true, updated_at = NOW()
 WHERE username = 'smoketest.admin';
 
 INSERT INTO amr_users (username, email, name, role, password_hash, is_active)
-SELECT 'smoketest.admin', 'harithavemuri@gmail.com', 'Smoke Test Admin', 'site_admin',
+SELECT 'smoketest.admin', 'smoketest.admin@amaradata.com', 'Smoke Test Admin', 'super_admin',
        '$2a$12$FQbKNm5AlKLsMC8VNc1BcegcIu8p9djZaeFAhYB2lEopCY7ruaFi.', true
 WHERE NOT EXISTS (SELECT 1 FROM amr_users WHERE username = 'smoketest.admin');
+
+-- Permanent bootstrap super_admin for scripts/smoke-lifecycle.js
+-- (SMOKE_BOOTSTRAP_ADMIN_USER) — deliberately a SEPARATE account from
+-- smoketest.admin above, since smoketest.admin is the one the lifecycle
+-- script itself enables/disables around each smoke run and must never be
+-- the account authenticating that enable/disable call.
+UPDATE amr_users
+SET password_hash = '$2a$12$FQbKNm5AlKLsMC8VNc1BcegcIu8p9djZaeFAhYB2lEopCY7ruaFi.',
+    email = 'smoketest.siteadmin@amaradata.com',
+    role = 'super_admin', is_active = true, updated_at = NOW()
+WHERE username = 'smoketest.siteadmin';
+
+INSERT INTO amr_users (username, email, name, role, password_hash, is_active)
+SELECT 'smoketest.siteadmin', 'smoketest.siteadmin@amaradata.com', 'Smoke Test Bootstrap Admin', 'super_admin',
+       '$2a$12$FQbKNm5AlKLsMC8VNc1BcegcIu8p9djZaeFAhYB2lEopCY7ruaFi.', true
+WHERE NOT EXISTS (SELECT 1 FROM amr_users WHERE username = 'smoketest.siteadmin');
 
 UPDATE amr_users
 SET password_hash = '$2a$12$FQbKNm5AlKLsMC8VNc1BcegcIu8p9djZaeFAhYB2lEopCY7ruaFi.',
@@ -522,5 +554,7 @@ INSERT INTO schema_migrations (version, description) VALUES
     ('2026.06.12.001', 'Drop unused columns: amr_users.picture/locale/region_code, tenants.description/logo_url/region_code'),
     ('2026.08.01.001', 'Add email_folders and email_placements for per-user email folders/trash'),
     ('2026.08.15.001', 'Add login_audit table for login activity tracking'),
-    ('2026.08.15.002', 'Add missing CSV-import columns (source, issue_id, site_name, fixed, item_type, is_billable, report_date) to enhancements — CREATE TABLE IF NOT EXISTS never retroactively added them to the pre-existing table')
+    ('2026.08.15.002', 'Add missing CSV-import columns (source, issue_id, site_name, fixed, item_type, is_billable, report_date) to enhancements — CREATE TABLE IF NOT EXISTS never retroactively added them to the pre-existing table'),
+    ('2026.08.15.003', 'Rename site_admin role to super_admin (amr_roles.name + amr_users.role); decouple smoketest.admin from harithavemuri@gmail.com onto its own email'),
+    ('2026.08.16.001', 'Seed smoketest.siteadmin — a permanent super_admin bootstrap account for scripts/smoke-lifecycle.js (SMOKE_BOOTSTRAP_ADMIN_USER), separate from smoketest.admin which the lifecycle script itself enables/disables')
 ON CONFLICT (version) DO NOTHING;

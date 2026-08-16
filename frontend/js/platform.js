@@ -343,7 +343,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#008cbb;box-sh
         const visibleNav = staff?.role === 'staff' ? NAV.filter(n => n.href !== '/email') : NAV;
         const navItems = visibleNav.map(_navLink).join('');
 
-        const adminSection = staff?.role === 'site_admin'
+        const adminSection = staff?.role === 'super_admin'
             ? `<div style="padding:8px 18px 4px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#475569;margin-top:8px;border-top:1px solid rgba(255,255,255,.06);padding-top:12px;">User Management</div>
                ${ADMIN_NAV.map(_navLink).join('')}
                <div style="padding:8px 18px 4px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#475569;margin-top:8px;border-top:1px solid rgba(255,255,255,.06);padding-top:12px;">System</div>

@@ -80,14 +80,14 @@ test.describe('Enhancements — edit/save coverage', () => {
 // Deliberately a separate top-level describe, not nested inside the one above:
 // nesting would run both describes' beforeEach hooks against the SAME page for
 // one test — the outer one logs in as 'admin' first, then this one's loginAs()
-// tries to log in again as site_admin on that already-authenticated page.
+// tries to log in again as super_admin on that already-authenticated page.
 // login.html auto-redirects to /dashboard whenever already logged in, so
 // #username never renders for the second login attempt (reproduced: all 3
 // tests here timed out on page.fill('#username', ...) until this was split out).
 //
-// Logged in as site_admin (not admin): /api/tenants/mine scopes 'admin' to
+// Logged in as super_admin (not admin): /api/tenants/mine scopes 'admin' to
 // tenants assigned via group membership, which this test can't easily set up
-// just to create a scratch tenant — site_admin sees all tenants and still
+// just to create a scratch tenant — super_admin sees all tenants and still
 // satisfies enhancements.js's requireAdmin guard.
 test.describe('Enhancements — filters', () => {
     let tenantId = null;
@@ -97,7 +97,7 @@ test.describe('Enhancements — filters', () => {
     let enhTitle;
 
     test.beforeEach(async ({ page }) => {
-        await loginAs(page, SEED_USERS.site_admin);
+        await loginAs(page, SEED_USERS.super_admin);
         const tenant = await apiPost(page, '/api/tenants', { name: testTag('FilterTenant'), slug: testSlug('tenant') });
         tenantId = tenant.id;
 
@@ -158,7 +158,7 @@ test.describe('Enhancements — filters', () => {
 });
 
 // ── pagination coverage ─────────────────────────────────────────────────────
-// Separate top-level describe (own site_admin login + own scratch tenant), same
+// Separate top-level describe (own super_admin login + own scratch tenant), same
 // reasoning as "Enhancements — filters". Creates 21 records via the API (bulk
 // UI creation would be far slower) purely to exercise window.__amrd.paginate()/
 // renderPagination() at the 20-per-page boundary — every other page's data
@@ -170,7 +170,7 @@ test.describe('Enhancements — pagination', () => {
     let createdIds = [];
 
     test.beforeEach(async ({ page }) => {
-        await loginAs(page, SEED_USERS.site_admin);
+        await loginAs(page, SEED_USERS.super_admin);
         const tenant = await apiPost(page, '/api/tenants', { name: testTag('PagerTenant'), slug: testSlug('tenant') });
         tenantId = tenant.id;
 
@@ -210,7 +210,7 @@ test.describe('Enhancements — pagination', () => {
 });
 
 // ── full field-edit coverage ────────────────────────────────────────────────────
-// Separate top-level describe (own site_admin login + own scratch tenant), same
+// Separate top-level describe (own super_admin login + own scratch tenant), same
 // reasoning as "Enhancements — filters": doesn't depend on another test in this
 // file having already created a tenant.
 test.describe('Enhancements — full field edit', () => {
@@ -218,7 +218,7 @@ test.describe('Enhancements — full field edit', () => {
     let enhId    = null;
 
     test.beforeEach(async ({ page }) => {
-        await loginAs(page, SEED_USERS.site_admin);
+        await loginAs(page, SEED_USERS.super_admin);
         const tenant = await apiPost(page, '/api/tenants', { name: testTag('FieldEditTenant'), slug: testSlug('tenant') });
         tenantId = tenant.id;
         const enh = await apiPost(page, '/api/enhancements', { tenant_id: tenantId, title: testTag('field-edit-me') });

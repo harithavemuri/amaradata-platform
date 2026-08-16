@@ -42,7 +42,7 @@ describe('API performance SLA (<=500ms)', () => {
         expect(duration, `took ${duration}ms`).toBeLessThan(SLA_MS);
     });
 
-    it('GET /api/admin/users (site_admin)', async () => {
+    it('GET /api/admin/users (super_admin)', async () => {
         const { res, duration } = await timed(() => request(app).get('/api/admin/users').set(auth('siteAdmin')));
         expect(res.status).toBe(200);
         expect(duration, `took ${duration}ms`).toBeLessThan(SLA_MS);

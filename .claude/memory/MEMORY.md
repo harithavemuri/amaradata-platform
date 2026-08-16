@@ -45,3 +45,7 @@
 - [DB Resilience Strategy](project-db-resilience-strategy.md) — reads auto-retry through DB connectivity errors, writes fail fast with a dbUnavailable-flagged 503 via sendError(); db.js/http-errors.js
 - [DB Write-to-File Mirror](project-db-write-file-mirror.md) — every successful DB-mode write re-syncs transactiondata/<table>.json (full-table re-SELECT); src/test/setup.js needed a TRANSACTIONDATA_DIR redirect to avoid clobbering real files
 - [NonDB Read-Only](project-nondb-read-only.md) — all writes blocked in NonDB mode except login audit; login_audit table added; 4 test tiers converted to real DB mode as a result; TRANSACTIONDATA_DIR redirect gotcha hit twice more; BIGINT issue_id type-parser bug found
+- [Super Admin Rename](project-super-admin-rename.md) — site_admin renamed to super_admin platform-wide incl. real DB migration; unblocks SSO role passthrough to rohas-group's SUPER_ROLES
+- [Smoketest Account Separation](project-smoketest-account-separation.md) — smoketest.admin decoupled from harithavemuri@gmail.com; new smoketest.siteadmin permanent bootstrap super_admin for smoke-lifecycle.js
+- [Tenant Modules SSO](project-tenant-modules-sso.md) — tenants.html shows/toggles rohas-group's per-project modules via SSO token exchange; project_id is rohas's own concept, GET called unscoped
+- [NonDB Auto-Fallback](project-nondb-auto-fallback.md) — reads auto-fallback to NonDB mode on real DB connectivity errors only (circuit breaker in db-health.js), every occurrence logged, writes always still hit the real DB

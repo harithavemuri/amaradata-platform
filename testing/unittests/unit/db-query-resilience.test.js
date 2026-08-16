@@ -47,7 +47,17 @@ dbModule.writePool.query = queryMock;
 dbModule.readPool.query  = queryMock;
 const { query } = dbModule;
 
-beforeEach(() => { queryMock.mockReset(); });
+// Same not-destructured-in-db.js reasoning as writePool/readPool above —
+// db.js does `const dbHealth = require('./services/db-health')` and calls
+// dbHealth.markDown/markUp as live property reads, so overwriting them here
+// on the same require-cache instance is actually observed.
+const dbHealthModule = require_('../../../backend/services/db-health.js');
+const markDownMock = vi.fn();
+const markUpMock   = vi.fn();
+dbHealthModule.markDown = markDownMock;
+dbHealthModule.markUp   = markUpMock;
+
+beforeEach(() => { queryMock.mockReset(); markDownMock.mockReset(); markUpMock.mockReset(); });
 afterAll(() => { fs.rmSync(tmpDir, { recursive: true, force: true }); });
 
 describe('db.query — reads', () => {
@@ -69,6 +79,49 @@ describe('db.query — reads', () => {
         expect(result.rows).toEqual([{ id: 1 }]);
         expect(queryMock).toHaveBeenCalledTimes(2);
     });
+
+    it('marks db-health down on the failed attempt and back up once it recovers', async () => {
+        queryMock
+            .mockRejectedValueOnce(netError('ETIMEDOUT'))
+            .mockResolvedValueOnce({ rows: [{ id: 1 }] });
+
+        const promise = query('SELECT * FROM tenants');
+        await vi.runAllTimersAsync();
+        await promise;
+
+        expect(markDownMock).toHaveBeenCalledTimes(1);
+        expect(markUpMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('marks db-health down once per exhausted-retries failure, never marks up', async () => {
+        // Rejection created fresh inside the implementation callback, at the
+        // moment the mock is actually invoked — chaining multiple
+        // mockRejectedValueOnce() calls up front instead constructs all
+        // three Promise.reject() instances immediately, before
+        // withConnectRetry's backoff has even started, which left later ones
+        // sitting unobserved long enough to trip Node's unhandled-rejection
+        // detector under fake timers (a benign PromiseRejectionHandledWarning
+        // that nonetheless fails the suite).
+        queryMock.mockImplementation(() => Promise.reject(netError('ECONNREFUSED')));
+
+        const promise = query('SELECT * FROM tenants');
+        promise.catch(() => {}); // observed immediately, before any timer advances
+        await vi.runAllTimersAsync();
+        await expect(promise).rejects.toMatchObject({ code: 'ECONNREFUSED' });
+
+        // 3 retry attempts: onRetry fires after attempts 1 and 2 (before each
+        // sleep), and the final exhausted-retries throw is caught once more —
+        // every one of the 3 failures gets logged, none silently dropped.
+        expect(markDownMock).toHaveBeenCalledTimes(3);
+        expect(markUpMock).not.toHaveBeenCalled();
+    });
+
+    it('a query that succeeds on the first try still marks db-health up', async () => {
+        queryMock.mockResolvedValueOnce({ rows: [] });
+        await query('SELECT * FROM tenants');
+        expect(markUpMock).toHaveBeenCalledTimes(1);
+        expect(markDownMock).not.toHaveBeenCalled();
+    });
 });
 
 describe('db.query — writes', () => {
@@ -80,13 +133,21 @@ describe('db.query — writes', () => {
         expect(queryMock).toHaveBeenCalledTimes(1);
     });
 
-    it('passes through a non-connectivity error unchanged', async () => {
+    it('marks db-health down on a connectivity failure', async () => {
+        queryMock.mockRejectedValue(netError('ECONNREFUSED'));
+        await expect(query('INSERT INTO tenants (name) VALUES ($1)', ['x'])).rejects.toBeTruthy();
+        expect(markDownMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('passes through a non-connectivity error unchanged and never touches db-health', async () => {
         const uniqueViolation = Object.assign(new Error('duplicate key'), { code: '23505' });
         queryMock.mockRejectedValue(uniqueViolation);
 
         await expect(query('INSERT INTO tenants (name) VALUES ($1)', ['x']))
             .rejects.toBe(uniqueViolation);
         expect(queryMock).toHaveBeenCalledTimes(1);
+        expect(markDownMock).not.toHaveBeenCalled();
+        expect(markUpMock).not.toHaveBeenCalled();
     });
 });
 

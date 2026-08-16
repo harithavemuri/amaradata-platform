@@ -5,9 +5,9 @@ import { SEED_USERS } from './helpers/seed-users.js';
 
 let createdId = null;
 
-test.describe('Users — edit/save coverage (site_admin only)', () => {
+test.describe('Users — edit/save coverage (super_admin only)', () => {
     test.beforeEach(async ({ page }) => {
-        await loginAs(page, SEED_USERS.site_admin);
+        await loginAs(page, SEED_USERS.super_admin);
         await page.goto('/users');
         await page.waitForSelector('#usersTable', { timeout: 10_000 });
     });
@@ -130,7 +130,7 @@ test.describe('Users — edit/save coverage (site_admin only)', () => {
         // only real way to verify a password change took effect is logging in
         // with it. A same-context context.newPage() is NOT enough here — pages
         // in the same browser context share localStorage/cookies, so the
-        // already-logged-in site_admin session leaks in and login.html's
+        // already-logged-in super_admin session leaks in and login.html's
         // already-logged-in redirect blocks #username from ever rendering
         // (same underlying issue as the nested-describe login bug, different
         // mechanism). Use a genuinely separate browser context instead.

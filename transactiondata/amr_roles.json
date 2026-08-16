@@ -1,8 +1,8 @@
 [
   {
     "id": 1,
-    "name": "site_admin",
-    "label": "Site Admin",
+    "name": "super_admin",
+    "label": "Super Admin",
     "description": "Full platform access including user and role management",
     "is_system": true,
     "created_at": "2026-05-29T01:47:59.721Z",

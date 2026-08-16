@@ -55,7 +55,7 @@ module.exports = async function globalSetup() {
     }
 
     // Seed one user per role via API (both modes) — needed by role-login-smoke.spec.js
-    // and by the edit-save specs for screens that require requireSiteAdmin.
+    // and by the edit-save specs for screens that require requireSuperAdmin.
     for (const user of Object.values(SEED_USERS)) {
         const res = await fetch(`${BASE_URL}/api/auth/create-user`, {
             method:  'POST',

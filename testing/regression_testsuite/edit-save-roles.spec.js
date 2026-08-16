@@ -5,9 +5,9 @@ import { SEED_USERS } from './helpers/seed-users.js';
 
 let createdId = null;
 
-test.describe('Roles — edit/save coverage (site_admin only)', () => {
+test.describe('Roles — edit/save coverage (super_admin only)', () => {
     test.beforeEach(async ({ page }) => {
-        await loginAs(page, SEED_USERS.site_admin);
+        await loginAs(page, SEED_USERS.super_admin);
         await page.goto('/roles');
         await page.waitForSelector('.amrd-table', { timeout: 10_000 });
     });

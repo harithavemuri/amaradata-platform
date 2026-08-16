@@ -7,7 +7,7 @@
  * route (no new Lambda / raw-SQL mechanism — unlike rohas-group's approach,
  * amaradata already exposes this over its normal admin API).
  *
- * Requires a permanent site_admin "bootstrap" account (SMOKE_BOOTSTRAP_ADMIN_*)
+ * Requires a permanent super_admin "bootstrap" account (SMOKE_BOOTSTRAP_ADMIN_*)
  * that is never itself the account being toggled — see .env.test.example.
  *
  * Usage:

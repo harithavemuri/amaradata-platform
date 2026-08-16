@@ -51,16 +51,16 @@ async function requireAuth(req, res, next) {
 
 async function requireAdmin(req, res, next) {
     return requireAuth(req, res, () => {
-        if (!['admin', 'site_admin'].includes(req.staff.role))
+        if (!['admin', 'super_admin'].includes(req.staff.role))
             return res.status(403).json({ error: 'Admin only' });
         next();
     });
 }
 
-async function requireSiteAdmin(req, res, next) {
+async function requireSuperAdmin(req, res, next) {
     return requireAuth(req, res, () => {
-        if (req.staff.role !== 'site_admin')
-            return res.status(403).json({ error: 'Site admin only' });
+        if (req.staff.role !== 'super_admin')
+            return res.status(403).json({ error: 'Super admin only' });
         next();
     });
 }
@@ -80,7 +80,7 @@ async function verifyRefresh(token) {
 }
 
 module.exports = {
-    requireAuth, requireAdmin, requireSiteAdmin,
+    requireAuth, requireAdmin, requireSuperAdmin,
     sign, signRefresh, verifyRefresh,
     getJwtSecret, verifyWithRetry,
 };

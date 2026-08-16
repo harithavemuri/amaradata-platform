@@ -1,16 +1,16 @@
 // @vitest-environment node
 /**
- * Exhaustive unit matrix: every guard (requireAuth/requireAdmin/requireSiteAdmin)
- * x every role (site_admin/admin/sales_manager/billing/staff), asserting the
+ * Exhaustive unit matrix: every guard (requireAuth/requireAdmin/requireSuperAdmin)
+ * x every role (super_admin/admin/sales_manager/billing/staff), asserting the
  * expected 200-vs-401/403 outcome. Pure unit level — mocked req/res, no HTTP/DB
  * (see feedback-test-layers-db-first.md's definition of the unit layer).
  */
 import { describe, it, expect, vi } from 'vitest';
 import jwt from 'jsonwebtoken';
-import { requireAuth, requireAdmin, requireSiteAdmin } from '../../../backend/middleware/auth.js';
+import { requireAuth, requireAdmin, requireSuperAdmin } from '../../../backend/middleware/auth.js';
 
 const SECRET = process.env.AMRD_JWT_SECRET;
-const ROLES  = ['site_admin', 'admin', 'sales_manager', 'billing', 'staff'];
+const ROLES  = ['super_admin', 'admin', 'sales_manager', 'billing', 'staff'];
 
 function tokenFor(role) {
     return jwt.sign({ id: 1, email: `${role}@t.com`, name: role, role, type: 'access' }, SECRET, { expiresIn: '1h' });
@@ -27,8 +27,8 @@ function mockReqRes(token) {
 
 const GUARDS = {
     requireAuth:       { fn: requireAuth,       allowed: new Set(ROLES) },                     // any authenticated role
-    requireAdmin:      { fn: requireAdmin,      allowed: new Set(['admin', 'site_admin']) },
-    requireSiteAdmin:  { fn: requireSiteAdmin,  allowed: new Set(['site_admin']) },
+    requireAdmin:      { fn: requireAdmin,      allowed: new Set(['admin', 'super_admin']) },
+    requireSuperAdmin: { fn: requireSuperAdmin, allowed: new Set(['super_admin']) },
 };
 
 describe('role guard matrix (unit, no HTTP)', () => {
@@ -64,7 +64,7 @@ describe('role guard matrix (unit, no HTTP)', () => {
             });
 
             it('refresh-type token -> 401, next not called', async () => {
-                const refreshToken = jwt.sign({ id: 1, role: 'site_admin', type: 'refresh' }, SECRET, { expiresIn: '1h' });
+                const refreshToken = jwt.sign({ id: 1, role: 'super_admin', type: 'refresh' }, SECRET, { expiresIn: '1h' });
                 const { req, res, next } = mockReqRes(refreshToken);
                 await fn(req, res, next);
                 expect(next).not.toHaveBeenCalled();

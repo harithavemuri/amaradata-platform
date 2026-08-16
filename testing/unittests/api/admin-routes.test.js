@@ -28,7 +28,7 @@ describe('Admin API', () => {
             expect(res.status).toBe(401);
         });
 
-        it('admin role → 403 (site_admin required)', async () => {
+        it('admin role → 403 (super_admin required)', async () => {
             const res = await request(app).get('/api/admin/users').set(auth('admin'));
             assertJson(res);
             expect(res.status).toBe(403);
@@ -40,7 +40,7 @@ describe('Admin API', () => {
             expect(res.status).toBe(403);
         });
 
-        it('site_admin → 200 with enriched users array', async () => {
+        it('super_admin → 200 with enriched users array', async () => {
             const res = await request(app).get('/api/admin/users').set(auth('siteAdmin'));
             assertJson(res);
             expect(res.status).toBe(200);
@@ -125,7 +125,7 @@ describe('Admin API', () => {
             expect(res.status).toBe(409);
         });
 
-        it.each(['site_admin', 'admin', 'sales_manager', 'billing', 'staff'])('valid role "%s" → 201', async (role) => {
+        it.each(['super_admin', 'admin', 'sales_manager', 'billing', 'staff'])('valid role "%s" → 201', async (role) => {
             const res = await request(app).post('/api/admin/users')
                 .set(auth('siteAdmin'))
                 .send({ email: `role-${role}-${uid()}@t.com`, name: `Role ${role}`, role });
@@ -195,7 +195,7 @@ describe('Admin API', () => {
 
     // ── User Groups ────────────────────────────────────────────────────────────
     describe('GET /api/admin/user-groups', () => {
-        it('site_admin → 200 with array', async () => {
+        it('super_admin → 200 with array', async () => {
             const res = await request(app).get('/api/admin/user-groups').set(auth('siteAdmin'));
             assertJson(res);
             expect(res.status).toBe(200);
@@ -261,7 +261,7 @@ describe('Admin API', () => {
 
     // ── Roles ──────────────────────────────────────────────────────────────────
     describe('GET /api/admin/roles', () => {
-        it('site_admin → 200 with roles array', async () => {
+        it('super_admin → 200 with roles array', async () => {
             const res = await request(app).get('/api/admin/roles').set(auth('siteAdmin'));
             assertJson(res);
             expect(res.status).toBe(200);

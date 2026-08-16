@@ -1,15 +1,15 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const db     = require('../db');
-const { requireSiteAdmin } = require('../middleware/auth');
+const { requireSuperAdmin } = require('../middleware/auth');
 const { version: APP_VERSION } = require('../../package.json');
 const { sendError } = require('../services/http-errors');
 const { blockNonDbWrite } = require('../middleware/block-nondb-write');
 
-const VALID_ROLES = ['site_admin', 'admin', 'sales_manager', 'billing', 'staff'];
+const VALID_ROLES = ['super_admin', 'admin', 'sales_manager', 'billing', 'staff'];
 
-// All admin routes require site_admin
-router.use(requireSiteAdmin);
+// All admin routes require super_admin
+router.use(requireSuperAdmin);
 
 // ── Users ─────────────────────────────────────────────────────────────────────
 

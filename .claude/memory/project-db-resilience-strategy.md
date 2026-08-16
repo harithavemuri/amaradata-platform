@@ -11,7 +11,9 @@ metadata:
 
 `backend/services/http-errors.js` — `sendError(res, err, tag, fallbackMessage?)` is the shared route catch-block helper: responds `503 { error: 'Service temporarily unavailable — please retry shortly.' }` when `isDbUnavailable(err)`, else the existing generic `500` (or a route's custom fallback message, e.g. auth.js's forgot/reset-password routes). Wired into all 9 `backend/routes/*.js` files' DB-call catch blocks, `backend/graphql/resolvers.js` (reads only — swapped from a direct `readPool.query()` bypass to `db.query()` so it gets the same retry), and `server.js`'s fallback Express error handler.
 
-**Why:** User requested this exact behavior — "reads still work, writes politely fail with a retry-later message" during a rare DB-down/warm-up window — rather than reviving NonDB (file-based) mode as a fallback, which was a separate, much larger removal effort in progress at the time (see chat history if that resurfaces).
+**Why:** User requested this exact behavior — "reads still work, writes politely fail with a retry-later message" during a rare DB-down/warm-up window — rather than reviving NonDB (file-based) mode as a fallback, which was a separate, much larger removal effort in progress at the time.
+
+**Superseded/extended:** the "rather than reviving NonDB mode as a fallback" call above was later reversed — [[project-nondb-auto-fallback]] adds automatic NonDB-mode fallback for **reads only** once a real connectivity error is detected, layered on top of (not replacing) everything in this file. Writes are completely unaffected: they still always attempt the real DB and still get the exact `dbUnavailable`-503 behavior described here, never silently rerouted to NonDB mode.
 
 **How to apply:** Any new write endpoint should go through `db.query()` (never call `writePool.query`/`readPool.query` directly) and use `sendError()` in its catch block, not a hand-rolled 500 — that's how it inherits this behavior automatically. Existing idempotency of writes is what makes telling the client "retry" safe — see [[feedback-idempotent-writes]].
 

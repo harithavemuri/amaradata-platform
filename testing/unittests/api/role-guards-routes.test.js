@@ -29,7 +29,7 @@ describe('role guard matrix (API level)', () => {
         });
     });
 
-    // requireAdmin: admin + site_admin pass, others 403
+    // requireAdmin: admin + super_admin pass, others 403
     describe('POST /api/tenants (requireAdmin)', () => {
         const allowed = new Set(['admin', 'siteAdmin']);
         for (const role of ROLES) {
@@ -48,8 +48,8 @@ describe('role guard matrix (API level)', () => {
         });
     });
 
-    // requireSiteAdmin: only site_admin passes
-    describe('GET /api/admin/users (requireSiteAdmin)', () => {
+    // requireSuperAdmin: only super_admin passes
+    describe('GET /api/admin/users (requireSuperAdmin)', () => {
         for (const role of ROLES) {
             const shouldPass = role === 'siteAdmin';
             it(`${role} -> ${shouldPass ? '200' : '403'}`, async () => {

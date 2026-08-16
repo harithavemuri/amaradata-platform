@@ -5,8 +5,8 @@ import { SEED_USERS } from './helpers/seed-users.js';
 
 // No PUT route exists for invoices (only POST create + PATCH status) — this covers
 // add-save and the status-transition path, not an "edit", matching the actual API surface.
-// Logged in as site_admin (not admin): /api/tenants/mine scopes 'admin' role to tenants
-// assigned via group membership, which the seeded admin user has none of — site_admin
+// Logged in as super_admin (not admin): /api/tenants/mine scopes 'admin' role to tenants
+// assigned via group membership, which the seeded admin user has none of — super_admin
 // sees all tenants and still satisfies invoices.js's requireAdmin guard.
 
 let tenantId    = null;
@@ -14,7 +14,7 @@ let createdId   = null;
 
 test.describe('Invoices — add/save + status-transition coverage', () => {
     test.beforeEach(async ({ page }) => {
-        await loginAs(page, SEED_USERS.site_admin);
+        await loginAs(page, SEED_USERS.super_admin);
         const tenant = await apiPost(page, '/api/tenants', { name: testTag('InvoiceTenant'), slug: testSlug('tenant') });
         tenantId = tenant.id;
         await page.goto('/invoices');

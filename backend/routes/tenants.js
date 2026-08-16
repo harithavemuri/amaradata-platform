@@ -1,13 +1,27 @@
 const router = require('express').Router();
 const db     = require('../db');
-const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { requireAuth, requireAdmin, requireSuperAdmin } = require('../middleware/auth');
 const { sendError } = require('../services/http-errors');
 const { blockNonDbWrite } = require('../middleware/block-nondb-write');
+// Not destructured: tests monkey-patch tenantSsoClient.callTenantApi directly
+// (vi.mock() doesn't reliably intercept a require() nested inside server.js's
+// own CJS require graph — see src/test/tenant-modules-routes.test.js and the
+// identical email-s3-client.js gotcha), which only works through a live
+// property read, not a copied local binding from destructuring at require time.
+const tenantSsoClient = require('../services/tenant-sso-client');
+
+async function getTenant(req, id) {
+    if (req.db.mode === 'nondb') {
+        return req.db.fileDb.getById('tenants', id) || null;
+    }
+    const { rows } = await db.query('SELECT * FROM tenants WHERE id = $1', [id]);
+    return rows[0] || null;
+}
 
 // GET /api/tenants/mine — returns only tenants the current user is eligible to see
 router.get('/mine', requireAuth, async (req, res) => {
     try {
-        if (req.staff.role === 'site_admin') {
+        if (req.staff.role === 'super_admin') {
             if (req.db.mode === 'nondb') {
                 return res.json({ success: true, data: req.db.fileDb.find('tenants').sort((a,b) => a.name.localeCompare(b.name)) });
             }
@@ -88,6 +102,47 @@ router.put('/:id', requireAdmin, blockNonDbWrite, async (req, res) => {
         if (!rows[0]) return res.status(404).json({ error: 'Not found' });
         res.json({ success: true, data: rows[0] });
     } catch (e) { sendError(res, e, '[tenants]'); }
+});
+
+// GET /api/tenants/:id/modules — proxies to the tenant site's own
+// GET /api/admin/project-modules via SSO token exchange (see
+// backend/services/tenant-sso-client.js). Called unscoped (no project_id) —
+// AmaraData has no concept of the tenant's internal "projects", only the
+// tenant site itself, so this returns every project+module row the tenant
+// site knows about, each already carrying its own project_name for display.
+router.get('/:id/modules', requireSuperAdmin, async (req, res) => {
+    try {
+        const tenant = await getTenant(req, req.params.id);
+        if (!tenant) return res.status(404).json({ error: 'Not found' });
+        const result = await tenantSsoClient.callTenantApi(tenant, req.staff, { method: 'GET', path: '/api/admin/project-modules' });
+        res.json({ success: true, data: result.data || [] });
+    } catch (e) {
+        if (e.tenantUnreachable) return res.status(502).json({ error: `Tenant site unavailable: ${e.message}` });
+        sendError(res, e, '[tenants/modules]');
+    }
+});
+
+// PUT /api/tenants/:id/modules — { project_id, module, enabled }, proxies
+// straight through to the tenant site's PUT /api/admin/project-modules
+// (project_id is opaque here — it's whatever the GET above returned).
+// Idempotent by construction: it's a passthrough to an already-idempotent
+// upsert on the tenant side.
+router.put('/:id/modules', requireSuperAdmin, blockNonDbWrite, async (req, res) => {
+    const { project_id, module, enabled } = req.body || {};
+    if (!project_id || !module || typeof enabled !== 'boolean') {
+        return res.status(400).json({ error: 'project_id, module, and enabled (boolean) are required' });
+    }
+    try {
+        const tenant = await getTenant(req, req.params.id);
+        if (!tenant) return res.status(404).json({ error: 'Not found' });
+        const result = await tenantSsoClient.callTenantApi(tenant, req.staff, {
+            method: 'PUT', path: '/api/admin/project-modules', body: { project_id, module, enabled },
+        });
+        res.json({ success: true, data: result.data });
+    } catch (e) {
+        if (e.tenantUnreachable) return res.status(502).json({ error: `Tenant site unavailable: ${e.message}` });
+        sendError(res, e, '[tenants/modules]');
+    }
 });
 
 module.exports = router;

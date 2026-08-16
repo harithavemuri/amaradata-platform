@@ -16,7 +16,7 @@ function setStaff(staff) {
 }
 
 const ADMIN_STAFF     = { id: 1, name: 'Alice', role: 'admin',      email: 'alice@t.com' };
-const SITEADMIN_STAFF = { id: 2, name: 'Bob',   role: 'site_admin', email: 'bob@t.com'   };
+const SITEADMIN_STAFF = { id: 2, name: 'Bob',   role: 'super_admin', email: 'bob@t.com'   };
 
 describe('platform.js — renderSidebar', () => {
     beforeEach(() => {
@@ -132,14 +132,14 @@ describe('platform.js — renderSidebar', () => {
             expect(document.body.innerHTML).not.toContain('User Management');
         });
 
-        it('IS shown for site_admin role', () => {
+        it('IS shown for super_admin role', () => {
             setStaff(SITEADMIN_STAFF);
             loadPlatform();
             window.__amrd.renderSidebar('Home');
             expect(document.body.innerHTML).toContain('User Management');
         });
 
-        it('site_admin sees Users, User Groups, and Roles links', () => {
+        it('super_admin sees Users, User Groups, and Roles links', () => {
             setStaff(SITEADMIN_STAFF);
             loadPlatform();
             window.__amrd.renderSidebar('Home');

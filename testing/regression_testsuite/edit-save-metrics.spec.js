@@ -12,7 +12,7 @@ let tenantId = null;
 
 test.describe('Billing Metrics — upsert-style edit/save coverage', () => {
     test.beforeEach(async ({ page }) => {
-        await loginAs(page, SEED_USERS.site_admin);
+        await loginAs(page, SEED_USERS.super_admin);
         const tenant = await apiPost(page, '/api/tenants', { name: testTag('MetricsTenant'), slug: testSlug('tenant') });
         tenantId = tenant.id;
         await page.goto('/metrics');
@@ -64,7 +64,7 @@ test.describe('Billing Metrics — upsert-style edit/save coverage', () => {
 // ── search/export coverage ──────────────────────────────────────────────────
 test.describe('Billing Metrics — search + export', () => {
     test.beforeEach(async ({ page }) => {
-        await loginAs(page, SEED_USERS.site_admin);
+        await loginAs(page, SEED_USERS.super_admin);
         const tenant = await apiPost(page, '/api/tenants', { name: testTag('MetricsSearchTenant'), slug: testSlug('tenant') });
         tenantId = tenant.id;
         await page.goto('/metrics');

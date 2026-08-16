@@ -4,7 +4,7 @@ import request from 'supertest';
 import app from '../../server.js';
 import { uid, auth, assertJson } from './helpers.js';
 
-describe('Admin routes (site_admin only)', () => {
+describe('Admin routes (super_admin only)', () => {
     let userId;
     let groupId;
     let roleId;
@@ -34,7 +34,7 @@ describe('Admin routes (site_admin only)', () => {
             expect(res.status).toBe(401);
         });
 
-        it('with admin (not site_admin) → 403', async () => {
+        it('with admin (not super_admin) → 403', async () => {
             const res = await request(app).get('/api/admin/users').set(auth('admin'));
             assertJson(res);
             expect(res.status).toBe(403);

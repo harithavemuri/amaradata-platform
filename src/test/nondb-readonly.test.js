@@ -64,14 +64,14 @@ describe('NonDB mode — reads still work', () => {
         expect(res.body.data).toHaveLength(1);
     });
 
-    it('GET /api/admin/users (site_admin) returns seeded file data', async () => {
+    it('GET /api/admin/users (super_admin) returns seeded file data', async () => {
         const res = await request(app).get('/api/admin/users').set(auth('siteAdmin'));
         assertJson(res);
         expect(res.status).toBe(200);
         expect(res.body.data).toHaveLength(1);
     });
 
-    it('GET /api/admin/roles (site_admin) returns seeded file data', async () => {
+    it('GET /api/admin/roles (super_admin) returns seeded file data', async () => {
         const res = await request(app).get('/api/admin/roles').set(auth('siteAdmin'));
         assertJson(res);
         expect(res.status).toBe(200);

@@ -58,8 +58,9 @@
                     <td><span class="amrd-badge amrd-badge-${t.status}">${t.status}</span></td>
                     <td>${fmtDate(t.onboarded_at)}</td>
                     <td>${t.site_url ? `<a href="${t.site_url}" target="_blank" rel="noopener" style="color:#008cbb;font-size:12px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:4px">Open ↗</a>` : '<span style="color:#94a3b8">—</span>'}</td>
+                    <td>${window.__amrd.getStaff()?.role === 'super_admin' && t.site_url ? `<button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="openModules(${t.id})">Modules</button>` : '<span style="color:#94a3b8">—</span>'}</td>
                     <td><button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick='openForm(${JSON.stringify(t)})'>${window.__amrd.isReadOnly() ? 'View' : 'Edit'}</button></td>
-                </tr>`).join('') || `<tr><td colspan="7" style="color:#94a3b8;text-align:center;padding:24px">No tenants${_allTenants.length ? ' match your search' : ' yet'}</td></tr>`;
+                </tr>`).join('') || `<tr><td colspan="8" style="color:#94a3b8;text-align:center;padding:24px">No tenants${_allTenants.length ? ' match your search' : ' yet'}</td></tr>`;
             document.getElementById('tenants-count').textContent = `${_filtered.length} tenant(s)`;
             window.__amrd.renderPagination(document.getElementById('tenants-pagination'), {
                 page: _page, pageSize: PAGE_SIZE, total: _filtered.length,
@@ -117,13 +118,14 @@
                 <div class="amrd-card" style="padding:0">
                     <div class="amrd-table-wrap">
                     <table class="amrd-table">
-                        <thead><tr><th>Name</th><th>Contact</th><th>Phone</th><th>Status</th><th>Onboarded</th><th>Site</th><th></th></tr></thead>
+                        <thead><tr><th>Name</th><th>Contact</th><th>Phone</th><th>Status</th><th>Onboarded</th><th>Site</th><th>Modules</th><th></th></tr></thead>
                         <tbody id="tenants-tbody"></tbody>
                     </table>
                     </div>
                     <div id="tenants-pagination"></div>
                 </div>
-                <div id="form-slot"></div>`;
+                <div id="form-slot"></div>
+                <div id="modules-modal-slot"></div>`;
 
             document.getElementById('btn-search').addEventListener('click', () => {
                 _search = {
@@ -214,8 +216,80 @@
             }
         }
 
-        window.openForm = openForm;
-        window.save     = save;
+        const MODULE_LABELS = { sales_management: 'Sales Management', rental_management: 'Rental Management' };
+
+        async function openModules(tenantId) {
+            const tenant = _allTenants.find(t => t.id == tenantId);
+            const slot = document.getElementById('modules-modal-slot');
+            slot.innerHTML = `
+                <div id="modulesModal" style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center">
+                    <div style="background:#fff;border-radius:12px;padding:28px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+                        <h3 style="margin:0 0 4px;font-size:16px;color:#0f172a">Modules — ${tenant?.name || ''}</h3>
+                        <p style="margin:0 0 16px;font-size:12px;color:#94a3b8">Toggling here updates the tenant's own site live via SSO.</p>
+                        <div id="modules-err" style="color:#dc2626;font-size:13px;margin-bottom:10px"></div>
+                        <div id="modules-body">Loading…</div>
+                        <div style="display:flex;justify-content:flex-end;margin-top:16px">
+                            <button class="amrd-btn amrd-btn-ghost" onclick="closeModules()">Close</button>
+                        </div>
+                    </div>
+                </div>`;
+
+            try {
+                const res = await window.__amrd.apiFetch(`/api/tenants/${tenantId}/modules`);
+                renderModulesBody(tenantId, res.data || []);
+            } catch (e) {
+                document.getElementById('modules-body').innerHTML = '';
+                document.getElementById('modules-err').textContent = e.message;
+            }
+        }
+
+        function renderModulesBody(tenantId, rows) {
+            const body = document.getElementById('modules-body');
+            if (!rows.length) {
+                body.innerHTML = '<p style="color:#94a3b8;font-size:13px">No projects found on the tenant site.</p>';
+                return;
+            }
+            const byProject = {};
+            rows.forEach(r => {
+                if (!byProject[r.project_id]) byProject[r.project_id] = { name: r.project_name || `Project ${r.project_id}`, modules: {} };
+                byProject[r.project_id].modules[r.module] = r.enabled;
+            });
+            body.innerHTML = Object.entries(byProject).map(([projectId, p]) => `
+                <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #f1f5f9">
+                    <div style="font-weight:600;font-size:13px;color:#334155;margin-bottom:8px">${p.name}</div>
+                    ${Object.keys(MODULE_LABELS).map(m => `
+                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#475569;padding:4px 0;cursor:pointer">
+                            <input type="checkbox" ${p.modules[m] ? 'checked' : ''}
+                                onchange="toggleModule(${tenantId}, ${projectId}, '${m}', this.checked, this)">
+                            ${MODULE_LABELS[m]}
+                        </label>`).join('')}
+                </div>`).join('');
+        }
+
+        async function toggleModule(tenantId, projectId, moduleName, enabled, checkbox) {
+            checkbox.disabled = true;
+            document.getElementById('modules-err').textContent = '';
+            try {
+                await window.__amrd.apiFetch(`/api/tenants/${tenantId}/modules`, {
+                    method: 'PUT', body: JSON.stringify({ project_id: projectId, module: moduleName, enabled }),
+                });
+            } catch (e) {
+                checkbox.checked = !enabled;
+                document.getElementById('modules-err').textContent = e.message;
+            } finally {
+                checkbox.disabled = false;
+            }
+        }
+
+        function closeModules() {
+            document.getElementById('modules-modal-slot').innerHTML = '';
+        }
+
+        window.openForm    = openForm;
+        window.save        = save;
+        window.openModules = openModules;
+        window.toggleModule = toggleModule;
+        window.closeModules = closeModules;
         await load();
     });
   </script>

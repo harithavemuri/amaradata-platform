@@ -7,12 +7,12 @@ import { SEED_USERS } from './helpers/seed-users.js';
 // covers the other 4 roles so responsibility isn't duplicated across two spec files.
 //
 // amaradata has only 5 roles (vs. rohas-group's 21), and today only 'staff' and
-// 'site_admin' render a different nav from the baseline — 'sales_manager' and 'billing'
+// 'super_admin' render a different nav from the baseline — 'sales_manager' and 'billing'
 // currently look identical to 'admin' in the UI, so their checks are necessarily thinner
 // (login + dashboard render only). That's a real gap in the frontend's role
 // differentiation, not a gap in this test's coverage — flagging here rather than
 // silently expanding scope into a frontend change.
-const ROLES_TO_CHECK = ['site_admin', 'sales_manager', 'billing', 'staff'];
+const ROLES_TO_CHECK = ['super_admin', 'sales_manager', 'billing', 'staff'];
 
 async function login(page, user) {
     await page.goto('/login');
@@ -35,9 +35,9 @@ for (const role of ROLES_TO_CHECK) {
     });
 }
 
-test.describe('Role login smoke — site_admin nav differences', () => {
-    test('site_admin sees User Management section', async ({ page }) => {
-        await login(page, SEED_USERS.site_admin);
+test.describe('Role login smoke — super_admin nav differences', () => {
+    test('super_admin sees User Management section', async ({ page }) => {
+        await login(page, SEED_USERS.super_admin);
         await expect(page.locator('text=User Management')).toBeVisible();
     });
 

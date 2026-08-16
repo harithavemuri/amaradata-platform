@@ -48,7 +48,7 @@ module.exports = async function globalSetup() {
         // joins) has something valid to fall back to.
         await pool.query(`
             INSERT INTO amr_roles (name, label, description, is_system) VALUES
-            ('site_admin', 'Site Admin', 'Full platform access', true),
+            ('super_admin', 'Super Admin', 'Full platform access', true),
             ('admin',      'Admin',      'Tenant admin access',  true)
             ON CONFLICT (name) DO NOTHING
         `);

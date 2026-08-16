@@ -85,7 +85,7 @@ Follow the unit > integration > E2E > smoke pyramid — place new tests at the l
 
 **Accessibility + responsive coverage:** `testing/regression_testsuite/accessibility.spec.js` runs `@axe-core/playwright` against the public homepage (`/`) and `/login` (the pages that matter most for compliance/SEO — not every admin screen), plus a horizontal-overflow check at mobile/tablet/desktop viewport widths (375/768/1440px). Extend the `PAGES` array here if a specific admin page needs the same coverage. **Gotcha:** small bold uppercase "eyebrow" label text (`.eyebrow`, `.contact-item h3`, footer links) at the brand blue `#008cbb` fails WCAG AA contrast at that size/weight on both white and the dark `#112240` navy background — axe caught this — use `#006d96` (darker) on light backgrounds and `#3fb8e8` (lighter) on dark ones for small text; `#008cbb` itself is reserved for larger UI (buttons, headings, icons) where it does pass.
 
-**Role/permission coverage:** `testing/unittests/unit/role-guards.test.js` — exhaustive matrix (every guard × every one of the 5 roles, mocked req/res, no HTTP). `testing/unittests/api/role-guards-routes.test.js` — one representative real-Express route per guard tier, catches guard-wiring mistakes the pure-unit matrix can't. `testing/regression_testsuite/role-login-smoke.spec.js` — E2E login + dashboard-render check for `site_admin`/`sales_manager`/`billing`/`staff` (admin's is already covered by `login-dashboard.spec.js`). `sales_manager` and `billing` currently render an identical nav to `admin` — that's a real frontend gap, not a test gap; the smoke spec's coverage for those two roles is intentionally thin until the UI differentiates them. Seeded per-role users live in `testing/regression_testsuite/helpers/seed-users.js`, seeded by `global-setup.js`.
+**Role/permission coverage:** `testing/unittests/unit/role-guards.test.js` — exhaustive matrix (every guard × every one of the 5 roles, mocked req/res, no HTTP). `testing/unittests/api/role-guards-routes.test.js` — one representative real-Express route per guard tier, catches guard-wiring mistakes the pure-unit matrix can't. `testing/regression_testsuite/role-login-smoke.spec.js` — E2E login + dashboard-render check for `super_admin`/`sales_manager`/`billing`/`staff` (admin's is already covered by `login-dashboard.spec.js`). `sales_manager` and `billing` currently render an identical nav to `admin` — that's a real frontend gap, not a test gap; the smoke spec's coverage for those two roles is intentionally thin until the UI differentiates them. Seeded per-role users live in `testing/regression_testsuite/helpers/seed-users.js`, seeded by `global-setup.js`.
 
 **Performance SLA:** API ≤500ms, page load ≤3s (`feedback-performance-sla.md`). `testing/unittests/integration/performance.test.js` times one representative request per route file (already DB-mode only — `testing/unittests/` has no NonDB config); `login-dashboard.spec.js`'s "dashboard loads within the 3s page-load SLA" test uses the Navigation Timing API and is explicitly `test.skip`'d unless `REGRESSION_DB=1` — NonDB's file-based reads are artificially fast and wouldn't catch a real regression.
 
@@ -127,7 +127,7 @@ DB passwords are read from Secrets Manager at request time, not baked into Lambd
 
 **Release tagging:** `scripts/tag-release.js` creates and pushes an annotated `vX.Y.Z` git tag (matching `package.json`'s `version`) before `sam build` — no-ops if the tag already exists (bump `version` for a new release).
 
-**Post-deploy smoke:** `npm run smoke:lifecycle` runs automatically at the end of `npm run deploy` — it enables the smoke-test account (`PUT /api/admin/users/:id` via a bootstrap `site_admin` account, see `.env.test.example`), runs `scripts/smoke-prod.js`, then disables the account again in a `finally` regardless of outcome, and verifies the disabled account can no longer log in. Credentials come from `.env.test` (gitignored, copy from `.env.test.example`) — never share the account between phase 1 (deploy gate) and phase 2 (this) without re-authenticating, since the bootstrap admin's JWT is short-lived (15 min).
+**Post-deploy smoke:** `npm run smoke:lifecycle` runs automatically at the end of `npm run deploy` — it enables the smoke-test account (`PUT /api/admin/users/:id` via a bootstrap `super_admin` account, see `.env.test.example`), runs `scripts/smoke-prod.js`, then disables the account again in a `finally` regardless of outcome, and verifies the disabled account can no longer log in. Credentials come from `.env.test` (gitignored, copy from `.env.test.example`) — never share the account between phase 1 (deploy gate) and phase 2 (this) without re-authenticating, since the bootstrap admin's JWT is short-lived (15 min).
 
 Secrets live in AWS Secrets Manager at `/<tenant>/<env>/<name>`:
 - `jwt-secret`, `google-client-secret`, `origin-secret`
@@ -196,7 +196,7 @@ Single Node/Express server (`server.js`, port 9000) serving both a REST API (`/a
 | Prefix | File | Auth required |
 |--------|------|--------------|
 | `/api/auth` | `backend/routes/auth.js` | Login/create-user are public; all others `requireAuth` |
-| `/api/admin` | `backend/routes/admin.js` | `requireSiteAdmin` (whole router, via `router.use`) |
+| `/api/admin` | `backend/routes/admin.js` | `requireSuperAdmin` (whole router, via `router.use`) |
 | `/api/tenants` | `backend/routes/tenants.js` | `requireAuth` |
 | `/api/subscriptions` | `backend/routes/subscriptions.js` | `requireAuth` |
 | `/api/invoices` | `backend/routes/invoices.js` | `requireAuth` |
@@ -250,10 +250,10 @@ When adding a new DB table:
 
 `backend/middleware/auth.js` exports three guards:
 - `requireAuth` — any valid JWT; attaches `req.staff` with `{ id, email, name, role, type }`
-- `requireAdmin` — role must be `admin` or `site_admin`
-- `requireSiteAdmin` — role must be `site_admin` only
+- `requireAdmin` — role must be `admin` or `super_admin`
+- `requireSuperAdmin` — role must be `super_admin` only
 
-Roles defined in `amr_roles`: `site_admin`, `admin`, `sales_manager`, `billing`, `staff`.
+Roles defined in `amr_roles`: `super_admin`, `admin`, `sales_manager`, `billing`, `staff`.
 
 `POST /api/auth/create-user` is the first-time setup endpoint and requires `setup_key = AMRD_JWT_SECRET` in the body instead of a Bearer token.
 

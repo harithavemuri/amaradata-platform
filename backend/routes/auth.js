@@ -8,13 +8,14 @@ const { sendEmail }                       = require('../services/ses');
 const secrets                             = require('../services/secrets');
 const { sendError }                       = require('../services/http-errors');
 const { blockNonDbWrite }                 = require('../middleware/block-nondb-write');
+const { signSsoToken }                    = require('../services/sso-token');
 
 // Resolved at runtime through services/secrets.js, not baked into the Lambda
 // env at deploy time (see project-realtime-secret-fetch-standard.md).
 const SSO_SECRET_ID = process.env.SSO_SECRET_ID;
 
 // Role priority — lower number = higher privilege
-const ROLE_PRIORITY = { site_admin: 1, admin: 2, sales_manager: 3, billing: 4, staff: 5 };
+const ROLE_PRIORITY = { super_admin: 1, admin: 2, sales_manager: 3, billing: 4, staff: 5 };
 
 function effectiveRole(directRole, groupRoleNames) {
     const all = [directRole, ...groupRoleNames].filter(Boolean);
@@ -362,13 +363,7 @@ router.post('/sso/issue', requireAuth, async (req, res) => {
     if (!aud) return res.status(400).json({ error: 'aud (target tenant) is required' });
 
     const user     = req.staff;
-    const now      = Math.floor(Date.now() / 1000);
-    const payload  = { iss: 'amaradata', aud, sub: user.email, name: user.name, role: user.role, iat: now, exp: now + 60 };
-
-    const header   = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
-    const body     = Buffer.from(JSON.stringify(payload)).toString('base64url');
-    const sig      = crypto.createHmac('sha256', ssoSecret).update(`${header}.${body}`).digest('base64url');
-    const ssoToken = `${header}.${body}.${sig}`;
+    const ssoToken = signSsoToken(ssoSecret, { aud, sub: user.email, name: user.name, role: user.role });
 
     const rohasUrl = process.env.ROHAS_URL || '';
     const loginUrl = rohasUrl ? `${rohasUrl}/auth/sso?sso_token=${ssoToken}` : null;

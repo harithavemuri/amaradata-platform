@@ -3,9 +3,9 @@ import { test, expect } from './helpers/perf-tracking.js';
 import { loginAs, apiGet, apiPost, apiDelete, testTag, testSlug, testEmail, randomRoleName } from './helpers/edit-save.js';
 import { SEED_USERS } from './helpers/seed-users.js';
 
-test.describe('User Groups — edit/save coverage (site_admin only)', () => {
+test.describe('User Groups — edit/save coverage (super_admin only)', () => {
     test.beforeEach(async ({ page }) => {
-        await loginAs(page, SEED_USERS.site_admin);
+        await loginAs(page, SEED_USERS.super_admin);
         await page.goto('/user-groups');
         await page.waitForSelector('.amrd-flex-row', { timeout: 10_000 });
     });

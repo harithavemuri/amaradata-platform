@@ -39,7 +39,7 @@ export default async function setup() {
         // Seed the 5 system roles so role-related queries work
         await pool.query(`
             INSERT INTO amr_roles (name, label, description, is_system) VALUES
-            ('site_admin',    'Site Admin',    'Full platform access',          true),
+            ('super_admin',   'Super Admin',   'Full platform access',          true),
             ('admin',         'Admin',         'Tenant admin access',           true),
             ('sales_manager', 'Sales Manager', 'Sales and CRM access',          true),
             ('billing',       'Billing',       'Billing and invoicing access',  true),
@@ -51,7 +51,7 @@ export default async function setup() {
         await pool.query(`
             INSERT INTO amr_users (id, username, email, name, role, password_hash) VALUES
             (901, 'test.admin',     'admin@t.com',  'Admin',     'admin',      ''),
-            (902, 'test.siteadmin', 'sadmin@t.com', 'SiteAdmin', 'site_admin', ''),
+            (902, 'test.siteadmin', 'sadmin@t.com', 'SiteAdmin', 'super_admin', ''),
             (903, 'test.staff',     'staff@t.com',  'Staff',     'staff',      '')
             ON CONFLICT (id) DO NOTHING
         `);
