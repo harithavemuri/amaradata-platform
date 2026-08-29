@@ -70,6 +70,13 @@ router.post('/login', async (req, res) => {
         if (!user || !(await bcrypt.compare(password, user.password_hash)))
             return res.status(401).json({ error: 'Invalid credentials' });
 
+        // property_owner accounts (portal.amaradata.com) are the same
+        // amr_users table/password hash as staff, isolated by role rather
+        // than a separate table — but must never be able to log into this
+        // staff app. See [[project_owner_portal]] in rohas-group's memory.
+        if (user.role === 'property_owner')
+            return res.status(403).json({ error: 'Property owner accounts cannot access this app. Use portal.amaradata.com instead.' });
+
         // Login audit — bookkeeping side effect of a successful login, not a
         // "data write" this app otherwise blocks in NonDB mode (see
         // backend/middleware/block-nondb-write.js's doc comment).
@@ -242,6 +249,10 @@ router.post('/google/exchange', async (req, res) => {
                 [user.id, 'google', req.ip]
             );
         }
+
+        // Same isolation as plain /login — see the comment there.
+        if (user.role === 'property_owner')
+            return res.status(403).json({ error: 'Property owner accounts cannot access this app. Use portal.amaradata.com instead.' });
 
         const role = await resolveEffectiveRole(user, req.db.mode, req.db.fileDb);
         const safe = {

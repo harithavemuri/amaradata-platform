@@ -38,6 +38,9 @@ beforeAll(async () => {
     seed('amr_users', [{
         id: 1, username: 'reader', email: 'reader@t.com', name: 'Reader', role: 'staff',
         password_hash: await bcrypt.hash('correctpassword', 12), is_active: true,
+    }, {
+        id: 2, username: 'owner', email: 'owner@t.com', name: 'Owner', role: 'property_owner',
+        password_hash: await bcrypt.hash('correctpassword', 12), is_active: true,
     }]);
     seed('login_audit', []);
 });
@@ -68,7 +71,7 @@ describe('NonDB mode — reads still work', () => {
         const res = await request(app).get('/api/admin/users').set(auth('siteAdmin'));
         assertJson(res);
         expect(res.status).toBe(200);
-        expect(res.body.data).toHaveLength(1);
+        expect(res.body.data).toHaveLength(2); // 'reader' (staff) + 'owner' (property_owner)
     });
 
     it('GET /api/admin/roles (super_admin) returns seeded file data', async () => {
@@ -139,5 +142,16 @@ describe('NonDB mode — login audit is the one write exception', () => {
         const audit = read('login_audit');
         expect(audit).toHaveLength(1);
         expect(audit[0]).toMatchObject({ user_id: 1, method: 'password' });
+    });
+
+    // property_owner isolation (see [[project_owner_portal]] in rohas-group's
+    // memory) applies in every mode, not just DB mode.
+    it('POST /api/auth/login rejects a property_owner account with 403, no audit row', async () => {
+        const res = await request(app).post('/api/auth/login')
+            .send({ username: 'owner', password: 'correctpassword' });
+        assertJson(res);
+        expect(res.status).toBe(403);
+        expect(res.body).not.toHaveProperty('token');
+        expect(read('login_audit')).toHaveLength(1); // still just the prior test's row
     });
 });

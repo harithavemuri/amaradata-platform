@@ -43,5 +43,14 @@
     "is_system": true,
     "created_at": "2026-05-29T01:47:59.721Z",
     "updated_at": "2026-05-29T01:47:59.721Z"
+  },
+  {
+    "id": 6,
+    "name": "property_owner",
+    "label": "Property Owner",
+    "description": "External property-owner login for portal.amaradata.com only — rejected at login on this staff app",
+    "is_system": true,
+    "created_at": "2026-08-29T00:00:00.000Z",
+    "updated_at": "2026-08-29T00:00:00.000Z"
   }
 ]

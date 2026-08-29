@@ -104,6 +104,20 @@ describe('Admin routes (super_admin only)', () => {
             expect(res.body.data).not.toHaveProperty('password_hash');
         });
 
+        // property_owner: staff creates the portal.amaradata.com login here,
+        // same as any other role — see [[project_owner_portal]] in
+        // rohas-group's memory. Isolation from this staff app is enforced at
+        // login (auth-routes-full.test.js), not at creation.
+        it('role: property_owner → 201', async () => {
+            const email = `owner-${uid()}@test.com`;
+            const res = await request(app).post('/api/admin/users')
+                .set(auth('siteAdmin'))
+                .send({ email, name: 'Property Owner', role: 'property_owner' });
+            assertJson(res);
+            expect(res.status).toBe(201);
+            expect(res.body.data.role).toBe('property_owner');
+        });
+
         it('duplicate email → 409', async () => {
             const email = `dup-${uid()}@test.com`;
             await request(app).post('/api/admin/users')

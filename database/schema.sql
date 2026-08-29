@@ -63,8 +63,17 @@ INSERT INTO amr_roles (name, label, description, is_system) VALUES
     ('admin',         'Admin',         'Tenant, invoice and enhancement management', true),
     ('sales_manager', 'Sales Manager', 'View and manage tenant sales pipeline', true),
     ('billing',       'Billing',       'Access to invoices and payments', true),
-    ('staff',         'Staff',         'Basic read-only platform access', true)
+    ('staff',         'Staff',         'Basic read-only platform access', true),
+    ('property_owner','Property Owner','External property-owner login for portal.amaradata.com only — same amr_users table/password as staff, but backend/routes/auth.js rejects this role at login on the staff app itself. See project-owner-portal.md.', true)
 ON CONFLICT (name) DO NOTHING;
+
+-- portal.amaradata.com's per-tenant API key — the tenant's own dedicated
+-- credential for GET .../api/owner-portal/summary (see project-owner-portal.md).
+-- Deliberately separate from tenant_db_secret_arn/tenant_db_password above,
+-- which are unrelated (direct-DB metrics-collection credentials, not this
+-- integration's service-to-service API key).
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS owner_portal_api_key_secret_arn VARCHAR(500);
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS owner_portal_api_key TEXT;
 
 -- Migration: rename old amr_user_groups / amr_user_group_members → new names and add FK columns.
 -- Must run BEFORE the CREATE TABLE IF NOT EXISTS below so that renames happen first on existing DBs.
@@ -556,5 +565,6 @@ INSERT INTO schema_migrations (version, description) VALUES
     ('2026.08.15.001', 'Add login_audit table for login activity tracking'),
     ('2026.08.15.002', 'Add missing CSV-import columns (source, issue_id, site_name, fixed, item_type, is_billable, report_date) to enhancements — CREATE TABLE IF NOT EXISTS never retroactively added them to the pre-existing table'),
     ('2026.08.15.003', 'Rename site_admin role to super_admin (amr_roles.name + amr_users.role); decouple smoketest.admin from harithavemuri@gmail.com onto its own email'),
-    ('2026.08.16.001', 'Seed smoketest.siteadmin — a permanent super_admin bootstrap account for scripts/smoke-lifecycle.js (SMOKE_BOOTSTRAP_ADMIN_USER), separate from smoketest.admin which the lifecycle script itself enables/disables')
+    ('2026.08.16.001', 'Seed smoketest.siteadmin — a permanent super_admin bootstrap account for scripts/smoke-lifecycle.js (SMOKE_BOOTSTRAP_ADMIN_USER), separate from smoketest.admin which the lifecycle script itself enables/disables'),
+    ('2026.08.29.001', 'Add property_owner role (portal.amaradata.com login, rejected on this staff app) and tenants.owner_portal_api_key(_secret_arn) for the per-tenant owner-portal API key')
 ON CONFLICT (version) DO NOTHING;

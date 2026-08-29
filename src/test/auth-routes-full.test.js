@@ -84,6 +84,22 @@ describe('Auth routes — full coverage', () => {
             expect(res.body.user).toHaveProperty('email', email);
             expect(res.body.user).not.toHaveProperty('password_hash');
         });
+
+        // property_owner accounts (portal.amaradata.com, see
+        // [[project_owner_portal]] in rohas-group's memory) must never be able
+        // to log into this staff app, even with correct credentials — they're
+        // the same amr_users table/password hash, isolated by role, not by a
+        // separate table.
+        it('correct credentials for a property_owner account → 403, no token issued', async () => {
+            const ownerEmail = `owner-${uid()}@test.com`;
+            await request(app).post('/api/auth/create-user')
+                .send({ email: ownerEmail, name: 'Property Owner', password: 'correctpassword', role: 'property_owner', setup_key: SETUP_KEY });
+            const res = await request(app).post('/api/auth/login')
+                .send({ username: ownerEmail, password: 'correctpassword' });
+            assertJson(res);
+            expect(res.status).toBe(403);
+            expect(res.body).not.toHaveProperty('token');
+        });
     });
 
     // ── refresh ──────────────────────────────────────────────────────────────

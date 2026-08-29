@@ -30,14 +30,15 @@ export default async function setup() {
             `TRUNCATE ${TABLES.map(t => `"${t}"`).join(', ')} RESTART IDENTITY CASCADE`
         );
 
-        // Seed the 5 system roles so role-related queries work
+        // Seed the 6 system roles so role-related queries work
         await pool.query(`
             INSERT INTO amr_roles (name, label, description, is_system) VALUES
-            ('super_admin',   'Super Admin',   'Full platform access',          true),
-            ('admin',         'Admin',         'Tenant admin access',           true),
-            ('sales_manager', 'Sales Manager', 'Sales and CRM access',          true),
-            ('billing',       'Billing',       'Billing and invoicing access',  true),
-            ('staff',         'Staff',         'Basic read-only access',        true)
+            ('super_admin',    'Super Admin',    'Full platform access',          true),
+            ('admin',          'Admin',          'Tenant admin access',           true),
+            ('sales_manager',  'Sales Manager',  'Sales and CRM access',          true),
+            ('billing',        'Billing',        'Billing and invoicing access',  true),
+            ('staff',          'Staff',          'Basic read-only access',        true),
+            ('property_owner', 'Property Owner', 'portal.amaradata.com login only, rejected on this staff app', true)
             ON CONFLICT (name) DO NOTHING
         `);
 
