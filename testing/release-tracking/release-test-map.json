@@ -2,5 +2,9 @@
   "TC-001": {
     "spec": "TC-001-enhancements-csv-task-type.spec.js",
     "description": "Enhancements CSV import: a Type=Task row must be classified as item_type=enhancement (visible under the Enhancements filter), never as a raw 'task' value"
+  },
+  "TC-002": {
+    "spec": "TC-002-cloudfront-error-response-not-masked.spec.js",
+    "description": "CloudFront's CustomErrorResponses (removed) must never rewrite a real API 403/404 into 200 + login.html — only meaningful against a real CloudFront-fronted deployment (PW_BASE_URL)"
   }
 }

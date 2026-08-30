@@ -522,15 +522,27 @@ Resources:
             OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
             AllowedMethods: [GET, HEAD]
             CachedMethods: [GET, HEAD]
-        CustomErrorResponses:
-          - ErrorCode: 403
-            ResponseCode: 200
-            ResponsePagePath: /login.html
-            ErrorCachingMinTTL: 0
-          - ErrorCode: 404
-            ResponseCode: 200
-            ResponsePagePath: /login.html
-            ErrorCachingMinTTL: 0
+        # No CustomErrorResponses here, deliberately — CloudFront's
+        # CustomErrorResponses is a DISTRIBUTION-wide setting (there is no
+        # per-cache-behavior override in CloudFront's model), so a rule meant
+        # as an SPA fallback for the S3 frontend origin ("unknown page ->
+        # show login.html") was ALSO rewriting every genuine 403/404 coming
+        # back from the API origin (/api/*, /graphql, /health) into a 200
+        # with login.html's HTML body. That silently broke: any real API 403
+        # (requireAdmin/requireSuperAdmin rejections, the property_owner
+        # login-isolation guard) and any real API 404 — a caller's
+        # `res.status === 403` / `.json()` check never sees the truth, only
+        # an unexpected HTML blob. A prior session partially diagnosed this
+        # for the origin-secret-check case specifically (see
+        # testing/unittests/integration/auth-routes.test.js's header
+        # comment) but only added a test against the Express app directly,
+        # which never goes through CloudFront and so never actually
+        # exercises this bug. Removed 2026-08-29 after it was hit again
+        # verifying the property_owner login guard in production. Trade-off:
+        # a genuinely mistyped URL now shows S3's raw XML error instead of
+        # being redirected to login.html — accepted as a minor, narrow
+        # cosmetic regression against actually letting API errors reach
+        # callers correctly.
 
   # ── Aurora Serverless v2 — conditional on CreateDbCluster=true ────────────────
   DBSecurityGroup:
