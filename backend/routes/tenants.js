@@ -58,14 +58,30 @@ router.get('/mine', requireAuth, async (req, res) => {
     } catch (e) { sendError(res, e, '[tenants/mine]'); }
 });
 
+// Plaintext DB and owner-portal credentials must never reach a caller here —
+// GET /api/tenants only requires requireAuth (any staff role, not just
+// admin/super_admin), so a SELECT * would leak tenant_db_password and
+// owner_portal_api_key to every logged-in staff member regardless of role.
+// requireAdmin-gated routes (POST/PUT below) return the full row on purpose
+// — an admin setting these values needs to see what was actually saved.
+const SENSITIVE_TENANT_FIELDS = new Set([
+    'tenant_db_host', 'tenant_db_port', 'tenant_db_name', 'tenant_db_user',
+    'tenant_db_secret_arn', 'tenant_db_password',
+    'owner_portal_api_key_secret_arn', 'owner_portal_api_key',
+]);
+
+function sanitizeTenant(tenant) {
+    return Object.fromEntries(Object.entries(tenant).filter(([key]) => !SENSITIVE_TENANT_FIELDS.has(key)));
+}
+
 // GET /api/tenants
 router.get('/', async (req, res) => {
     try {
         if (req.db.mode === 'nondb') {
-            return res.json({ success: true, data: req.db.fileDb.find('tenants') });
+            return res.json({ success: true, data: req.db.fileDb.find('tenants').map(sanitizeTenant) });
         }
         const { rows } = await db.query('SELECT * FROM tenants ORDER BY name');
-        res.json({ success: true, data: rows });
+        res.json({ success: true, data: rows.map(sanitizeTenant) });
     } catch (e) { sendError(res, e, '[tenants]'); }
 });
 

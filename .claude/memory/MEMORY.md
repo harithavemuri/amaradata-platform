@@ -50,3 +50,4 @@
 - [Tenant Modules SSO](project-tenant-modules-sso.md) — tenants.html shows/toggles rohas-group's per-project modules via SSO token exchange; project_id is rohas's own concept, GET called unscoped
 - [NonDB Auto-Fallback](project-nondb-auto-fallback.md) — reads auto-fallback to NonDB mode on real DB connectivity errors only (circuit breaker in db-health.js), every occurrence logged, writes always still hit the real DB
 - [Owner Portal (AmaraData side)](project-owner-portal.md) — property_owner identity: amr_users.owner_portal_uid (auto-gen, never hand-edited), owner_tenant_links bookkeeping table, owner-portal-tenant-client.js; API-only so far, no frontend screen yet
+- [Tenants List Credential Leak](feedback-tenants-list-credential-leak.md) — GET /api/tenants leaked plaintext tenant_db_password/owner_portal_api_key to any staff role; fixed by sanitizing the response, not narrowing the auth guard (only caller needs id/name)
