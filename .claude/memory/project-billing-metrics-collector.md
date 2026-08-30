@@ -1,0 +1,66 @@
+---
+name: project-billing-metrics-collector
+description: "jobs/collect-metrics.js rewritten 2026-08-30 to call each tenant's own GET /api/billing/metrics instead of connecting directly to the tenant's Postgres — the old version was broken three ways and never had real production credentials"
+metadata:
+  type: project
+---
+
+**Found 2026-08-30 (user asked "check if the established billing is wired to
+Amaradata.com for getting info from tenant DBs"):** `jobs/collect-metrics.js`
+looked fully built — real DB queries, real upsert logic — but was never
+actually functional:
+- Every `billing_metrics` row and both invoices in production matched
+  `database/seed_rohas.sql`'s hardcoded values byte-for-byte. Nothing had
+  ever been collected for real.
+- No cron/EventBridge trigger existed anywhere — pure manual script, never
+  run in practice.
+- Even run manually it would fail: the real rohas `tenants` row never had
+  `tenant_db_user`/`tenant_db_secret_arn` populated (only host/name were
+  set); it connected to `amaradata_rohas` (rohas-group's main/shared DB)
+  instead of looping the per-project DBs (`rohas_amaracasa` etc.) where
+  `properties`/`rent_payments` actually live; and it queried
+  `rent_payments.payment_date` (real column: `paid_date`) and
+  `properties.sale_price` (doesn't exist).
+- It also opened a raw `pg.Pool` directly into rohas's database — the same
+  no-direct-cross-DB-reads rule already followed elsewhere (owner-portal,
+  billing/project-modules both go through the tenant's own
+  service-authenticated API instead; see rohas-group's own
+  `feedback_no_direct_cross_db_reads` memory for the rule itself).
+
+**Fix:** `jobs/collect-metrics.js` now calls `backend/services/
+billing-tenant-client.js`'s `fetchMetrics(tenant, year, month)` — a real
+HTTP call to the tenant's own `GET /api/billing/metrics`, authenticated with
+`X-Amaradata-Api-Key` using the tenant's dedicated `billing_api_key`/
+`billing_api_key_secret_arn` (migration `2026.08.30.002`), resolved via
+`services/secrets.js`. Same shape as `owner-portal-tenant-client.js` —
+**deliberately a separate credential**, not shared with the owner-portal
+integration (least-privilege: one leaked key can't reach the other). The job
+itself is now a thin loop: fetch each active tenant's numbers, upsert into
+`billing_metrics`. Refactored to `if (require.main === module) { run() }` +
+`module.exports = { collectForTenant, run }` (matching
+`jobs/sync-tenant-fixes.js`'s convention) so `collectForTenant` is directly
+testable — it never was before, since importing the old file executed it
+immediately.
+
+**Real gap found while wiring this: `AMARADATA_API_KEY`/`AMARADATA_API_KEY_ID`
+had never actually been added to rohas-group's `template.yaml` at all** —
+`serviceAuthMiddleware` and the whole billing route file existed and were
+documented, but the env var wiring the CLAUDE.md docs described was never
+written. Confirmed live: `GET /api/billing/project-modules` 401ed with
+*any* key value in production, before this. Fixed on rohas-group's side the
+same day (its own memory has the details); a fresh key was generated and
+stored at `/rohas/prod/amaradata-billing-api-key` in Secrets Manager, then
+copied into this tenant's `tenants.billing_api_key` here.
+
+**Test coverage:** `src/test/collect-metrics-job.test.js` — mocks
+`billing-tenant-client.fetchMetrics` (same monkey-patch-the-real-module
+pattern as `owner-links-routes.test.js`), asserts the upsert (not
+duplicate-insert) on re-run for the same period, and that a
+`tenantUnreachable` failure from one tenant propagates from
+`collectForTenant` itself (isolation across tenants happens in `run()`'s
+per-tenant try/catch in the loop, not inside `collectForTenant`).
+
+**Not yet decided:** whether to drop `tenants.tenant_db_host/port/name/user/
+secret_arn/password` — they're now genuinely dead (this job was their only
+consumer) but removing columns is a separate, more deliberate decision than
+swapping which mechanism the job uses. Left in place for now.

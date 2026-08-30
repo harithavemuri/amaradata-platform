@@ -69,11 +69,23 @@ ON CONFLICT (name) DO NOTHING;
 
 -- portal.amaradata.com's per-tenant API key — the tenant's own dedicated
 -- credential for GET .../api/owner-portal/summary (see project-owner-portal.md).
--- Deliberately separate from tenant_db_secret_arn/tenant_db_password above,
--- which are unrelated (direct-DB metrics-collection credentials, not this
--- integration's service-to-service API key).
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS owner_portal_api_key_secret_arn VARCHAR(500);
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS owner_portal_api_key TEXT;
+
+-- The tenant's own dedicated credential for GET .../api/billing/project-modules
+-- and GET .../api/billing/metrics (jobs/collect-metrics.js) — separate from
+-- owner_portal_api_key above (least-privilege: a leaked key can't reach the
+-- other integration). Replaces tenant_db_host/port/name/user/secret_arn/
+-- password below as the actual mechanism jobs/collect-metrics.js uses —
+-- those direct-DB-connection columns are now dead code (see
+-- project-owner-portal.md's sibling memory on the billing-metrics fix,
+-- 2026-08-30): the job never had real credentials in those columns in
+-- production, pointed at the wrong database, and referenced columns that
+-- don't exist in rohas-group's real schema. Left in place rather than
+-- dropped, since removing columns is a separate, more deliberate decision
+-- than swapping which mechanism a job uses.
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS billing_api_key_secret_arn VARCHAR(500);
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS billing_api_key TEXT;
 
 -- A property_owner account's permanent cross-tenant identity — generated
 -- once (crypto.randomUUID(), application-side — this DB has no pgcrypto
@@ -605,5 +617,6 @@ INSERT INTO schema_migrations (version, description) VALUES
     ('2026.08.15.003', 'Rename site_admin role to super_admin (amr_roles.name + amr_users.role); decouple smoketest.admin from harithavemuri@gmail.com onto its own email'),
     ('2026.08.16.001', 'Seed smoketest.siteadmin — a permanent super_admin bootstrap account for scripts/smoke-lifecycle.js (SMOKE_BOOTSTRAP_ADMIN_USER), separate from smoketest.admin which the lifecycle script itself enables/disables'),
     ('2026.08.29.001', 'Add property_owner role (portal.amaradata.com login, rejected on this staff app) and tenants.owner_portal_api_key(_secret_arn) for the per-tenant owner-portal API key'),
-    ('2026.08.30.001', 'Add amr_users.owner_portal_uid (per-owner cross-tenant identity) and owner_tenant_links table, replacing email-based tenant owner matching')
+    ('2026.08.30.001', 'Add amr_users.owner_portal_uid (per-owner cross-tenant identity) and owner_tenant_links table, replacing email-based tenant owner matching'),
+    ('2026.08.30.002', 'Add tenants.billing_api_key(_secret_arn) for GET .../api/billing/* — jobs/collect-metrics.js no longer connects directly to a tenant''s DB')
 ON CONFLICT (version) DO NOTHING;

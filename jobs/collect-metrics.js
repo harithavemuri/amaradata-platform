@@ -1,91 +1,50 @@
 /**
  * Billing metrics collector.
- * Reads each tenant's operational DB (read-only) and writes monthly
- * snapshots to the AmaraData platform DB.
+ * Calls each tenant's own GET /api/billing/metrics (service-to-service,
+ * tenants.billing_api_key) and writes the returned monthly snapshot to the
+ * AmaraData platform DB.
  *
  * Run manually:   node jobs/collect-metrics.js [--year=2026] [--month=4]
  * Or schedule via cron on the 1st of each month.
  *
- * In production, set AMRD_DB_SECRET_ARN on tenants and ensure the Lambda
- * execution role has secretsmanager:GetSecretValue permission.
+ * Rewritten 2026-08-30 — the previous version opened a direct Postgres
+ * connection into the tenant's own database (see
+ * [[feedback_no_direct_cross_db_reads]]) and, on inspection, was broken
+ * three separate ways: it connected to the tenant's main/shared DB instead
+ * of looping the per-project DBs where properties/rent_payments actually
+ * live, it queried a rent_payments.payment_date column that doesn't exist
+ * (the real column is paid_date), and it summed a properties.sale_price
+ * column that doesn't exist at all. It also never had real credentials
+ * (tenant_db_user/tenant_db_secret_arn) populated for the real rohas tenant
+ * row in production — every billing_metrics row and invoice seen in
+ * production before this fix was hand-written seed data
+ * (database/seed_rohas.sql), never a real collected number. See
+ * project-owner-portal.md's sibling memory for the full investigation.
  */
 
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
-const { Pool }   = require('pg');
 const platformDb = require('../backend/db');
-
-async function getTenantDbPassword(tenant) {
-    if (tenant.tenant_db_secret_arn && process.env.NODE_ENV === 'production') {
-        const { SecretsManagerClient, GetSecretValueCommand } =
-            require('@aws-sdk/client-secrets-manager');
-        const client = new SecretsManagerClient({ region: process.env.AWS_REGION || 'ap-south-1' });
-        const result = await client.send(new GetSecretValueCommand({ SecretId: tenant.tenant_db_secret_arn }));
-        const secret = JSON.parse(result.SecretString);
-        return secret.password;
-    }
-    return tenant.tenant_db_password;
-}
+const { fetchMetrics } = require('../backend/services/billing-tenant-client');
 
 async function collectForTenant(tenant, year, month) {
-    const password = await getTenantDbPassword(tenant);
-    const tenantPool = new Pool({
-        host:                    tenant.tenant_db_host,
-        port:                    tenant.tenant_db_port || 5432,
-        database:                tenant.tenant_db_name,
-        user:                    tenant.tenant_db_user,
-        password,
-        connectionTimeoutMillis: 5000,
-    });
+    const metrics = await fetchMetrics(tenant, year, month);
 
-    try {
-        const start = `${year}-${String(month).padStart(2,'0')}-01`;
-        const end   = new Date(year, month, 1).toISOString().slice(0, 10);
+    await platformDb.query(
+        `INSERT INTO billing_metrics
+         (tenant_id,period_year,period_month,sales_count,sales_value,rental_units,rental_income,active_properties)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+         ON CONFLICT (tenant_id, period_year, period_month)
+         DO UPDATE SET sales_count=$4, sales_value=$5, rental_units=$6,
+                       rental_income=$7, active_properties=$8, collected_at=NOW()`,
+        [tenant.id, year, month,
+         metrics.sales_count, metrics.sales_value, metrics.rental_units,
+         metrics.rental_income, metrics.active_properties],
+    );
 
-        const salesRes = await tenantPool.query(
-            `SELECT COUNT(*) AS sales_count, COALESCE(SUM(sale_price),0) AS sales_value
-             FROM properties WHERE status='sold' AND updated_at >= $1 AND updated_at < $2`,
-            [start, end]
-        );
-        const rentalRes = await tenantPool.query(
-            `SELECT COUNT(DISTINCT rental_property_id) AS rental_units,
-                    COALESCE(SUM(amount),0) AS rental_income
-             FROM rent_payments WHERE payment_date >= $1 AND payment_date < $2 AND status='paid'`,
-            [start, end]
-        );
-        const propRes = await tenantPool.query(
-            `SELECT COUNT(*) AS active_properties FROM properties WHERE status != 'sold'`
-        );
-
-        const metrics = {
-            tenant_id:         tenant.id,
-            period_year:       year,
-            period_month:      month,
-            sales_count:       parseInt(salesRes.rows[0].sales_count),
-            sales_value:       parseFloat(salesRes.rows[0].sales_value),
-            rental_units:      parseInt(rentalRes.rows[0].rental_units),
-            rental_income:     parseFloat(rentalRes.rows[0].rental_income),
-            active_properties: parseInt(propRes.rows[0].active_properties),
-        };
-
-        await platformDb.query(
-            `INSERT INTO billing_metrics
-             (tenant_id,period_year,period_month,sales_count,sales_value,rental_units,rental_income,active_properties)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-             ON CONFLICT (tenant_id, period_year, period_month)
-             DO UPDATE SET sales_count=$4, sales_value=$5, rental_units=$6,
-                           rental_income=$7, active_properties=$8, collected_at=NOW()`,
-            [metrics.tenant_id, metrics.period_year, metrics.period_month,
-             metrics.sales_count, metrics.sales_value, metrics.rental_units,
-             metrics.rental_income, metrics.active_properties]
-        );
-
-        console.log(`  ✓ ${tenant.name}: ${metrics.sales_count} sales (₹${metrics.sales_value}), ` +
-                    `${metrics.rental_units} rental units (₹${metrics.rental_income})`);
-        return metrics;
-    } finally {
-        await tenantPool.end();
-    }
+    console.log(`  ✓ ${tenant.name}: ${metrics.sales_count} sales (₹${metrics.sales_value}), ` +
+                `${metrics.rental_units} rental units (₹${metrics.rental_income})`);
+    return metrics;
 }
 
 async function run() {
@@ -102,10 +61,10 @@ async function run() {
     console.log(`\nCollecting billing metrics for ${year}-${String(month).padStart(2,'0')}...\n`);
 
     const { rows: tenants } = await platformDb.query(
-        `SELECT * FROM tenants WHERE status='active' AND tenant_db_host IS NOT NULL`
+        `SELECT * FROM tenants WHERE status='active' AND site_url IS NOT NULL`
     );
 
-    if (!tenants.length) { console.log('No active tenants with DB connection configured.'); process.exit(0); }
+    if (!tenants.length) { console.log('No active tenants with a site_url configured.'); process.exit(0); }
 
     for (const tenant of tenants) {
         process.stdout.write(`  ${tenant.name} (${tenant.slug})... `);
@@ -120,4 +79,8 @@ async function run() {
     process.exit(0);
 }
 
-run().catch(e => { console.error(e); process.exit(1); });
+if (require.main === module) {
+    run().catch(e => { console.error(e); process.exit(1); });
+}
+
+module.exports = { collectForTenant, run };
