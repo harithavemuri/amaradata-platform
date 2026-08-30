@@ -9,6 +9,9 @@ const { blockNonDbWrite } = require('../middleware/block-nondb-write');
 // identical email-s3-client.js gotcha), which only works through a live
 // property read, not a copied local binding from destructuring at require time.
 const tenantSsoClient = require('../services/tenant-sso-client');
+// Same not-destructured reasoning as tenantSsoClient above — tests monkey-patch
+// this module's exports directly.
+const ownerPortalTenantClient = require('../services/owner-portal-tenant-client');
 
 async function getTenant(req, id) {
     if (req.db.mode === 'nondb') {
@@ -142,6 +145,27 @@ router.put('/:id/modules', requireSuperAdmin, blockNonDbWrite, async (req, res) 
     } catch (e) {
         if (e.tenantUnreachable) return res.status(502).json({ error: `Tenant site unavailable: ${e.message}` });
         sendError(res, e, '[tenants/modules]');
+    }
+});
+
+// GET /api/tenants/:id/owner-candidates?q=<partial name/email> — proxies to
+// the tenant's own GET /api/owner-portal/search-owners using that tenant's
+// dedicated owner-portal API key (owner-portal-tenant-client.js), NOT the
+// SSO staff-impersonation flow the /modules routes above use — this is
+// server-to-server data access, not an action taken "as" a staff member.
+// Powers the Owner Portal Links admin screen's tenant-owner lookup step.
+router.get('/:id/owner-candidates', requireSuperAdmin, async (req, res) => {
+    const q = String(req.query.q || '').trim();
+    if (q.length < 2) return res.status(400).json({ error: 'q query parameter (2+ characters) is required' });
+    try {
+        const tenant = await getTenant(req, req.params.id);
+        if (!tenant) return res.status(404).json({ error: 'Not found' });
+        const results = await ownerPortalTenantClient.searchOwners(tenant, q);
+        res.json({ success: true, data: results });
+    } catch (e) {
+        if (e.tenantUnreachable) return res.status(502).json({ error: `Tenant site unavailable: ${e.message}` });
+        if (e.tenantStatus) return res.status(e.tenantStatus).json({ error: e.message });
+        sendError(res, e, '[tenants/owner-candidates]');
     }
 });
 

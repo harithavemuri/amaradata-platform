@@ -6,6 +6,7 @@
     "amr_group_members",
     "tenants",
     "group_tenant",
+    "owner_tenant_links",
     "subscription_plans",
     "tenant_subscriptions",
     "billing_metrics",

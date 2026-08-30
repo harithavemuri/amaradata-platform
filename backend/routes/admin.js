@@ -1,10 +1,13 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const db     = require('../db');
 const { requireSuperAdmin } = require('../middleware/auth');
 const { version: APP_VERSION } = require('../../package.json');
 const { sendError } = require('../services/http-errors');
 const { blockNonDbWrite } = require('../middleware/block-nondb-write');
+// Not destructured — same mockability reasoning as tenants.js's client requires.
+const ownerPortalTenantClient = require('../services/owner-portal-tenant-client');
 
 const VALID_ROLES = ['super_admin', 'admin', 'sales_manager', 'billing', 'staff', 'property_owner'];
 
@@ -36,7 +39,7 @@ router.get('/users', async (req, res) => {
         try {
             ({ rows } = await db.query(`
                 SELECT u.id, u.username, u.email, u.name, u.first_name, u.last_name,
-                       u.role, u.google_id, u.logo_url,
+                       u.role, u.google_id, u.logo_url, u.owner_portal_uid,
                        u.is_active, u.last_login_at, u.created_at, u.updated_at,
                        COALESCE(json_agg(json_build_object('id',g.id,'name',g.name))
                          FILTER (WHERE g.id IS NOT NULL), '[]') AS groups
@@ -48,7 +51,7 @@ router.get('/users', async (req, res) => {
         } catch {
             ({ rows } = await db.query(`
                 SELECT id, username, email, name, first_name, last_name, role,
-                       google_id, logo_url,
+                       google_id, logo_url, owner_portal_uid,
                        is_active, last_login_at, created_at, updated_at,
                        '[]'::json AS groups
                 FROM amr_users ORDER BY created_at DESC
@@ -69,12 +72,15 @@ router.post('/users', blockNonDbWrite, async (req, res) => {
         const password_hash = password ? await bcrypt.hash(password, 12) : '';
         const fn = first_name || name.split(' ')[0];
         const ln = last_name  || name.split(' ').slice(1).join(' ') || null;
+        // property_owner accounts get their cross-tenant identity generated
+        // immediately, never entered by hand — see project-owner-portal.md.
+        const ownerPortalUid = role === 'property_owner' ? crypto.randomUUID() : null;
 
         const { rows } = await db.query(
-            `INSERT INTO amr_users (username,email,name,first_name,last_name,role,password_hash)
-             VALUES ($1,$2,$3,$4,$5,$6,$7)
-             RETURNING id,username,email,name,first_name,last_name,role,is_active,created_at`,
-            [username, email, name, fn, ln, role, password_hash]
+            `INSERT INTO amr_users (username,email,name,first_name,last_name,role,password_hash,owner_portal_uid)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+             RETURNING id,username,email,name,first_name,last_name,role,is_active,created_at,owner_portal_uid`,
+            [username, email, name, fn, ln, role, password_hash, ownerPortalUid]
         );
         res.status(201).json({ success: true, data: rows[0] });
     } catch (e) {
@@ -97,13 +103,20 @@ router.put('/users/:id', blockNonDbWrite, async (req, res) => {
         if (is_active   !== undefined) updates.is_active   = is_active;
         if (password)                  updates.password_hash = await bcrypt.hash(password, 12);
 
+        // Switching a user TO property_owner must give them a cross-tenant
+        // identity if they don't already have one — never editable by hand.
+        if (role === 'property_owner') {
+            const { rows: [existing] } = await db.query('SELECT owner_portal_uid FROM amr_users WHERE id = $1', [req.params.id]);
+            if (existing && !existing.owner_portal_uid) updates.owner_portal_uid = crypto.randomUUID();
+        }
+
         updates.updated_at = new Date().toISOString();
         const keys = Object.keys(updates);
         const vals = Object.values(updates);
         const sets = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
         const { rows } = await db.query(
             `UPDATE amr_users SET ${sets} WHERE id = $${keys.length + 1}
-             RETURNING id,email,name,first_name,last_name,role,is_active,updated_at`,
+             RETURNING id,email,name,first_name,last_name,role,is_active,updated_at,owner_portal_uid`,
             [...vals, req.params.id]
         );
         if (!rows[0]) return res.status(404).json({ error: 'User not found' });
@@ -394,6 +407,142 @@ router.delete('/roles/:id', blockNonDbWrite, async (req, res) => {
         await db.query('DELETE FROM amr_roles WHERE id = $1', [req.params.id]);
         res.json({ success: true });
     } catch (e) { sendError(res, e, '[admin]'); }
+});
+
+// ── Owner Portal Links ───────────────────────────────────────────────────────
+// Maps a property_owner account (amr_users) to one specific row in one
+// tenant's own property_owners table — see owner_tenant_links in
+// database/schema.sql and project-owner-portal.md. Pure AmaraData-side
+// bookkeeping/display: the portal itself never reads this table at request
+// time, and which tenants an owner can query at all is governed entirely by
+// group_tenant (role=property_owner), independent of whether a link row
+// exists here. The actual cross-tenant push uses owner-portal-tenant-client.js
+// (that tenant's own dedicated API key), not the SSO staff-impersonation flow
+// tenant-sso-client.js uses for /api/admin/* proxying.
+
+// GET /api/admin/users/:id/owner-links
+router.get('/users/:id/owner-links', async (req, res) => {
+    try {
+        if (req.db.mode === 'nondb') {
+            const tenants = req.db.fileDb.find('tenants');
+            const links = req.db.fileDb.find('owner_tenant_links')
+                .filter(l => l.owner_user_id == req.params.id)
+                .map(l => ({ ...l, tenant_name: tenants.find(t => t.id == l.tenant_id)?.name || null }));
+            return res.json({ success: true, data: links });
+        }
+        const { rows } = await db.query(
+            `SELECT l.*, t.name AS tenant_name
+             FROM owner_tenant_links l
+             JOIN tenants t ON t.id = l.tenant_id
+             WHERE l.owner_user_id = $1
+             ORDER BY t.name`,
+            [req.params.id]
+        );
+        res.json({ success: true, data: rows });
+    } catch (e) { sendError(res, e, '[admin/owner-links]'); }
+});
+
+// POST /api/admin/users/:id/owner-links
+// { tenant_id, tenant_project_id, tenant_owner_id, tenant_owner_email, tenant_owner_name }
+// tenant_owner_email/name are whatever GET /api/tenants/:tenantId/owner-candidates
+// already returned to the frontend for this row — denormalized for display
+// only (see the table comment in schema.sql), never re-synced from the tenant.
+router.post('/users/:id/owner-links', blockNonDbWrite, async (req, res) => {
+    const { tenant_id, tenant_project_id, tenant_owner_id, tenant_owner_email, tenant_owner_name } = req.body;
+    if (!tenant_id || !tenant_project_id || !tenant_owner_id) {
+        return res.status(400).json({ error: 'tenant_id, tenant_project_id, and tenant_owner_id are required' });
+    }
+    try {
+        const { rows: [owner] } = await db.query('SELECT * FROM amr_users WHERE id = $1', [req.params.id]);
+        if (!owner) return res.status(404).json({ error: 'Owner not found' });
+        if (owner.role !== 'property_owner') return res.status(400).json({ error: 'User is not a property_owner' });
+
+        // Auto-generate on first link too, in case this account predates the
+        // create/role-change auto-generation added alongside this table.
+        let ownerPortalUid = owner.owner_portal_uid;
+        if (!ownerPortalUid) {
+            ownerPortalUid = crypto.randomUUID();
+            await db.query('UPDATE amr_users SET owner_portal_uid = $1, updated_at = NOW() WHERE id = $2', [ownerPortalUid, req.params.id]);
+        }
+
+        const { rows: [tenant] } = await db.query('SELECT * FROM tenants WHERE id = $1', [tenant_id]);
+        if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
+
+        await ownerPortalTenantClient.linkOwner(tenant, {
+            project_id: tenant_project_id, owner_id: tenant_owner_id, identifier: ownerPortalUid,
+        });
+
+        const { rows } = await db.query(
+            `INSERT INTO owner_tenant_links (owner_user_id, tenant_id, tenant_project_id, tenant_owner_id, tenant_owner_email, tenant_owner_name)
+             VALUES ($1,$2,$3,$4,$5,$6)
+             ON CONFLICT (owner_user_id, tenant_id, tenant_project_id, tenant_owner_id)
+             DO UPDATE SET tenant_owner_email = EXCLUDED.tenant_owner_email, tenant_owner_name = EXCLUDED.tenant_owner_name, updated_at = NOW()
+             RETURNING *`,
+            [req.params.id, tenant_id, tenant_project_id, tenant_owner_id, tenant_owner_email || null, tenant_owner_name || null]
+        );
+        res.status(201).json({ success: true, data: rows[0] });
+    } catch (e) {
+        if (e.tenantUnreachable) return res.status(502).json({ error: `Tenant site unavailable: ${e.message}` });
+        if (e.tenantStatus) return res.status(e.tenantStatus).json({ error: e.message });
+        sendError(res, e, '[admin/owner-links]');
+    }
+});
+
+// DELETE /api/admin/users/:id/owner-links/:linkId — removes the AmaraData-side
+// record only. Does NOT clear the tenant's own
+// property_owners.owner_portal_identifier — real tenant access is governed
+// by group_tenant, not this table, so an orphaned identifier on the tenant
+// side is harmless bookkeeping drift, not a live access grant.
+router.delete('/users/:id/owner-links/:linkId', blockNonDbWrite, async (req, res) => {
+    try {
+        const { rowCount } = await db.query(
+            'DELETE FROM owner_tenant_links WHERE id = $1 AND owner_user_id = $2',
+            [req.params.linkId, req.params.id]
+        );
+        if (!rowCount) return res.status(404).json({ error: 'Link not found' });
+        res.json({ success: true });
+    } catch (e) { sendError(res, e, '[admin/owner-links]'); }
+});
+
+// POST /api/admin/users/:id/rotate-owner-uid — generates a fresh
+// owner_portal_uid and re-pushes it to every tenant this owner is currently
+// linked to. Per-tenant propagation failures are reported back individually
+// rather than failing the whole rotation — one unreachable tenant must not
+// block rotating the account's identity; the caller can retry that tenant's
+// link afterward. Refuses to rotate a disabled account — an inactive owner
+// has no live session that would need a new value pushed out.
+router.post('/users/:id/rotate-owner-uid', blockNonDbWrite, async (req, res) => {
+    try {
+        const { rows: [owner] } = await db.query('SELECT * FROM amr_users WHERE id = $1', [req.params.id]);
+        if (!owner) return res.status(404).json({ error: 'Owner not found' });
+        if (owner.role !== 'property_owner') return res.status(400).json({ error: 'User is not a property_owner' });
+        if (!owner.is_active) return res.status(400).json({ error: 'Cannot rotate the identity of a disabled owner account' });
+
+        const { rows: links } = await db.query(
+            `SELECT l.id AS link_id, l.tenant_project_id, l.tenant_owner_id,
+                    t.id AS tenant_id, t.name AS tenant_name, t.site_url,
+                    t.owner_portal_api_key, t.owner_portal_api_key_secret_arn
+             FROM owner_tenant_links l JOIN tenants t ON t.id = l.tenant_id
+             WHERE l.owner_user_id = $1`,
+            [req.params.id]
+        );
+
+        const newUid = crypto.randomUUID();
+        const results = [];
+        for (const link of links) {
+            try {
+                await ownerPortalTenantClient.linkOwner(link, {
+                    project_id: link.tenant_project_id, owner_id: link.tenant_owner_id, identifier: newUid,
+                });
+                results.push({ tenant_id: link.tenant_id, tenant_name: link.tenant_name, success: true });
+            } catch (e) {
+                results.push({ tenant_id: link.tenant_id, tenant_name: link.tenant_name, success: false, error: e.message });
+            }
+        }
+
+        await db.query('UPDATE amr_users SET owner_portal_uid = $1, updated_at = NOW() WHERE id = $2', [newUid, req.params.id]);
+        res.json({ success: true, data: { owner_portal_uid: newUid, tenants: results } });
+    } catch (e) { sendError(res, e, '[admin/rotate-owner-uid]'); }
 });
 
 // ── Login Audit ───────────────────────────────────────────────────────────────

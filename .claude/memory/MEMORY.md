@@ -19,7 +19,7 @@
 - [Testing Pyramid](feedback-testing-pyramid.md) — Tests must follow unit > integration > E2E > smoke pyramid; warn when a request would place tests at a higher layer than necessary
 - [Deploy Test Summary](feedback-deploy-test-summary.md) — Before recommending a deploy, always show pass/fail counts per layer (unit, integration DB, integration NonDB, E2E, smoke)
 - [Performance SLA](feedback-performance-sla.md) — API ≤500ms, page load ≤3s; API perf tests at integration layer, page load perf tests at E2E layer
-- [Tenant Onboarding](project-tenant-onboarding.md) — rohas-group is the only tenant so far; new tenants = new repo modeled on rohas-group, ask which features to enable, bill per enabled feature
+- [Tenant Onboarding](project-tenant-onboarding.md) — rohas-group repo IS the tenant-platform template; new tenants = new stack deploy of the same code (not new repo), tenants.slug must match the Tenant CFN param, ask which features to enable, bill per enabled feature
 - [No Auto-Deploy](feedback-no-auto-deploy.md) — never deploy to AWS automatically; stop at commit, wait for explicit "deploy" (both rohas-group + amaradata)
 - [American English](feedback-american-english.md) — all copy uses American spelling (Organization, Color, Analyze...) — both repos
 - [Lambda Runtime](feedback-lambda-runtime.md) — always nodejs22.x; nodejs20.x is EOL on AWS account 797666412164 (shared account)
@@ -49,3 +49,4 @@
 - [Smoketest Account Separation](project-smoketest-account-separation.md) — smoketest.admin decoupled from harithavemuri@gmail.com; new smoketest.siteadmin permanent bootstrap super_admin for smoke-lifecycle.js
 - [Tenant Modules SSO](project-tenant-modules-sso.md) — tenants.html shows/toggles rohas-group's per-project modules via SSO token exchange; project_id is rohas's own concept, GET called unscoped
 - [NonDB Auto-Fallback](project-nondb-auto-fallback.md) — reads auto-fallback to NonDB mode on real DB connectivity errors only (circuit breaker in db-health.js), every occurrence logged, writes always still hit the real DB
+- [Owner Portal (AmaraData side)](project-owner-portal.md) — property_owner identity: amr_users.owner_portal_uid (auto-gen, never hand-edited), owner_tenant_links bookkeeping table, owner-portal-tenant-client.js; API-only so far, no frontend screen yet

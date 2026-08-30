@@ -1,0 +1,19 @@
+{
+  "table": "owner_tenant_links",
+  "description": "Maps a property_owner amr_users account to one of a tenant's own property_owners rows, recorded when staff link them via the Owner Portal Links admin screen. Display/bookkeeping only — the portal itself resolves tenant access via group_tenant and matches owner rows via owner_portal_uid, never via this table.",
+  "columns": [
+    { "name": "id",                 "type": "serial",    "primaryKey": true },
+    { "name": "owner_user_id",      "type": "integer",   "notNull": true, "references": "amr_users.id" },
+    { "name": "tenant_id",          "type": "integer",   "notNull": true, "references": "tenants.id" },
+    { "name": "tenant_project_id",  "type": "integer",   "notNull": true },
+    { "name": "tenant_owner_id",    "type": "integer",   "notNull": true },
+    { "name": "tenant_owner_email", "type": "varchar(255)" },
+    { "name": "tenant_owner_name",  "type": "varchar(255)" },
+    { "name": "linked_at",          "type": "timestamp", "notNull": true },
+    { "name": "created_at",         "type": "timestamp", "notNull": true },
+    { "name": "updated_at",         "type": "timestamp", "notNull": true }
+  ],
+  "constraints": [
+    { "type": "UNIQUE", "columns": ["owner_user_id", "tenant_id", "tenant_project_id", "tenant_owner_id"] }
+  ]
+}

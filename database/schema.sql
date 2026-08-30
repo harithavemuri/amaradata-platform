@@ -75,6 +75,15 @@ ON CONFLICT (name) DO NOTHING;
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS owner_portal_api_key_secret_arn VARCHAR(500);
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS owner_portal_api_key TEXT;
 
+-- A property_owner account's permanent cross-tenant identity — generated
+-- once (crypto.randomUUID(), application-side — this DB has no pgcrypto
+-- extension installed) when the account is created or first switched to
+-- property_owner, then pushed down to every linked tenant's own
+-- property_owners.owner_portal_identifier column (see owner_tenant_links
+-- below and project-owner-portal.md). Rotating this value must re-push it
+-- to every active link — never edit it directly with a bare UPDATE.
+ALTER TABLE amr_users ADD COLUMN IF NOT EXISTS owner_portal_uid VARCHAR(64) UNIQUE;
+
 -- Migration: rename old amr_user_groups / amr_user_group_members → new names and add FK columns.
 -- Must run BEFORE the CREATE TABLE IF NOT EXISTS below so that renames happen first on existing DBs.
 -- Safe to re-run; every step is guarded by IF EXISTS / IF NOT EXISTS.
@@ -171,6 +180,35 @@ CREATE TABLE IF NOT EXISTS tenants (
     created_at            TIMESTAMP    NOT NULL DEFAULT NOW(),
     updated_at            TIMESTAMP    NOT NULL DEFAULT NOW()
 );
+
+-- Records every (property_owner account) <-> (one tenant's property_owners
+-- row) mapping AmaraData staff have made, via the "Owner Portal Links"
+-- admin screen. Purely AmaraData-side bookkeeping/display state — the
+-- portal itself never reads this table at request time; it calls each
+-- tenant's GET /api/owner-portal/summary?identifier=<owner_portal_uid>
+-- directly, and which tenants an owner can query at all is governed
+-- entirely by group_tenant (role=property_owner), independently of whether
+-- a link row exists here. tenant_owner_email/tenant_owner_name are
+-- denormalized from the tenant's GET /search-owners response at link time,
+-- purely so the admin UI can render "linked to X" without an extra
+-- cross-tenant call on every page load — they are display-only and never
+-- re-synced.
+CREATE TABLE IF NOT EXISTS owner_tenant_links (
+    id                  SERIAL PRIMARY KEY,
+    owner_user_id       INTEGER   NOT NULL REFERENCES amr_users(id) ON DELETE CASCADE,
+    tenant_id           INTEGER   NOT NULL REFERENCES tenants(id)   ON DELETE CASCADE,
+    tenant_project_id   INTEGER   NOT NULL,  -- the tenant's own project id (opaque to AmaraData)
+    tenant_owner_id     INTEGER   NOT NULL,  -- the tenant's own property_owners.id
+    tenant_owner_email  VARCHAR(255),
+    tenant_owner_name   VARCHAR(255),
+    linked_at           TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_at          TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE (owner_user_id, tenant_id, tenant_project_id, tenant_owner_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_otl_owner  ON owner_tenant_links(owner_user_id);
+CREATE INDEX IF NOT EXISTS idx_otl_tenant ON owner_tenant_links(tenant_id);
 
 -- Reusable plan definitions
 CREATE TABLE IF NOT EXISTS subscription_plans (
@@ -566,5 +604,6 @@ INSERT INTO schema_migrations (version, description) VALUES
     ('2026.08.15.002', 'Add missing CSV-import columns (source, issue_id, site_name, fixed, item_type, is_billable, report_date) to enhancements — CREATE TABLE IF NOT EXISTS never retroactively added them to the pre-existing table'),
     ('2026.08.15.003', 'Rename site_admin role to super_admin (amr_roles.name + amr_users.role); decouple smoketest.admin from harithavemuri@gmail.com onto its own email'),
     ('2026.08.16.001', 'Seed smoketest.siteadmin — a permanent super_admin bootstrap account for scripts/smoke-lifecycle.js (SMOKE_BOOTSTRAP_ADMIN_USER), separate from smoketest.admin which the lifecycle script itself enables/disables'),
-    ('2026.08.29.001', 'Add property_owner role (portal.amaradata.com login, rejected on this staff app) and tenants.owner_portal_api_key(_secret_arn) for the per-tenant owner-portal API key')
+    ('2026.08.29.001', 'Add property_owner role (portal.amaradata.com login, rejected on this staff app) and tenants.owner_portal_api_key(_secret_arn) for the per-tenant owner-portal API key'),
+    ('2026.08.30.001', 'Add amr_users.owner_portal_uid (per-owner cross-tenant identity) and owner_tenant_links table, replacing email-based tenant owner matching')
 ON CONFLICT (version) DO NOTHING;
