@@ -21,7 +21,7 @@
     "is_billable": true,
     "report_date": "2026-05-28",
     "created_at": "2026-07-28T01:19:33.429Z",
-    "updated_at": "2026-08-16T18:07:20.993Z"
+    "updated_at": "2026-08-30T13:32:22.739Z"
   },
   {
     "id": 6,
@@ -45,7 +45,7 @@
     "is_billable": true,
     "report_date": "2026-05-28",
     "created_at": "2026-07-28T01:19:33.476Z",
-    "updated_at": "2026-08-16T18:07:21.012Z"
+    "updated_at": "2026-08-30T13:32:22.771Z"
   },
   {
     "id": 7,
@@ -69,7 +69,7 @@
     "is_billable": false,
     "report_date": "2026-05-28",
     "created_at": "2026-07-28T01:19:33.479Z",
-    "updated_at": "2026-08-16T18:07:21.018Z"
+    "updated_at": "2026-08-30T13:32:22.780Z"
   },
   {
     "id": 8,
@@ -93,7 +93,7 @@
     "is_billable": false,
     "report_date": "2026-05-28",
     "created_at": "2026-07-28T01:19:33.482Z",
-    "updated_at": "2026-08-16T18:07:21.023Z"
+    "updated_at": "2026-08-30T13:32:22.788Z"
   },
   {
     "id": 9,
@@ -117,7 +117,7 @@
     "is_billable": false,
     "report_date": "2026-05-28",
     "created_at": "2026-07-28T01:19:33.486Z",
-    "updated_at": "2026-08-16T18:07:21.028Z"
+    "updated_at": "2026-08-30T13:32:22.795Z"
   },
   {
     "id": 10,
@@ -141,7 +141,7 @@
     "is_billable": false,
     "report_date": "2026-05-28",
     "created_at": "2026-07-28T01:19:33.489Z",
-    "updated_at": "2026-08-16T18:07:21.033Z"
+    "updated_at": "2026-08-30T13:32:22.803Z"
   },
   {
     "id": 11,
@@ -165,7 +165,7 @@
     "is_billable": false,
     "report_date": "2026-05-28",
     "created_at": "2026-07-28T01:19:33.491Z",
-    "updated_at": "2026-08-16T18:07:21.037Z"
+    "updated_at": "2026-08-30T13:32:22.810Z"
   },
   {
     "id": 12,
@@ -189,7 +189,7 @@
     "is_billable": false,
     "report_date": "2026-05-28",
     "created_at": "2026-07-28T01:19:33.494Z",
-    "updated_at": "2026-08-16T18:07:21.042Z"
+    "updated_at": "2026-08-30T13:32:22.818Z"
   },
   {
     "id": 13,
@@ -213,7 +213,7 @@
     "is_billable": false,
     "report_date": "2026-05-28",
     "created_at": "2026-07-28T01:19:33.496Z",
-    "updated_at": "2026-08-16T18:07:21.046Z"
+    "updated_at": "2026-08-30T13:32:22.824Z"
   },
   {
     "id": 14,
@@ -237,7 +237,7 @@
     "is_billable": false,
     "report_date": "2026-05-28",
     "created_at": "2026-07-28T01:19:33.499Z",
-    "updated_at": "2026-08-16T18:07:21.050Z"
+    "updated_at": "2026-08-30T13:32:22.833Z"
   },
   {
     "id": 15,
@@ -261,7 +261,7 @@
     "is_billable": false,
     "report_date": "2026-05-28",
     "created_at": "2026-07-28T01:19:33.501Z",
-    "updated_at": "2026-08-16T18:07:21.054Z"
+    "updated_at": "2026-08-30T13:32:22.840Z"
   },
   {
     "id": 16,
@@ -285,7 +285,7 @@
     "is_billable": false,
     "report_date": "2026-05-28",
     "created_at": "2026-07-28T01:19:33.503Z",
-    "updated_at": "2026-08-16T18:07:21.058Z"
+    "updated_at": "2026-08-30T13:32:22.847Z"
   },
   {
     "id": 17,
@@ -309,7 +309,7 @@
     "is_billable": false,
     "report_date": "2026-05-28",
     "created_at": "2026-07-28T01:19:33.506Z",
-    "updated_at": "2026-08-16T18:07:21.061Z"
+    "updated_at": "2026-08-30T13:32:22.854Z"
   },
   {
     "id": 18,
@@ -333,7 +333,7 @@
     "is_billable": false,
     "report_date": "2026-05-28",
     "created_at": "2026-07-28T01:19:33.508Z",
-    "updated_at": "2026-08-16T18:07:21.065Z"
+    "updated_at": "2026-08-30T13:32:22.861Z"
   },
   {
     "id": 19,
@@ -357,7 +357,7 @@
     "is_billable": false,
     "report_date": "2026-05-28",
     "created_at": "2026-07-28T01:19:33.515Z",
-    "updated_at": "2026-08-16T18:07:21.069Z"
+    "updated_at": "2026-08-30T13:32:22.867Z"
   },
   {
     "id": 20,
@@ -381,7 +381,7 @@
     "is_billable": false,
     "report_date": "2026-05-28",
     "created_at": "2026-07-28T01:19:33.517Z",
-    "updated_at": "2026-08-16T18:07:21.073Z"
+    "updated_at": "2026-08-30T13:32:22.875Z"
   },
   {
     "id": 21,
@@ -405,7 +405,7 @@
     "is_billable": false,
     "report_date": "2026-05-28",
     "created_at": "2026-07-28T01:19:33.519Z",
-    "updated_at": "2026-08-16T18:07:21.077Z"
+    "updated_at": "2026-08-30T13:32:22.881Z"
   },
   {
     "id": 22,
@@ -429,7 +429,7 @@
     "is_billable": false,
     "report_date": "2026-05-28",
     "created_at": "2026-07-28T01:19:33.521Z",
-    "updated_at": "2026-08-16T18:07:21.080Z"
+    "updated_at": "2026-08-30T13:32:22.888Z"
   },
   {
     "id": 23,
@@ -453,7 +453,7 @@
     "is_billable": false,
     "report_date": "2026-05-28",
     "created_at": "2026-07-28T01:19:33.523Z",
-    "updated_at": "2026-08-16T18:07:21.084Z"
+    "updated_at": "2026-08-30T13:32:22.895Z"
   },
   {
     "id": 24,
@@ -477,7 +477,7 @@
     "is_billable": false,
     "report_date": "2026-05-28",
     "created_at": "2026-07-28T01:19:33.525Z",
-    "updated_at": "2026-08-16T18:07:21.088Z"
+    "updated_at": "2026-08-30T13:32:22.901Z"
   },
   {
     "id": 25,
@@ -501,7 +501,7 @@
     "is_billable": false,
     "report_date": "2026-05-26",
     "created_at": "2026-07-28T01:19:33.527Z",
-    "updated_at": "2026-08-16T18:07:21.092Z"
+    "updated_at": "2026-08-30T13:32:22.909Z"
   },
   {
     "id": 26,
@@ -525,7 +525,7 @@
     "is_billable": false,
     "report_date": "2026-05-26",
     "created_at": "2026-07-28T01:19:33.528Z",
-    "updated_at": "2026-08-16T18:07:21.095Z"
+    "updated_at": "2026-08-30T13:32:22.915Z"
   },
   {
     "id": 27,
@@ -549,7 +549,7 @@
     "is_billable": false,
     "report_date": "2026-07-17",
     "created_at": "2026-07-28T01:19:33.530Z",
-    "updated_at": "2026-08-16T18:07:21.099Z"
+    "updated_at": "2026-08-30T13:32:22.922Z"
   },
   {
     "id": 28,
@@ -573,7 +573,7 @@
     "is_billable": false,
     "report_date": "2026-07-17",
     "created_at": "2026-07-28T01:19:33.532Z",
-    "updated_at": "2026-08-16T18:07:21.104Z"
+    "updated_at": "2026-08-30T13:32:22.930Z"
   },
   {
     "id": 29,
@@ -597,7 +597,7 @@
     "is_billable": false,
     "report_date": "2026-07-17",
     "created_at": "2026-07-28T01:19:33.534Z",
-    "updated_at": "2026-08-16T18:07:21.108Z"
+    "updated_at": "2026-08-30T13:32:22.935Z"
   },
   {
     "id": 30,
@@ -621,7 +621,7 @@
     "is_billable": false,
     "report_date": "2026-07-17",
     "created_at": "2026-07-28T01:19:33.536Z",
-    "updated_at": "2026-08-16T18:07:21.111Z"
+    "updated_at": "2026-08-30T13:32:22.942Z"
   },
   {
     "id": 31,
@@ -645,7 +645,7 @@
     "is_billable": false,
     "report_date": "2026-07-19",
     "created_at": "2026-07-28T01:19:33.538Z",
-    "updated_at": "2026-08-16T18:07:21.115Z"
+    "updated_at": "2026-08-30T13:32:22.950Z"
   },
   {
     "id": 32,
@@ -669,7 +669,7 @@
     "is_billable": false,
     "report_date": "2026-06-19",
     "created_at": "2026-07-28T01:19:33.540Z",
-    "updated_at": "2026-08-16T18:07:21.118Z"
+    "updated_at": "2026-08-30T13:32:22.956Z"
   },
   {
     "id": 33,
@@ -693,7 +693,7 @@
     "is_billable": false,
     "report_date": "2026-07-23",
     "created_at": "2026-07-28T01:19:33.541Z",
-    "updated_at": "2026-08-16T18:07:21.122Z"
+    "updated_at": "2026-08-30T13:32:22.961Z"
   },
   {
     "id": 34,
@@ -717,7 +717,7 @@
     "is_billable": false,
     "report_date": "2026-07-23",
     "created_at": "2026-07-28T01:19:33.546Z",
-    "updated_at": "2026-08-16T18:07:21.125Z"
+    "updated_at": "2026-08-30T13:32:22.967Z"
   },
   {
     "id": 35,
@@ -741,6 +741,6 @@
     "is_billable": false,
     "report_date": "2026-07-21",
     "created_at": "2026-07-28T01:19:33.548Z",
-    "updated_at": "2026-08-16T18:07:21.129Z"
+    "updated_at": "2026-08-30T13:32:22.975Z"
   }
 ]
