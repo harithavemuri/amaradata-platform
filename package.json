@@ -1,6 +1,6 @@
 {
   "name": "amaradata-platform",
-  "version": "1.3.11",
+  "version": "1.3.12",
   "description": "AmaraData SaaS platform — tenant management and billing",
   "main": "server.js",
   "scripts": {

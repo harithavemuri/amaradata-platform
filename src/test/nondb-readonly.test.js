@@ -32,7 +32,9 @@ beforeAll(async () => {
     seed('tenants', [{ id: 1, name: 'Acme', slug: 'acme', status: 'active' }]);
     seed('invoices', [{ id: 1, tenant_id: 1, invoice_number: 'AMR-2026-0001', status: 'draft' }]);
     seed('enhancements', [{ id: 1, tenant_id: 1, title: 'Seeded', status: 'scoped' }]);
-    seed('subscription_plans', [{ id: 1, name: 'Standard' }]);
+    seed('subscription_plans', [{ id: 1, name: 'Standard' }, { id: 2, name: 'Suggest Plan', sales_pct: 5, rental_pct: 10, min_monthly_fee: 2000, currency_code: 'INR' }]);
+    seed('tenant_subscriptions', [{ id: 1, tenant_id: 1, plan_id: 2, effective_from: '2020-01-01', effective_to: null }]);
+    seed('billing_metrics', [{ id: 1, tenant_id: 1, period_year: 2026, period_month: 6, sales_count: 2, sales_value: 1000000, rental_units: 3, rental_income: 50000, active_properties: 10 }]);
     seed('contact_submissions', [{ id: 1, ref_number: 'REF-1', name: 'X', email: 'x@x.com', message: 'hi' }]);
     seed('amr_roles', [{ id: 1, name: 'staff', label: 'Staff', is_system: true }]);
     seed('amr_users', [{
@@ -86,6 +88,18 @@ describe('NonDB mode — reads still work', () => {
         assertJson(res);
         expect(res.status).toBe(200);
         expect(res.body.data).toHaveLength(1);
+    });
+
+    it('GET /api/invoices/suggest-line-items computes commission from seeded files, same as DB mode', async () => {
+        const res = await request(app)
+            .get('/api/invoices/suggest-line-items?tenant_id=1&period_year=2026&period_month=6')
+            .set(auth('staff'));
+        assertJson(res);
+        expect(res.status).toBe(200);
+        const sales  = res.body.data.line_items.find((l) => l.billing_type === 'sales_pct');
+        const rental = res.body.data.line_items.find((l) => l.billing_type === 'rental_pct');
+        expect(sales.amount).toBe(50000);  // 5% of 1,000,000
+        expect(rental.amount).toBe(5000);  // 10% of 50,000
     });
 });
 

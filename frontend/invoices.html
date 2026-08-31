@@ -180,9 +180,14 @@
                         <div><label>Due Date *</label><input id="f-due" type="date" value="${due}"></div>
                     </div>
                     <div id="lines-wrap">
-                        <h4 style="font-size:13px;margin:16px 0 8px">Line Items</h4>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 8px">
+                            <h4 style="font-size:13px;margin:0">Line Items</h4>
+                            <button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="suggestFromMetrics()">Suggest from Metrics</button>
+                        </div>
                         <div id="lines"></div>
                         <button class="amrd-btn amrd-btn-ghost amrd-btn-sm" style="margin-top:8px" onclick="addLine()">+ Add Line</button>
+                        <div id="suggest-err" style="color:#dc2626;font-size:12px;margin-top:6px"></div>
+                        <div id="suggest-note" style="color:#64748b;font-size:12px;margin-top:6px"></div>
                     </div>
                     <div class="amrd-form-row full" style="margin-top:14px"><div><label>Notes</label><textarea id="f-notes" rows="2"></textarea></div></div>
                     <div style="margin-top:16px;display:flex;gap:10px">
@@ -195,23 +200,68 @@
         }
 
         let lineCount = 0;
-        function addLine() {
+        // prefill lets suggestFromMetrics() populate a row with a computed
+        // description/type/amount — every field stays a normal editable
+        // input, so staff can still adjust or delete before saving.
+        function addLine(prefill) {
             const n = lineCount++;
             const wrap = document.createElement('div');
             wrap.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:end';
+            const desc = prefill?.description ? prefill.description.replace(/"/g, '&quot;') : '';
+            const type = prefill?.billing_type || 'sales_pct';
+            const qty  = prefill?.quantity ?? 1;
+            const up   = prefill?.unit_price ?? 0;
             wrap.innerHTML = `
-                <div><label>Description</label><input id="ld-${n}" placeholder="e.g. Sales commission (2 units)"></div>
+                <div><label>Description</label><input id="ld-${n}" placeholder="e.g. Sales commission (2 units)" value="${desc}"></div>
                 <div><label>Type</label><select id="lt-${n}">
-                    <option value="sales_pct">Sales %</option>
-                    <option value="rental_pct">Rental %</option>
-                    <option value="hourly">Hourly</option>
-                    <option value="milestone">Milestone</option>
-                    <option value="fixed">Fixed</option>
+                    <option value="sales_pct"${type==='sales_pct'?' selected':''}>Sales %</option>
+                    <option value="rental_pct"${type==='rental_pct'?' selected':''}>Rental %</option>
+                    <option value="hourly"${type==='hourly'?' selected':''}>Hourly</option>
+                    <option value="milestone"${type==='milestone'?' selected':''}>Milestone</option>
+                    <option value="fixed"${type==='fixed'?' selected':''}>Fixed</option>
                 </select></div>
-                <div><label>Qty</label><input id="lq-${n}" type="number" value="1" min="0" step="0.01"></div>
-                <div><label>Unit Price</label><input id="lp-${n}" type="number" value="0" min="0" step="0.01"></div>
+                <div><label>Qty</label><input id="lq-${n}" type="number" value="${qty}" min="0" step="0.01"></div>
+                <div><label>Unit Price</label><input id="lp-${n}" type="number" value="${up}" min="0" step="0.01"></div>
                 <div><button class="amrd-btn amrd-btn-ghost amrd-btn-sm" style="margin-top:18px" onclick="this.closest('div').remove()">✕</button></div>`;
             document.getElementById('lines').appendChild(wrap);
+        }
+
+        // Replaces whatever line items are currently in the form with the
+        // computed commission for the selected tenant + period (sales_value
+        // × plan sales_pct, rental_income × plan rental_pct, floored at
+        // min_monthly_fee) — the server does the actual math, this just
+        // renders the result as normal editable rows.
+        async function suggestFromMetrics() {
+            const errEl  = document.getElementById('suggest-err');
+            const noteEl = document.getElementById('suggest-note');
+            errEl.textContent = '';
+            noteEl.textContent = '';
+
+            const tenantId = document.getElementById('f-tenant').value;
+            const period   = document.getElementById('f-period').value.trim();
+            if (!tenantId || !/^\d{4}-\d{2}$/.test(period)) {
+                errEl.textContent = 'Select a tenant and enter Billing Period as YYYY-MM first.';
+                return;
+            }
+            const [year, month] = period.split('-').map(Number);
+
+            try {
+                const res = await window.__amrd.apiFetch(
+                    `/api/invoices/suggest-line-items?tenant_id=${tenantId}&period_year=${year}&period_month=${month}`
+                );
+                const { line_items, plan } = res.data;
+                document.getElementById('lines').innerHTML = '';
+                lineCount = 0;
+                if (!line_items.length) {
+                    noteEl.textContent = `No billable amount for ${period} under plan "${plan.name}".`;
+                    addLine();
+                    return;
+                }
+                line_items.forEach(addLine);
+                noteEl.textContent = `Suggested from "${plan.name}" (${plan.sales_pct}% sales, ${plan.rental_pct}% rental, ${plan.currency_code} ${plan.min_monthly_fee} min) — review before saving.`;
+            } catch (e) {
+                errEl.textContent = e.message;
+            }
         }
 
         async function saveInvoice() {
@@ -257,6 +307,7 @@
 
         window.openForm        = openForm;
         window.addLine         = addLine;
+        window.suggestFromMetrics = suggestFromMetrics;
         window.saveInvoice     = saveInvoice;
         window.setStatus       = setStatus;
 
