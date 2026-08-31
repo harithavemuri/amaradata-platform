@@ -573,6 +573,82 @@ router.get('/login-audit', async (req, res) => {
     } catch (e) { sendError(res, e, '[admin/login-audit]'); }
 });
 
+// ── Billing Metrics Collection ───────────────────────────────────────────────
+// Manual trigger + history for jobs/collect-metrics.js — see
+// project-billing-metrics-collector.md. Runs synchronously (one HTTP call
+// per tenant, one INSERT), which is safely inside API Gateway's Lambda-proxy
+// timeout for today's single-tenant scale; if the tenant count grows large
+// enough for that to matter, this needs to move to an async job with polling
+// (same tradeoff already noted on /sync-from-db/:table above).
+
+// POST /api/admin/billing/collect-metrics  { period_year, period_month }
+router.post('/billing/collect-metrics', blockNonDbWrite, async (req, res) => {
+    const { period_year, period_month } = req.body || {};
+    if (!period_year || !period_month || period_month < 1 || period_month > 12) {
+        return res.status(400).json({ error: 'period_year and period_month (1-12) are required' });
+    }
+
+    let runRow;
+    try {
+        const { rows } = await db.query(
+            `INSERT INTO billing_metrics_job_runs (period_year, period_month, triggered_by, status)
+             VALUES ($1, $2, $3, 'running') RETURNING *`,
+            [period_year, period_month, req.staff.id],
+        );
+        runRow = rows[0];
+    } catch (e) { return sendError(res, e, '[admin/billing/collect-metrics]'); }
+
+    try {
+        // Lazy require — collectAllTenants() itself requires backend/db,
+        // and this file is required by server.js before that module is
+        // fully initialized in some test bootstrapping orders.
+        const { collectAllTenants } = require('../../jobs/collect-metrics');
+        const results = await collectAllTenants(period_year, period_month);
+
+        const allFailed = results.length > 0 && results.every((r) => !r.success);
+        const anyFailed = results.some((r) => !r.success);
+        const status = allFailed ? 'failed' : anyFailed ? 'partial_failure' : 'success';
+
+        const { rows: updated } = await db.query(
+            `UPDATE billing_metrics_job_runs SET status = $1, results = $2, completed_at = NOW() WHERE id = $3 RETURNING *`,
+            [status, JSON.stringify(results), runRow.id],
+        );
+        res.json({ success: true, data: updated[0] });
+    } catch (e) {
+        await db.query(
+            `UPDATE billing_metrics_job_runs SET status = 'failed', results = $1, completed_at = NOW() WHERE id = $2`,
+            [JSON.stringify({ error: e.message }), runRow.id],
+        ).catch(() => {}); // best-effort — the real failure below is what the caller sees regardless
+        sendError(res, e, '[admin/billing/collect-metrics]');
+    }
+});
+
+// GET /api/admin/billing/job-runs — most recent runs, enriched with who triggered them
+router.get('/billing/job-runs', async (req, res) => {
+    try {
+        if (req.db.mode === 'nondb') {
+            const users = req.db.fileDb.find('amr_users');
+            const rows = req.db.fileDb.find('billing_metrics_job_runs')
+                .slice()
+                .sort((a, b) => new Date(b.started_at) - new Date(a.started_at))
+                .slice(0, 100)
+                .map((r) => {
+                    const u = users.find((u) => u.id == r.triggered_by);
+                    return { ...r, triggered_by_name: u?.name || null, triggered_by_email: u?.email || null };
+                });
+            return res.json({ success: true, data: rows });
+        }
+        const { rows } = await db.query(`
+            SELECT r.*, u.name AS triggered_by_name, u.email AS triggered_by_email
+            FROM billing_metrics_job_runs r
+            LEFT JOIN amr_users u ON u.id = r.triggered_by
+            ORDER BY r.started_at DESC
+            LIMIT 100
+        `);
+        res.json({ success: true, data: rows });
+    } catch (e) { sendError(res, e, '[admin/billing/job-runs]'); }
+});
+
 // ── Sync ──────────────────────────────────────────────────────────────────────
 
 // GET /api/admin/sync-tables — the list of tables eligible for DB→file sync

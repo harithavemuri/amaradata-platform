@@ -64,3 +64,49 @@ per-tenant try/catch in the loop, not inside `collectForTenant`).
 secret_arn/password` — they're now genuinely dead (this job was their only
 consumer) but removing columns is a separate, more deliberate decision than
 swapping which mechanism the job uses. Left in place for now.
+
+**"Collect Metrics Now" button + job history (2026-08-30, same session,
+api_version 1.3.11):** the job was still manual-only with no UI trigger and
+no run history. Added:
+- `billing_metrics_job_runs` table (migration `2026.08.30.003`) —
+  `period_year/month`, `triggered_by` (NULL = automatic/cron, not built
+  yet), `status` (`running|success|partial_failure|failed`), `results`
+  JSONB (the exact per-tenant array `collectAllTenants()` already returns —
+  persisted as-is, never re-derived).
+- `collect-metrics.js` gained `collectAllTenants(year, month)` — the same
+  loop `run()`'s CLI used inline, extracted so it never calls
+  `process.exit()` and is safe to call from a long-lived Express request.
+- `POST /api/admin/billing/collect-metrics` (admin.js, `requireSuperAdmin`
+  via the file's existing `router.use`) — runs synchronously (one HTTP call
+  per tenant today), inserts a `running` row first, then updates it to its
+  final status. A `collectAllTenants` throw (not just a per-tenant failure)
+  still marks the row `failed` rather than leaving it stuck at `running` —
+  covered by its own test.
+- `GET /api/admin/billing/job-runs` — last 100 runs, joined to
+  `amr_users` for who triggered them.
+- `frontend/metrics.html` — button + a "Job History" modal, both gated
+  `window.__amrd.getStaff()?.role === 'super_admin'` (matches
+  `tenants.html`'s modules-column idiom exactly). Collects for whatever
+  period the page's own Year/Month search fields are currently set to —
+  no separate prompt, since the table already shows that exact period.
+
+**Verified against the live dev server, not just unit tests** (no browser
+automation tool available, so this was curl-driven, not a real click-through
+— flagged honestly rather than claimed as full UI verification): logged in
+as a throwaway `zzzzzz.uitest` super_admin, called the new endpoints
+directly. First call correctly failed (`"Billing API key not configured for
+this tenant"`) since local dev's `tenants` row had no `billing_api_key` set;
+after setting it to the same real production key, a second call
+successfully pulled live data from `https://rohas.amaradata.com` end-to-end
+and the resulting row showed up via both `/api/admin/billing/job-runs` and
+the existing `/api/metrics`. Local dev's `tenants` row for rohas was left
+pointed at the real production billing endpoint afterward (read-only,
+harmless, and useful for testing this feature locally again later) — only
+the throwaway user and the job-run/metrics rows it created were cleaned up.
+
+**Gotcha hit setting up the local test user:** a bcrypt hash passed inline
+to `psql -c "..."` in PowerShell got silently mangled — PowerShell expands
+`$2a`, `$12` etc. as variable references inside a **double**-quoted
+`-c` string, truncating the hash to just its literal tail. Fixed by using a
+**single**-quoted PowerShell string (which doesn't interpolate `$vars`) with
+SQL's own `''`-escaping for the inner single quotes.

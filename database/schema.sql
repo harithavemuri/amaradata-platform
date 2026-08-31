@@ -268,6 +268,27 @@ CREATE TABLE IF NOT EXISTS billing_metrics (
     UNIQUE (tenant_id, period_year, period_month)
 );
 
+-- One row per manual (or, once scheduled, automatic) run of
+-- jobs/collect-metrics.js — powers the "Collect Metrics Now" button on
+-- frontend/metrics.html and its job-history view. triggered_by is NULL for
+-- an automatic/cron-triggered run (not built yet); results is a per-tenant
+-- [{tenant_id, tenant_name, success, error?}] array, the same shape
+-- collectAllTenants() already returns, so the route just persists it as-is
+-- rather than re-deriving it.
+CREATE TABLE IF NOT EXISTS billing_metrics_job_runs (
+    id              SERIAL PRIMARY KEY,
+    period_year     INTEGER      NOT NULL,
+    period_month    INTEGER      NOT NULL CHECK (period_month BETWEEN 1 AND 12),
+    triggered_by    INTEGER      REFERENCES amr_users(id),
+    status          VARCHAR(20)  NOT NULL DEFAULT 'running' CHECK (status IN ('running','success','partial_failure','failed')),
+    results         JSONB,
+    started_at      TIMESTAMP    NOT NULL DEFAULT NOW(),
+    completed_at    TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_billing_job_runs_period  ON billing_metrics_job_runs(period_year, period_month);
+CREATE INDEX IF NOT EXISTS idx_billing_job_runs_started ON billing_metrics_job_runs(started_at);
+
 -- Invoices issued to tenants
 CREATE TABLE IF NOT EXISTS invoices (
     id              SERIAL PRIMARY KEY,
@@ -618,5 +639,6 @@ INSERT INTO schema_migrations (version, description) VALUES
     ('2026.08.16.001', 'Seed smoketest.siteadmin — a permanent super_admin bootstrap account for scripts/smoke-lifecycle.js (SMOKE_BOOTSTRAP_ADMIN_USER), separate from smoketest.admin which the lifecycle script itself enables/disables'),
     ('2026.08.29.001', 'Add property_owner role (portal.amaradata.com login, rejected on this staff app) and tenants.owner_portal_api_key(_secret_arn) for the per-tenant owner-portal API key'),
     ('2026.08.30.001', 'Add amr_users.owner_portal_uid (per-owner cross-tenant identity) and owner_tenant_links table, replacing email-based tenant owner matching'),
-    ('2026.08.30.002', 'Add tenants.billing_api_key(_secret_arn) for GET .../api/billing/* — jobs/collect-metrics.js no longer connects directly to a tenant''s DB')
+    ('2026.08.30.002', 'Add tenants.billing_api_key(_secret_arn) for GET .../api/billing/* — jobs/collect-metrics.js no longer connects directly to a tenant''s DB'),
+    ('2026.08.30.003', 'Add billing_metrics_job_runs table — history for the "Collect Metrics Now" button on frontend/metrics.html')
 ON CONFLICT (version) DO NOTHING;

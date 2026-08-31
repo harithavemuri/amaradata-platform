@@ -15,6 +15,7 @@
         const root = window.__amrd.renderSidebar('Billing Metrics');
         const fmt  = v => new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Number(v));
         const now  = new Date();
+        const isSuperAdmin = () => window.__amrd.getStaff()?.role === 'super_admin';
 
         let _myTenants = [];
         let _rows      = [];
@@ -60,7 +61,12 @@
                 </div>
                 <div class="amrd-toolbar">
                     <span id="metrics-count" style="font-size:13px;color:#64748b"></span>
-                    <div style="display:flex;gap:8px">
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <span id="collect-status" style="font-size:12px;color:#64748b"></span>
+                        ${isSuperAdmin() ? `
+                            <button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="openJobHistory()">Job History</button>
+                            <button class="amrd-btn amrd-btn-primary amrd-btn-sm" id="btn-collect-now" onclick="collectMetricsNow()">Collect Metrics Now</button>
+                        ` : ''}
                         <button class="amrd-btn amrd-btn-ghost amrd-btn-sm" id="btn-export">Export CSV</button>
                         ${window.__amrd.isReadOnly() ? '' : `<button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="openManual()">+ Manual Entry</button>`}
                     </div>
@@ -74,7 +80,8 @@
                     </div>
                 </div>
                 <div id="metrics-pagination"></div>
-                <div id="form-slot"></div>`;
+                <div id="form-slot"></div>
+                <div id="job-history-modal-slot"></div>`;
 
             document.getElementById('btn-search').addEventListener('click', () => {
                 _search.year     = parseInt(document.getElementById('sf-year').value)  || now.getFullYear();
@@ -211,8 +218,99 @@
             }
         }
 
+        const STATUS_LABELS = { running: 'Running…', success: 'Success', partial_failure: 'Partial failure', failed: 'Failed' };
+        const STATUS_COLORS = { running: '#64748b', success: '#16a34a', partial_failure: '#d97706', failed: '#dc2626' };
+
+        // Collects for whatever period the search fields are currently set
+        // to — no separate year/month prompt, since the table already shows
+        // exactly that period and the button sits right next to it.
+        async function collectMetricsNow() {
+            const btn = document.getElementById('btn-collect-now');
+            const statusEl = document.getElementById('collect-status');
+            if (!confirm(`Collect billing metrics for ${_search.month}/${_search.year} now? This calls every tenant's live API.`)) return;
+
+            btn.disabled = true;
+            const original = btn.textContent;
+            btn.textContent = 'Collecting…';
+            statusEl.textContent = '';
+            statusEl.style.color = '#64748b';
+
+            try {
+                const res = await window.__amrd.apiFetch('/api/admin/billing/collect-metrics', {
+                    method: 'POST',
+                    body: JSON.stringify({ period_year: _search.year, period_month: _search.month }),
+                });
+                const run = res.data;
+                const okCount = (run.results || []).filter(r => r.success).length;
+                statusEl.textContent = `${STATUS_LABELS[run.status]} — ${okCount}/${(run.results || []).length} tenant(s)`;
+                statusEl.style.color = STATUS_COLORS[run.status];
+                await runSearch();
+            } catch (e) {
+                statusEl.textContent = `Failed: ${e.message}`;
+                statusEl.style.color = STATUS_COLORS.failed;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = original;
+            }
+        }
+
+        async function openJobHistory() {
+            const slot = document.getElementById('job-history-modal-slot');
+            slot.innerHTML = `
+                <div style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center">
+                    <div style="background:#fff;border-radius:12px;padding:28px;width:100%;max-width:640px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+                        <h3 style="margin:0 0 4px;font-size:16px;color:#0f172a">Collection Job History</h3>
+                        <p style="margin:0 0 16px;font-size:12px;color:#94a3b8">Last 100 runs, newest first.</p>
+                        <div id="job-history-body">Loading…</div>
+                        <div style="display:flex;justify-content:flex-end;margin-top:16px">
+                            <button class="amrd-btn amrd-btn-ghost" onclick="closeJobHistory()">Close</button>
+                        </div>
+                    </div>
+                </div>`;
+
+            try {
+                const res = await window.__amrd.apiFetch('/api/admin/billing/job-runs');
+                renderJobHistoryBody(res.data || []);
+            } catch (e) {
+                document.getElementById('job-history-body').innerHTML = `<p style="color:#dc2626;font-size:13px">${e.message}</p>`;
+            }
+        }
+
+        function renderJobHistoryBody(rows) {
+            const body = document.getElementById('job-history-body');
+            if (!rows.length) {
+                body.innerHTML = '<p style="color:#94a3b8;font-size:13px">No collection runs yet.</p>';
+                return;
+            }
+            body.innerHTML = `
+                <table class="amrd-table">
+                    <thead><tr><th>Period</th><th>Status</th><th>Triggered By</th><th>Started</th><th>Result</th></tr></thead>
+                    <tbody>
+                        ${rows.map(r => {
+                            const okCount = Array.isArray(r.results) ? r.results.filter(x => x.success).length : null;
+                            const total   = Array.isArray(r.results) ? r.results.length : null;
+                            const failedNames = Array.isArray(r.results) ? r.results.filter(x => !x.success).map(x => x.tenant_name).join(', ') : '';
+                            return `<tr>
+                                <td>${String(r.period_month).padStart(2, '0')}/${r.period_year}</td>
+                                <td><span style="color:${STATUS_COLORS[r.status] || '#64748b'};font-weight:600">${STATUS_LABELS[r.status] || r.status}</span></td>
+                                <td style="font-size:12px">${r.triggered_by_name || r.triggered_by_email || '—'}</td>
+                                <td style="font-size:11px;color:#94a3b8">${new Date(r.started_at).toLocaleString()}</td>
+                                <td style="font-size:12px">${total !== null ? `${okCount}/${total}` : '—'}${failedNames ? `<br><span style="color:#dc2626;font-size:11px">${failedNames}</span>` : ''}</td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>`;
+        }
+
+        function closeJobHistory() {
+            document.getElementById('job-history-modal-slot').innerHTML = '';
+        }
+
         window.openManual = openManual;
         window.saveMetric = saveMetric;
+        window.collectMetricsNow = collectMetricsNow;
+        window.openJobHistory = openJobHistory;
+        window.closeJobHistory = closeJobHistory;
 
         load();
         await runSearch();

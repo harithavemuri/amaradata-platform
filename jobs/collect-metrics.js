@@ -47,6 +47,30 @@ async function collectForTenant(tenant, year, month) {
     return metrics;
 }
 
+// Runs every active, site_url-configured tenant for one period and returns a
+// per-tenant result array — never throws for an individual tenant's failure
+// (one unreachable tenant must not stop the rest), and never calls
+// process.exit(), so it's safe to call from a long-lived process (the
+// POST /api/admin/billing/collect-metrics route) as well as the CLI below.
+// This is also the shape persisted verbatim into
+// billing_metrics_job_runs.results.
+async function collectAllTenants(year, month) {
+    const { rows: tenants } = await platformDb.query(
+        `SELECT * FROM tenants WHERE status='active' AND site_url IS NOT NULL`
+    );
+
+    const results = [];
+    for (const tenant of tenants) {
+        try {
+            const metrics = await collectForTenant(tenant, year, month);
+            results.push({ tenant_id: tenant.id, tenant_name: tenant.name, success: true, metrics });
+        } catch (e) {
+            results.push({ tenant_id: tenant.id, tenant_name: tenant.name, success: false, error: e.message });
+        }
+    }
+    return results;
+}
+
 async function run() {
     if (process.env.NONDB_MODE === 'true') {
         console.log('[NonDB mode] Metrics collection requires a live tenant DB. Skipping.');
@@ -60,18 +84,16 @@ async function run() {
 
     console.log(`\nCollecting billing metrics for ${year}-${String(month).padStart(2,'0')}...\n`);
 
-    const { rows: tenants } = await platformDb.query(
-        `SELECT * FROM tenants WHERE status='active' AND site_url IS NOT NULL`
-    );
+    const results = await collectAllTenants(year, month);
 
-    if (!tenants.length) { console.log('No active tenants with a site_url configured.'); process.exit(0); }
+    if (!results.length) { console.log('No active tenants with a site_url configured.'); process.exit(0); }
 
-    for (const tenant of tenants) {
-        process.stdout.write(`  ${tenant.name} (${tenant.slug})... `);
-        try {
-            await collectForTenant(tenant, year, month);
-        } catch (e) {
-            console.error(`FAILED: ${e.message}`);
+    for (const r of results) {
+        if (r.success) {
+            console.log(`  ✓ ${r.tenant_name}: ${r.metrics.sales_count} sales (₹${r.metrics.sales_value}), ` +
+                        `${r.metrics.rental_units} rental units (₹${r.metrics.rental_income})`);
+        } else {
+            console.error(`  ✗ ${r.tenant_name}: FAILED: ${r.error}`);
         }
     }
 
@@ -83,4 +105,4 @@ if (require.main === module) {
     run().catch(e => { console.error(e); process.exit(1); });
 }
 
-module.exports = { collectForTenant, run };
+module.exports = { collectForTenant, collectAllTenants, run };

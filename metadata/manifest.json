@@ -10,6 +10,7 @@
     "subscription_plans",
     "tenant_subscriptions",
     "billing_metrics",
+    "billing_metrics_job_runs",
     "invoices",
     "invoice_line_items",
     "enhancements",

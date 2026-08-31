@@ -1,0 +1,18 @@
+{
+  "table": "billing_metrics_job_runs",
+  "description": "History of manual (and, once scheduled, automatic) runs of jobs/collect-metrics.js — powers the \"Collect Metrics Now\" button and job-history view on frontend/metrics.html.",
+  "columns": [
+    { "name": "id",              "type": "serial",    "primaryKey": true },
+    { "name": "period_year",     "type": "integer",   "notNull": true },
+    { "name": "period_month",    "type": "integer",   "notNull": true },
+    { "name": "triggered_by",    "type": "integer",   "references": "amr_users.id" },
+    { "name": "status",          "type": "varchar(20)", "notNull": true, "default": "running" },
+    { "name": "results",         "type": "jsonb" },
+    { "name": "started_at",      "type": "timestamp", "notNull": true },
+    { "name": "completed_at",    "type": "timestamp" }
+  ],
+  "constraints": [
+    { "type": "CHECK", "expression": "period_month BETWEEN 1 AND 12" },
+    { "type": "CHECK", "expression": "status IN ('running','success','partial_failure','failed')" }
+  ]
+}
