@@ -1,6 +1,6 @@
 ---
 name: project-billing-contact-routing
-description: "billing_contacts + billing_contact_scopes (2026-08-31) — a billing contact can be scoped to a whole tenant, one project, or one property, and a single contact can span DIFFERENT tenants (cross-tenant). Fallback to tenants.contact_* when no scope matches."
+description: "billing_contacts + billing_contact_scopes (2026-08-31) — a billing contact can be scoped to one or more tenants, projects, or properties in a single bulk call, and span DIFFERENT tenants (cross-tenant). Fallback to tenants.contact_* when no scope matches."
 metadata:
   type: project
 ---
@@ -111,3 +111,48 @@ super_admin). Test tenants/contact/scopes/user cleaned up afterward
 (delete was done via raw SQL rather than the API, so the
 `transactiondata/*.json` file mirrors had to be manually reset to `[]`
 afterward — direct DB writes never go through `mirrorWrite()`).
+
+**Bulk-add (2026-08-31, same day, api_version 1.3.14):** the initial screen
+only added one scope at a time. User restated the requirement more
+precisely — "a single contact can be scoped to **one or more** tenants,
+one or more projects, or one or more properties... in a single action" —
+confirmed via `AskUserQuestion` that this meant true multi-select/bulk-add,
+not just "the existing one-at-a-time flow already technically allows
+several scopes eventually."
+
+- **New `POST /api/billing-contacts/:id/scopes/bulk`** — `{ scopes: [...] }`,
+  each entry the same shape as the single-scope endpoint's body. Each entry
+  is inserted **independently** (not a single DB transaction) — one bad or
+  already-claimed entry never blocks the rest, since a staff member
+  bulk-adding 10 properties shouldn't lose all 10 because 1 was already
+  assigned elsewhere. Returns `{ created: [...], failed: [{entry, error}] }`
+  so the caller knows exactly which landed and why any didn't.
+  `insertOneScope()` extracted as a shared helper so the single-scope route
+  and the bulk route share identical validation/conflict logic — an
+  `.status`-tagged error thrown from the helper becomes either a single
+  HTTP response or one `failed` entry, same code path either way.
+- **Frontend (`billing-contacts.html`):** the Tenant field became a native
+  `<select multiple>` — selecting several tenants with `scope_type='tenant'`
+  bulk-creates one tenant-level scope per selected tenant (the cross-tenant
+  bulk case). For `scope_type='project'`/`'property'`, exactly one tenant
+  must be selected (a project/property id is only meaningful within one
+  tenant) and Project ID / Property ID became comma-separated text fields
+  (`parseIdList()` — dedupes, silently drops anything that doesn't parse)
+  — one scope created per id. The Load-Projects picker also became
+  multi-select, appending picked ids into the same comma-separated field
+  rather than replacing free-typed ones, so the two entry methods (pick
+  from list vs. type by hand) can be mixed in one add. Result message shows
+  "N added, M failed: <reasons>" rather than a single pass/fail.
+- **Test coverage:** 7 new tests in `billing-contacts-routes.test.js`
+  (cross-tenant bulk tenant-add, multi-project-add, multi-property-add,
+  partial failure reporting both a shape error and a duplicate-scope
+  conflict in the same batch, and a second contact's bulk attempt on an
+  already-claimed scope). All tiers re-pass: 283 DB + 42 NonDB + 453
+  unittests.
+- **Verified against the live local dev server** (curl-driven, no browser
+  tool): one bulk call created 2 tenant-level scopes across 2 different
+  tenants for the same contact in a single request; a second bulk call
+  created 3 project-level scopes on one tenant in one request; a third
+  call mixing one new id with one already-claimed id correctly created the
+  new one and reported the duplicate as `failed` rather than rejecting the
+  whole batch.

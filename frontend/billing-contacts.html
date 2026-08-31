@@ -148,36 +148,42 @@
                         <div id="scopes-body">Loading…</div>
                         ${window.__amrd.isReadOnly() ? '' : `
                             <div style="margin-top:16px;padding-top:16px;border-top:1px solid #f1f5f9">
-                                <h4 style="font-size:13px;margin:0 0 8px">Add a Scope</h4>
+                                <h4 style="font-size:13px;margin:0 0 8px">Add Scope(s)</h4>
                                 <div class="amrd-form-row">
-                                    <div><label>Tenant *</label>
-                                        <select id="s-tenant">
-                                            <option value="">-- Select --</option>
+                                    <div><label>Tenant(s) *</label>
+                                        <select id="s-tenant" multiple size="4" style="width:100%">
                                             ${_myTenants.map((t) => `<option value="${t.id}">${t.name}</option>`).join('')}
                                         </select>
+                                        <div style="font-size:11px;color:#94a3b8;margin-top:2px">Ctrl/Cmd-click to select multiple. For Project/Property scope, select exactly one.</div>
                                     </div>
                                     <div><label>Scope Type *</label>
                                         <select id="s-type" onchange="onScopeTypeChange()">
-                                            <option value="tenant">Whole Tenant</option>
-                                            <option value="project">Project</option>
-                                            <option value="property">Property</option>
+                                            <option value="tenant">Whole Tenant(s)</option>
+                                            <option value="project">Project(s)</option>
+                                            <option value="property">Propert(y/ies)</option>
                                         </select>
                                     </div>
                                 </div>
                                 <div class="amrd-form-row" id="s-project-row" style="display:none">
-                                    <div><label>Project</label>
-                                        <select id="s-project-picker" onchange="document.getElementById('s-project-id').value=this.value">
-                                            <option value="">-- Load projects (optional) --</option>
+                                    <div><label>Project(s)</label>
+                                        <select id="s-project-picker" multiple size="4" style="width:100%" onchange="onProjectPickerChange()">
                                         </select>
                                         <button type="button" class="amrd-btn amrd-btn-ghost amrd-btn-sm" style="margin-top:4px" onclick="loadTenantProjects()">Load Projects</button>
                                     </div>
-                                    <div><label>Project ID *</label><input id="s-project-id" type="number" placeholder="tenant's own project id"></div>
+                                    <div><label>Project ID(s) *</label>
+                                        <input id="s-project-id" placeholder="e.g. 101, 102, 103">
+                                        <div style="font-size:11px;color:#94a3b8;margin-top:2px">Comma-separated tenant project ids — one project-level scope is created per id.</div>
+                                    </div>
                                 </div>
                                 <div class="amrd-form-row" id="s-property-row" style="display:none">
-                                    <div><label>Property ID *</label><input id="s-property-id" type="number" placeholder="tenant's own property id — no picker available yet"></div>
+                                    <div><label>Property ID(s) *</label>
+                                        <input id="s-property-id" placeholder="e.g. 1, 2, 3">
+                                        <div style="font-size:11px;color:#94a3b8;margin-top:2px">Comma-separated tenant property ids (within the one project above) — no live picker yet.</div>
+                                    </div>
                                     <div></div>
                                 </div>
-                                <button class="amrd-btn amrd-btn-primary amrd-btn-sm" style="margin-top:10px" onclick="addScope(${contactId})">Add Scope</button>
+                                <button class="amrd-btn amrd-btn-primary amrd-btn-sm" style="margin-top:10px" onclick="addScopes(${contactId})">Add Scope(s)</button>
+                                <div id="scopes-add-note" style="font-size:12px;color:#64748b;margin-top:8px"></div>
                             </div>
                         `}
                         <div style="display:flex;justify-content:flex-end;margin-top:16px">
@@ -226,6 +232,17 @@
             document.getElementById('s-property-row').style.display = (type === 'property') ? 'grid' : 'none';
         }
 
+        function selectedTenantIds() {
+            return [...document.getElementById('s-tenant').selectedOptions].map((o) => parseInt(o.value, 10));
+        }
+
+        // Comma/whitespace-separated list of ids -> deduped array of ints,
+        // silently dropping anything that doesn't parse (a trailing comma,
+        // stray space) rather than erroring on it.
+        function parseIdList(raw) {
+            return [...new Set((raw || '').split(/[,\s]+/).map((s) => parseInt(s, 10)).filter((n) => Number.isFinite(n)))];
+        }
+
         // Reuses the same SSO project-modules proxy tenants.html's "Modules"
         // button already calls — the only tenant-side endpoint AmaraData has
         // that returns real {project_id, project_name} pairs. There's no
@@ -236,48 +253,82 @@
         // That endpoint is super_admin-only (tenants.js's requireSuperAdmin),
         // one level stricter than billing-contacts' own requireAdmin — a
         // plain admin can still fully use this page, just by typing the
-        // Project ID directly instead of picking from this list.
+        // Project ID(s) directly instead of picking from this list.
         async function loadTenantProjects() {
-            const tenantId = document.getElementById('s-tenant').value;
+            const tenantIds = selectedTenantIds();
             const picker = document.getElementById('s-project-picker');
-            if (!tenantId) {
-                document.getElementById('scopes-err').textContent = 'Select a tenant first.';
+            if (tenantIds.length !== 1) {
+                document.getElementById('scopes-err').textContent = 'Select exactly one tenant to load its projects.';
                 return;
             }
             document.getElementById('scopes-err').textContent = '';
             try {
-                const res = await window.__amrd.apiFetch(`/api/tenants/${tenantId}/modules`);
+                const res = await window.__amrd.apiFetch(`/api/tenants/${tenantIds[0]}/modules`);
                 const projects = [...new Map((res.data || []).map((r) => [r.project_id, r.project_name])).entries()];
-                picker.innerHTML = '<option value="">-- Select a project --</option>' +
-                    projects.map(([id, name]) => `<option value="${id}">${name || `Project ${id}`}</option>`).join('');
+                picker.innerHTML = projects.map(([id, name]) => `<option value="${id}">${name || `Project ${id}`}</option>`).join('');
             } catch (e) {
                 document.getElementById('scopes-err').textContent = window.__amrd.getStaff()?.role === 'super_admin'
                     ? e.message
-                    : 'Only super_admin can browse the live project list — enter the Project ID directly instead.';
+                    : 'Only super_admin can browse the live project list — enter the Project ID(s) directly instead.';
             }
         }
 
-        async function addScope(contactId) {
-            const errEl = document.getElementById('scopes-err');
-            errEl.textContent = '';
-            const tenant_id = document.getElementById('s-tenant').value;
-            const scope_type = document.getElementById('s-type').value;
-            if (!tenant_id) { errEl.textContent = 'Select a tenant.'; return; }
+        // Picking one or more projects from the live-loaded list appends
+        // their ids into the same comma-separated Project ID(s) field the
+        // free-text path uses — the two entry methods feed one field, so a
+        // staff member can mix "picked from the list" with "typed by hand".
+        function onProjectPickerChange() {
+            const picked = [...document.getElementById('s-project-picker').selectedOptions].map((o) => o.value);
+            const field = document.getElementById('s-project-id');
+            const existing = parseIdList(field.value);
+            field.value = [...new Set([...existing, ...picked.map((p) => parseInt(p, 10))])].join(', ');
+        }
 
-            const body = { tenant_id: parseInt(tenant_id, 10), scope_type };
-            if (scope_type === 'project' || scope_type === 'property') {
-                const pid = document.getElementById('s-project-id').value;
-                if (!pid) { errEl.textContent = 'Project ID is required for this scope type.'; return; }
-                body.tenant_project_id = parseInt(pid, 10);
-            }
-            if (scope_type === 'property') {
-                const prid = document.getElementById('s-property-id').value;
-                if (!prid) { errEl.textContent = 'Property ID is required for a property-level scope.'; return; }
-                body.tenant_property_id = parseInt(prid, 10);
+        // Builds one scope entry per (tenant × id) combination and submits
+        // them all in a single bulk call — this is how "one or more
+        // tenants, one or more projects, or one or more properties" in one
+        // action actually works: for scope_type='tenant', every SELECTED
+        // tenant becomes its own tenant-level scope (the cross-tenant bulk
+        // case); for project/property, exactly one tenant must be selected
+        // (a project/property id is only meaningful within one tenant) and
+        // every id in the comma-separated field becomes its own scope.
+        async function addScopes(contactId) {
+            const errEl = document.getElementById('scopes-err');
+            const noteEl = document.getElementById('scopes-add-note');
+            errEl.textContent = '';
+            noteEl.textContent = '';
+
+            const tenantIds = selectedTenantIds();
+            const scope_type = document.getElementById('s-type').value;
+            if (!tenantIds.length) { errEl.textContent = 'Select at least one tenant.'; return; }
+
+            let entries = [];
+            if (scope_type === 'tenant') {
+                entries = tenantIds.map((tenant_id) => ({ tenant_id, scope_type }));
+            } else {
+                if (tenantIds.length !== 1) { errEl.textContent = 'Select exactly one tenant for a Project or Property scope.'; return; }
+                const projectIds = parseIdList(document.getElementById('s-project-id').value);
+                if (!projectIds.length) { errEl.textContent = 'Enter at least one Project ID.'; return; }
+
+                if (scope_type === 'project') {
+                    entries = projectIds.map((tenant_project_id) => ({ tenant_id: tenantIds[0], scope_type, tenant_project_id }));
+                } else {
+                    const propertyIds = parseIdList(document.getElementById('s-property-id').value);
+                    if (!propertyIds.length) { errEl.textContent = 'Enter at least one Property ID.'; return; }
+                    // Every property id is scoped under EVERY selected project id —
+                    // typically just one project, but supports "these 3 properties,
+                    // each also appearing under project X and Y" without extra UI.
+                    entries = projectIds.flatMap((tenant_project_id) =>
+                        propertyIds.map((tenant_property_id) => ({ tenant_id: tenantIds[0], scope_type, tenant_project_id, tenant_property_id })));
+                }
             }
 
             try {
-                await window.__amrd.apiFetch(`/api/billing-contacts/${contactId}/scopes`, { method: 'POST', body: JSON.stringify(body) });
+                const res = await window.__amrd.apiFetch(`/api/billing-contacts/${contactId}/scopes/bulk`, {
+                    method: 'POST', body: JSON.stringify({ scopes: entries }),
+                });
+                const { created, failed } = res.data;
+                noteEl.textContent = `${created.length} scope(s) added.` + (failed.length ? ` ${failed.length} failed: ${failed.map((f) => f.error).join('; ')}` : '');
                 await loadScopesBody(contactId);
                 await runSearch();
             } catch (e) {
@@ -306,7 +357,8 @@
         window.closeScopes     = closeScopes;
         window.onScopeTypeChange   = onScopeTypeChange;
         window.loadTenantProjects  = loadTenantProjects;
-        window.addScope         = addScope;
+        window.onProjectPickerChange = onProjectPickerChange;
+        window.addScopes        = addScopes;
         window.removeScope      = removeScope;
 
         load();

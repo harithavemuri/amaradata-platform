@@ -133,6 +133,7 @@ describe('NonDB mode — writes are rejected', () => {
         ['PUT',    '/api/billing-contacts/1',                 'admin',     { name: 'X' }],
         ['DELETE', '/api/billing-contacts/1',                 'admin',     undefined],
         ['POST',   '/api/billing-contacts/1/scopes',          'admin',     { tenant_id: 1, scope_type: 'tenant' }],
+        ['POST',   '/api/billing-contacts/1/scopes/bulk',     'admin',     { scopes: [{ tenant_id: 1, scope_type: 'tenant' }] }],
         ['DELETE', '/api/billing-contacts/scopes/1',          'admin',     undefined],
         ['POST',   '/api/contact',                            null,        { name: 'X', email: 'x@x.com', message: 'hi' }],
         ['POST',   '/api/admin/users',                        'siteAdmin', { email: 'x@x.com', name: 'X' }],

@@ -127,6 +127,98 @@ describe('/api/billing-contacts', () => {
         });
     });
 
+    describe('POST /api/billing-contacts/:id/scopes/bulk', () => {
+        let bulkContactId, bulkTenantCId, bulkTenantDId;
+
+        beforeAll(async () => {
+            const c = await request(app).post('/api/billing-contacts').set(auth('admin'))
+                .send({ name: 'Bulk Scopes Owner', email: `bulk-${uid()}@x.com` });
+            bulkContactId = c.body.data.id;
+
+            const tc = await request(app).post('/api/tenants').set(auth('admin')).send({ name: 'BC Bulk Tenant C', slug: `bc-bulk-c-${uid()}` });
+            bulkTenantCId = tc.body.data.id;
+            const td = await request(app).post('/api/tenants').set(auth('admin')).send({ name: 'BC Bulk Tenant D', slug: `bc-bulk-d-${uid()}` });
+            bulkTenantDId = td.body.data.id;
+        });
+
+        it('without auth → 401', async () => {
+            const res = await request(app).post(`/api/billing-contacts/${bulkContactId}/scopes/bulk`)
+                .send({ scopes: [{ tenant_id: bulkTenantCId, scope_type: 'tenant' }] });
+            assertJson(res);
+            expect(res.status).toBe(401);
+        });
+
+        it('missing/empty scopes array → 400', async () => {
+            const res = await request(app).post(`/api/billing-contacts/${bulkContactId}/scopes/bulk`).set(auth('admin')).send({ scopes: [] });
+            assertJson(res);
+            expect(res.status).toBe(400);
+        });
+
+        it('one call creates tenant-level scopes on MULTIPLE tenants at once (cross-tenant bulk add)', async () => {
+            const res = await request(app).post(`/api/billing-contacts/${bulkContactId}/scopes/bulk`).set(auth('admin'))
+                .send({ scopes: [
+                    { tenant_id: bulkTenantCId, scope_type: 'tenant' },
+                    { tenant_id: bulkTenantDId, scope_type: 'tenant' },
+                ] });
+            assertJson(res);
+            expect(res.status).toBe(201);
+            expect(res.body.data.created).toHaveLength(2);
+            expect(res.body.data.failed).toHaveLength(0);
+
+            const check = await request(app).get(`/api/billing-contacts/${bulkContactId}`).set(auth('admin'));
+            expect(check.body.data.scopes.filter(s => s.scope_type === 'tenant')).toHaveLength(2);
+        });
+
+        it('one call creates multiple project-level scopes on the same tenant', async () => {
+            const res = await request(app).post(`/api/billing-contacts/${bulkContactId}/scopes/bulk`).set(auth('admin'))
+                .send({ scopes: [
+                    { tenant_id: bulkTenantCId, scope_type: 'project', tenant_project_id: 701 },
+                    { tenant_id: bulkTenantCId, scope_type: 'project', tenant_project_id: 702 },
+                    { tenant_id: bulkTenantCId, scope_type: 'project', tenant_project_id: 703 },
+                ] });
+            assertJson(res);
+            expect(res.status).toBe(201);
+            expect(res.body.data.created).toHaveLength(3);
+        });
+
+        it('one call creates multiple property-level scopes under the same project', async () => {
+            const res = await request(app).post(`/api/billing-contacts/${bulkContactId}/scopes/bulk`).set(auth('admin'))
+                .send({ scopes: [
+                    { tenant_id: bulkTenantCId, scope_type: 'property', tenant_project_id: 701, tenant_property_id: 1 },
+                    { tenant_id: bulkTenantCId, scope_type: 'property', tenant_project_id: 701, tenant_property_id: 2 },
+                ] });
+            assertJson(res);
+            expect(res.status).toBe(201);
+            expect(res.body.data.created).toHaveLength(2);
+        });
+
+        it('a partial failure (one entry invalid, one entry a duplicate) still creates the valid ones and reports the rest as failed', async () => {
+            const res = await request(app).post(`/api/billing-contacts/${bulkContactId}/scopes/bulk`).set(auth('admin'))
+                .send({ scopes: [
+                    { tenant_id: bulkTenantCId, scope_type: 'project', tenant_project_id: 999 },       // valid, new
+                    { tenant_id: bulkTenantCId, scope_type: 'project', tenant_project_id: 701 },       // duplicate — already claimed above
+                    { tenant_id: bulkTenantCId, scope_type: 'project' },                                // invalid shape — missing tenant_project_id
+                ] });
+            assertJson(res);
+            expect(res.status).toBe(201);
+            expect(res.body.data.created).toHaveLength(1);
+            expect(res.body.data.failed).toHaveLength(2);
+            expect(res.body.data.failed.some((f) => f.error.match(/already assigned/i))).toBe(true);
+            expect(res.body.data.failed.some((f) => f.error.match(/tenant_project_id/i))).toBe(true);
+        });
+
+        it('a second contact bulk-claiming an already-claimed scope reports it as failed, not a 500', async () => {
+            const other = await request(app).post('/api/billing-contacts').set(auth('admin'))
+                .send({ name: 'Bulk Duplicate Claimant', email: `bulkdup-${uid()}@x.com` });
+            const res = await request(app).post(`/api/billing-contacts/${other.body.data.id}/scopes/bulk`).set(auth('admin'))
+                .send({ scopes: [{ tenant_id: bulkTenantCId, scope_type: 'tenant' }] });
+            assertJson(res);
+            expect(res.status).toBe(201);
+            expect(res.body.data.created).toHaveLength(0);
+            expect(res.body.data.failed).toHaveLength(1);
+        });
+    });
+
     describe('GET /api/billing-contacts/resolve', () => {
         let propertyContactId, projectContactId, tenantContactId, resolveTenantId;
         const tenantProjectId = 501, tenantPropertyId = 9001;

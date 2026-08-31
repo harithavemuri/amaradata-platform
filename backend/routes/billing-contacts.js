@@ -172,26 +172,75 @@ router.delete('/:id', requireAdmin, blockNonDbWrite, async (req, res) => {
     } catch (e) { sendError(res, e, '[billing-contacts]'); }
 });
 
+// Shared by both the single-scope and bulk endpoints below. Throws with
+// `.status` set on a known, user-facing failure (400 shape error, 409
+// duplicate) so callers can turn that into either a single HTTP response
+// (POST /:id/scopes) or one entry in a bulk result's `failed` array
+// (POST /:id/scopes/bulk) — the validation/conflict logic itself is
+// identical either way, never duplicated.
+async function insertOneScope(contactId, { tenant_id, scope_type, tenant_project_id, tenant_property_id }) {
+    if (!tenant_id) {
+        throw Object.assign(new Error('tenant_id is required'), { status: 400 });
+    }
+    const shapeError = validateScopeShape(scope_type, tenant_project_id, tenant_property_id);
+    if (shapeError) throw Object.assign(new Error(shapeError), { status: 400 });
+
+    try {
+        const { rows } = await db.query(
+            `INSERT INTO billing_contact_scopes (billing_contact_id, tenant_id, scope_type, tenant_project_id, tenant_property_id)
+             VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+            [contactId, tenant_id, scope_type, tenant_project_id ?? null, tenant_property_id ?? null],
+        );
+        return rows[0];
+    } catch (e) {
+        if (e.code === '23505') throw Object.assign(new Error('Another billing contact is already assigned to this exact scope.'), { status: 409 });
+        throw e;
+    }
+}
+
 // POST /api/billing-contacts/:id/scopes  { tenant_id, scope_type, tenant_project_id?, tenant_property_id? }
 router.post('/:id/scopes', requireAdmin, blockNonDbWrite, async (req, res) => {
-    const { tenant_id, scope_type, tenant_project_id, tenant_property_id } = req.body;
-    if (!tenant_id) return res.status(400).json({ error: 'tenant_id is required' });
-    const shapeError = validateScopeShape(scope_type, tenant_project_id, tenant_property_id);
-    if (shapeError) return res.status(400).json({ error: shapeError });
     try {
         const { rows: contactRows } = await db.query('SELECT id FROM billing_contacts WHERE id = $1', [req.params.id]);
         if (!contactRows[0]) return res.status(404).json({ error: 'Billing contact not found' });
 
-        const { rows } = await db.query(
-            `INSERT INTO billing_contact_scopes (billing_contact_id, tenant_id, scope_type, tenant_project_id, tenant_property_id)
-             VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-            [req.params.id, tenant_id, scope_type, tenant_project_id ?? null, tenant_property_id ?? null],
-        );
-        res.status(201).json({ success: true, data: rows[0] });
+        const row = await insertOneScope(req.params.id, req.body);
+        res.status(201).json({ success: true, data: row });
     } catch (e) {
-        if (e.code === '23505') return res.status(409).json({ error: 'Another billing contact is already assigned to this exact scope.' });
+        if (e.status) return res.status(e.status).json({ error: e.message });
         sendError(res, e, '[billing-contacts/scopes]');
     }
+});
+
+// POST /api/billing-contacts/:id/scopes/bulk  { scopes: [{ tenant_id, scope_type, tenant_project_id?, tenant_property_id? }, ...] }
+// Adds several scopes for one contact in a single call — e.g. several
+// properties under one project, several projects under one tenant, or
+// several WHOLE TENANTS at once (the cross-tenant bulk case). Each entry is
+// inserted independently: one bad or already-claimed entry never blocks
+// the rest, since a staff member picking 10 properties shouldn't lose all
+// 10 because 1 was already assigned to someone else — the response
+// reports exactly which entries landed and which didn't, and why.
+router.post('/:id/scopes/bulk', requireAdmin, blockNonDbWrite, async (req, res) => {
+    const { scopes } = req.body || {};
+    if (!Array.isArray(scopes) || scopes.length === 0) {
+        return res.status(400).json({ error: 'scopes must be a non-empty array' });
+    }
+    try {
+        const { rows: contactRows } = await db.query('SELECT id FROM billing_contacts WHERE id = $1', [req.params.id]);
+        if (!contactRows[0]) return res.status(404).json({ error: 'Billing contact not found' });
+
+        const created = [];
+        const failed = [];
+        for (const entry of scopes) {
+            try {
+                created.push(await insertOneScope(req.params.id, entry));
+            } catch (e) {
+                if (!e.status) throw e; // an unexpected (non-validation/conflict) error still fails the whole request
+                failed.push({ entry, error: e.message });
+            }
+        }
+        res.status(201).json({ success: true, data: { created, failed } });
+    } catch (e) { sendError(res, e, '[billing-contacts/scopes/bulk]'); }
 });
 
 // DELETE /api/billing-contacts/scopes/:scopeId — removes one scope mapping
