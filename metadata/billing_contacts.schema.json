@@ -1,0 +1,17 @@
+{
+  "table": "billing_contacts",
+  "description": "A billing contact independent of any single tenant — scoped to tenant/project/property via billing_contact_scopes. See metadata/billing_contact_scopes.schema.json.",
+  "columns": [
+    { "name": "id",              "type": "serial",    "primaryKey": true },
+    { "name": "name",            "type": "varchar(255)", "notNull": true },
+    { "name": "email",           "type": "varchar(255)", "notNull": true },
+    { "name": "phone",           "type": "varchar(50)" },
+    { "name": "billing_address", "type": "text" },
+    { "name": "gstin",           "type": "varchar(20)" },
+    { "name": "pan",             "type": "varchar(20)" },
+    { "name": "notes",           "type": "text" },
+    { "name": "is_active",       "type": "boolean",   "notNull": true, "default": true },
+    { "name": "created_at",      "type": "timestamp", "notNull": true },
+    { "name": "updated_at",      "type": "timestamp", "notNull": true }
+  ]
+}

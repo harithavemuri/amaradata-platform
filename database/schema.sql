@@ -222,6 +222,61 @@ CREATE TABLE IF NOT EXISTS owner_tenant_links (
 CREATE INDEX IF NOT EXISTS idx_otl_owner  ON owner_tenant_links(owner_user_id);
 CREATE INDEX IF NOT EXISTS idx_otl_tenant ON owner_tenant_links(tenant_id);
 
+-- A billing contact independent of any single tenant — one contact can be
+-- scoped (via billing_contact_scopes below) to a whole tenant, one specific
+-- project within a tenant, one specific property within a project, or
+-- several of these across DIFFERENT tenants at once (e.g. an owner who
+-- holds properties in two different tenants and wants one consolidated
+-- point of contact). tenants.contact_name/email/phone/billing_address
+-- above remain untouched as the fallback when no scope row matches a given
+-- tenant at all — this is additive, not a replacement.
+CREATE TABLE IF NOT EXISTS billing_contacts (
+    id              SERIAL PRIMARY KEY,
+    name            VARCHAR(255) NOT NULL,
+    email           VARCHAR(255) NOT NULL,
+    phone           VARCHAR(50),
+    billing_address TEXT,
+    gstin           VARCHAR(20),
+    pan             VARCHAR(20),
+    notes           TEXT,
+    is_active       BOOLEAN      NOT NULL DEFAULT true,
+    created_at      TIMESTAMP    NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMP    NOT NULL DEFAULT NOW()
+);
+
+-- One row per (contact, scope) assignment. tenant_project_id/
+-- tenant_property_id are the TENANT's own internal ids — opaque to
+-- AmaraData, same convention as owner_tenant_links.tenant_project_id/
+-- tenant_owner_id, since AmaraData has no projects/properties table of its
+-- own. A contact can hold many scope rows; resolving "who is billed for
+-- property X in project Y of tenant Z" picks the most specific match
+-- (property > project > tenant) — see billing-contacts.js's resolve logic.
+CREATE TABLE IF NOT EXISTS billing_contact_scopes (
+    id                  SERIAL PRIMARY KEY,
+    billing_contact_id  INTEGER      NOT NULL REFERENCES billing_contacts(id) ON DELETE CASCADE,
+    tenant_id           INTEGER      NOT NULL REFERENCES tenants(id)          ON DELETE CASCADE,
+    scope_type          VARCHAR(20)  NOT NULL CHECK (scope_type IN ('tenant', 'project', 'property')),
+    tenant_project_id   INTEGER,  -- required for 'project'/'property', NULL for 'tenant'
+    tenant_property_id  INTEGER,  -- required for 'property' only
+    created_at          TIMESTAMP    NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMP    NOT NULL DEFAULT NOW(),
+    CONSTRAINT billing_contact_scope_shape CHECK (
+        (scope_type = 'tenant'   AND tenant_project_id IS NULL     AND tenant_property_id IS NULL) OR
+        (scope_type = 'project'  AND tenant_project_id IS NOT NULL AND tenant_property_id IS NULL) OR
+        (scope_type = 'property' AND tenant_project_id IS NOT NULL AND tenant_property_id IS NOT NULL)
+    )
+);
+
+-- Two different contacts can never both claim the EXACT same scope —
+-- COALESCE normalizes the nullable id columns to 0 so Postgres's usual
+-- "NULLs are never equal" behavior doesn't let duplicate tenant-level rows
+-- (both NULL/NULL) slip past a plain UNIQUE constraint.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_billing_contact_scope_unique
+    ON billing_contact_scopes (tenant_id, scope_type, COALESCE(tenant_project_id, 0), COALESCE(tenant_property_id, 0));
+
+CREATE INDEX IF NOT EXISTS idx_bcs_contact ON billing_contact_scopes(billing_contact_id);
+CREATE INDEX IF NOT EXISTS idx_bcs_tenant  ON billing_contact_scopes(tenant_id);
+
 -- Reusable plan definitions
 CREATE TABLE IF NOT EXISTS subscription_plans (
     id              SERIAL PRIMARY KEY,
@@ -640,5 +695,6 @@ INSERT INTO schema_migrations (version, description) VALUES
     ('2026.08.29.001', 'Add property_owner role (portal.amaradata.com login, rejected on this staff app) and tenants.owner_portal_api_key(_secret_arn) for the per-tenant owner-portal API key'),
     ('2026.08.30.001', 'Add amr_users.owner_portal_uid (per-owner cross-tenant identity) and owner_tenant_links table, replacing email-based tenant owner matching'),
     ('2026.08.30.002', 'Add tenants.billing_api_key(_secret_arn) for GET .../api/billing/* — jobs/collect-metrics.js no longer connects directly to a tenant''s DB'),
-    ('2026.08.30.003', 'Add billing_metrics_job_runs table — history for the "Collect Metrics Now" button on frontend/metrics.html')
+    ('2026.08.30.003', 'Add billing_metrics_job_runs table — history for the "Collect Metrics Now" button on frontend/metrics.html'),
+    ('2026.08.31.001', 'Add billing_contacts + billing_contact_scopes — flexible billing contact routing at tenant/project/property granularity, cross-tenant capable')
 ON CONFLICT (version) DO NOTHING;

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+  <title>Billing Contacts — AmaraData Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="/js/platform.js"></script>
+</head>
+<body>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const root = window.__amrd.renderSidebar('Billing Contacts');
+
+        let _myTenants  = [];
+        let _contacts   = [];
+        let _page       = 1;
+        const PAGE_SIZE = 20;
+
+        const tr = await window.__amrd.apiFetch('/api/tenants/mine');
+        _myTenants = tr.data || [];
+        const tenantName = (id) => _myTenants.find((t) => t.id == id)?.name || `Tenant ${id}`;
+
+        function load() {
+            root.innerHTML = `
+                <div class="amrd-toolbar">
+                    <span id="bc-count" style="font-size:13px;color:#64748b"></span>
+                    ${window.__amrd.isReadOnly() ? '' : '<button class="amrd-btn amrd-btn-primary amrd-btn-sm" onclick="openContactForm()">+ New Contact</button>'}
+                </div>
+                <div class="amrd-card" style="padding:0">
+                    <div class="amrd-table-wrap">
+                    <table class="amrd-table">
+                        <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Scopes</th><th></th></tr></thead>
+                        <tbody id="bc-tbody"></tbody>
+                    </table>
+                    </div>
+                </div>
+                <div id="bc-pagination"></div>
+                <div id="form-slot"></div>
+                <div id="scopes-modal-slot"></div>`;
+        }
+
+        async function runSearch() {
+            const res = await window.__amrd.apiFetch('/api/billing-contacts');
+            _contacts = res.data || [];
+            _page = 1;
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('bc-tbody');
+            const pageRows = window.__amrd.paginate(_contacts, _page, PAGE_SIZE);
+            tbody.innerHTML = pageRows.map((c) => `
+                <tr>
+                    <td><strong>${c.name}</strong></td>
+                    <td>${c.email}</td>
+                    <td>${c.phone || '—'}</td>
+                    <td><button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="openScopes(${c.id})">Manage Scopes</button></td>
+                    <td>
+                        ${window.__amrd.isReadOnly() ? '' : `
+                            <button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="openContactForm(${c.id})">Edit</button>
+                            <button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="deleteContact(${c.id})">Delete</button>
+                        `}
+                    </td>
+                </tr>`).join('') || '<tr><td colspan="5" style="color:#94a3b8;text-align:center;padding:24px">No billing contacts yet</td></tr>';
+
+            document.getElementById('bc-count').textContent = `${_contacts.length} contact(s)`;
+            window.__amrd.renderPagination(document.getElementById('bc-pagination'), {
+                page: _page, pageSize: PAGE_SIZE, total: _contacts.length,
+                onChange: (p) => { _page = p; renderTable(); },
+            });
+        }
+
+        function openContactForm(id) {
+            const existing = id ? _contacts.find((c) => c.id === id) : null;
+            const slot = document.getElementById('form-slot');
+            slot.innerHTML = `
+                <div class="amrd-card">
+                    <h3>${existing ? 'Edit' : 'New'} Billing Contact</h3>
+                    <div class="amrd-form-row">
+                        <div><label>Name *</label><input id="f-name" value="${existing?.name || ''}"></div>
+                        <div><label>Email *</label><input id="f-email" value="${existing?.email || ''}"></div>
+                    </div>
+                    <div class="amrd-form-row">
+                        <div><label>Phone</label><input id="f-phone" value="${existing?.phone || ''}"></div>
+                        <div><label>GSTIN</label><input id="f-gstin" value="${existing?.gstin || ''}"></div>
+                    </div>
+                    <div class="amrd-form-row">
+                        <div><label>PAN</label><input id="f-pan" value="${existing?.pan || ''}"></div>
+                        <div><label>Billing Address</label><input id="f-address" value="${existing?.billing_address || ''}"></div>
+                    </div>
+                    <div class="amrd-form-row full"><div><label>Notes</label><textarea id="f-notes" rows="2">${existing?.notes || ''}</textarea></div></div>
+                    <div style="margin-top:16px;display:flex;gap:10px">
+                        <button class="amrd-btn amrd-btn-primary" onclick="saveContact(${existing ? existing.id : 'null'})">Save</button>
+                        <button class="amrd-btn amrd-btn-ghost" onclick="document.getElementById('form-slot').innerHTML=''">Cancel</button>
+                    </div>
+                    <div id="save-err" style="color:#dc2626;font-size:13px;margin-top:8px"></div>
+                </div>`;
+        }
+
+        async function saveContact(id) {
+            const body = {
+                name: document.getElementById('f-name').value,
+                email: document.getElementById('f-email').value,
+                phone: document.getElementById('f-phone').value || null,
+                gstin: document.getElementById('f-gstin').value || null,
+                pan: document.getElementById('f-pan').value || null,
+                billing_address: document.getElementById('f-address').value || null,
+                notes: document.getElementById('f-notes').value || null,
+            };
+            try {
+                await window.__amrd.apiFetch(id ? `/api/billing-contacts/${id}` : '/api/billing-contacts', {
+                    method: id ? 'PUT' : 'POST',
+                    body: JSON.stringify(body),
+                });
+                document.getElementById('form-slot').innerHTML = '';
+                await runSearch();
+            } catch (e) {
+                document.getElementById('save-err').textContent = e.message;
+            }
+        }
+
+        async function deleteContact(id) {
+            if (!confirm('Delete this billing contact and all of its scope assignments?')) return;
+            try {
+                await window.__amrd.apiFetch(`/api/billing-contacts/${id}`, { method: 'DELETE' });
+                await runSearch();
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        const SCOPE_LABELS = { tenant: 'Whole Tenant', project: 'Project', property: 'Property' };
+
+        async function openScopes(contactId) {
+            const slot = document.getElementById('scopes-modal-slot');
+            slot.innerHTML = `
+                <div style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center">
+                    <div style="background:#fff;border-radius:12px;padding:28px;width:100%;max-width:600px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+                        <h3 style="margin:0 0 4px;font-size:16px;color:#0f172a">Scopes</h3>
+                        <p style="margin:0 0 16px;font-size:12px;color:#94a3b8">
+                            Which tenant(s)/project(s)/propert(y/ies) this contact is billed for. The same
+                            contact can be scoped across MULTIPLE tenants — each row below is independent.
+                        </p>
+                        <div id="scopes-err" style="color:#dc2626;font-size:13px;margin-bottom:10px"></div>
+                        <div id="scopes-body">Loading…</div>
+                        ${window.__amrd.isReadOnly() ? '' : `
+                            <div style="margin-top:16px;padding-top:16px;border-top:1px solid #f1f5f9">
+                                <h4 style="font-size:13px;margin:0 0 8px">Add a Scope</h4>
+                                <div class="amrd-form-row">
+                                    <div><label>Tenant *</label>
+                                        <select id="s-tenant">
+                                            <option value="">-- Select --</option>
+                                            ${_myTenants.map((t) => `<option value="${t.id}">${t.name}</option>`).join('')}
+                                        </select>
+                                    </div>
+                                    <div><label>Scope Type *</label>
+                                        <select id="s-type" onchange="onScopeTypeChange()">
+                                            <option value="tenant">Whole Tenant</option>
+                                            <option value="project">Project</option>
+                                            <option value="property">Property</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="amrd-form-row" id="s-project-row" style="display:none">
+                                    <div><label>Project</label>
+                                        <select id="s-project-picker" onchange="document.getElementById('s-project-id').value=this.value">
+                                            <option value="">-- Load projects (optional) --</option>
+                                        </select>
+                                        <button type="button" class="amrd-btn amrd-btn-ghost amrd-btn-sm" style="margin-top:4px" onclick="loadTenantProjects()">Load Projects</button>
+                                    </div>
+                                    <div><label>Project ID *</label><input id="s-project-id" type="number" placeholder="tenant's own project id"></div>
+                                </div>
+                                <div class="amrd-form-row" id="s-property-row" style="display:none">
+                                    <div><label>Property ID *</label><input id="s-property-id" type="number" placeholder="tenant's own property id — no picker available yet"></div>
+                                    <div></div>
+                                </div>
+                                <button class="amrd-btn amrd-btn-primary amrd-btn-sm" style="margin-top:10px" onclick="addScope(${contactId})">Add Scope</button>
+                            </div>
+                        `}
+                        <div style="display:flex;justify-content:flex-end;margin-top:16px">
+                            <button class="amrd-btn amrd-btn-ghost" onclick="closeScopes()">Close</button>
+                        </div>
+                    </div>
+                </div>`;
+            await loadScopesBody(contactId);
+        }
+
+        async function loadScopesBody(contactId) {
+            try {
+                const res = await window.__amrd.apiFetch(`/api/billing-contacts/${contactId}`);
+                renderScopesBody(res.data.scopes || []);
+            } catch (e) {
+                document.getElementById('scopes-body').innerHTML = '';
+                document.getElementById('scopes-err').textContent = e.message;
+            }
+        }
+
+        function renderScopesBody(scopes) {
+            const body = document.getElementById('scopes-body');
+            if (!scopes.length) {
+                body.innerHTML = '<p style="color:#94a3b8;font-size:13px">No scopes assigned yet — this contact will not receive anything until at least one scope is added.</p>';
+                return;
+            }
+            body.innerHTML = `
+                <table class="amrd-table">
+                    <thead><tr><th>Tenant</th><th>Scope</th><th>Project ID</th><th>Property ID</th><th></th></tr></thead>
+                    <tbody>
+                        ${scopes.map((s) => `
+                            <tr>
+                                <td>${s.tenant_name || tenantName(s.tenant_id)}</td>
+                                <td>${SCOPE_LABELS[s.scope_type] || s.scope_type}</td>
+                                <td>${s.tenant_project_id ?? '—'}</td>
+                                <td>${s.tenant_property_id ?? '—'}</td>
+                                <td>${window.__amrd.isReadOnly() ? '' : `<button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="removeScope(${s.id}, ${s.billing_contact_id})">Remove</button>`}</td>
+                            </tr>`).join('')}
+                    </tbody>
+                </table>`;
+        }
+
+        function onScopeTypeChange() {
+            const type = document.getElementById('s-type').value;
+            document.getElementById('s-project-row').style.display  = (type === 'project' || type === 'property') ? 'grid' : 'none';
+            document.getElementById('s-property-row').style.display = (type === 'property') ? 'grid' : 'none';
+        }
+
+        // Reuses the same SSO project-modules proxy tenants.html's "Modules"
+        // button already calls — the only tenant-side endpoint AmaraData has
+        // that returns real {project_id, project_name} pairs. There's no
+        // equivalent "list properties" endpoint yet, so property id stays a
+        // free-text field the staff member fills in from the tenant's own
+        // admin UI — see project-billing-contact-routing.md.
+        //
+        // That endpoint is super_admin-only (tenants.js's requireSuperAdmin),
+        // one level stricter than billing-contacts' own requireAdmin — a
+        // plain admin can still fully use this page, just by typing the
+        // Project ID directly instead of picking from this list.
+        async function loadTenantProjects() {
+            const tenantId = document.getElementById('s-tenant').value;
+            const picker = document.getElementById('s-project-picker');
+            if (!tenantId) {
+                document.getElementById('scopes-err').textContent = 'Select a tenant first.';
+                return;
+            }
+            document.getElementById('scopes-err').textContent = '';
+            try {
+                const res = await window.__amrd.apiFetch(`/api/tenants/${tenantId}/modules`);
+                const projects = [...new Map((res.data || []).map((r) => [r.project_id, r.project_name])).entries()];
+                picker.innerHTML = '<option value="">-- Select a project --</option>' +
+                    projects.map(([id, name]) => `<option value="${id}">${name || `Project ${id}`}</option>`).join('');
+            } catch (e) {
+                document.getElementById('scopes-err').textContent = window.__amrd.getStaff()?.role === 'super_admin'
+                    ? e.message
+                    : 'Only super_admin can browse the live project list — enter the Project ID directly instead.';
+            }
+        }
+
+        async function addScope(contactId) {
+            const errEl = document.getElementById('scopes-err');
+            errEl.textContent = '';
+            const tenant_id = document.getElementById('s-tenant').value;
+            const scope_type = document.getElementById('s-type').value;
+            if (!tenant_id) { errEl.textContent = 'Select a tenant.'; return; }
+
+            const body = { tenant_id: parseInt(tenant_id, 10), scope_type };
+            if (scope_type === 'project' || scope_type === 'property') {
+                const pid = document.getElementById('s-project-id').value;
+                if (!pid) { errEl.textContent = 'Project ID is required for this scope type.'; return; }
+                body.tenant_project_id = parseInt(pid, 10);
+            }
+            if (scope_type === 'property') {
+                const prid = document.getElementById('s-property-id').value;
+                if (!prid) { errEl.textContent = 'Property ID is required for a property-level scope.'; return; }
+                body.tenant_property_id = parseInt(prid, 10);
+            }
+
+            try {
+                await window.__amrd.apiFetch(`/api/billing-contacts/${contactId}/scopes`, { method: 'POST', body: JSON.stringify(body) });
+                await loadScopesBody(contactId);
+                await runSearch();
+            } catch (e) {
+                errEl.textContent = e.message;
+            }
+        }
+
+        async function removeScope(scopeId, contactId) {
+            try {
+                await window.__amrd.apiFetch(`/api/billing-contacts/scopes/${scopeId}`, { method: 'DELETE' });
+                await loadScopesBody(contactId);
+                await runSearch();
+            } catch (e) {
+                document.getElementById('scopes-err').textContent = e.message;
+            }
+        }
+
+        function closeScopes() {
+            document.getElementById('scopes-modal-slot').innerHTML = '';
+        }
+
+        window.openContactForm = openContactForm;
+        window.saveContact     = saveContact;
+        window.deleteContact   = deleteContact;
+        window.openScopes      = openScopes;
+        window.closeScopes     = closeScopes;
+        window.onScopeTypeChange   = onScopeTypeChange;
+        window.loadTenantProjects  = loadTenantProjects;
+        window.addScope         = addScope;
+        window.removeScope      = removeScope;
+
+        load();
+        await runSearch();
+    });
+  </script>
+</body>
+</html>

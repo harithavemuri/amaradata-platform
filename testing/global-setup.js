@@ -11,7 +11,7 @@ const { Pool } = pg;
 // tier has to actually run against Postgres, as intended).
 const TABLES = [
     'email_placements', 'email_folders',
-    'amr_password_reset_tokens', 'owner_tenant_links', 'group_tenant', 'amr_group_members',
+    'amr_password_reset_tokens', 'owner_tenant_links', 'billing_contacts', 'billing_contact_scopes', 'group_tenant', 'amr_group_members',
     'contact_submissions', 'payments', 'invoice_line_items', 'billing_metrics', 'billing_metrics_job_runs',
     'tenant_subscriptions', 'invoices', 'enhancements',
     'tenants', 'subscription_plans', 'amr_groups',

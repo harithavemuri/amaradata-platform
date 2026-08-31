@@ -57,6 +57,7 @@ app.use('/api/contact',       require('./backend/routes/contact'));
 app.use('/api/tenants',       requireAuth, require('./backend/routes/tenants'));
 app.use('/api/subscriptions', requireAuth, require('./backend/routes/subscriptions'));
 app.use('/api/invoices',      requireAuth, require('./backend/routes/invoices'));
+app.use('/api/billing-contacts', requireAuth, require('./backend/routes/billing-contacts'));
 app.use('/api/enhancements',  requireAuth, require('./backend/routes/enhancements'));
 app.use('/api/metrics',       requireAuth, require('./backend/routes/metrics'));
 app.use('/api/email',         requireAuth, require('./backend/routes/email'));

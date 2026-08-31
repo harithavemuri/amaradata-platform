@@ -35,6 +35,8 @@ beforeAll(async () => {
     seed('subscription_plans', [{ id: 1, name: 'Standard' }, { id: 2, name: 'Suggest Plan', sales_pct: 5, rental_pct: 10, min_monthly_fee: 2000, currency_code: 'INR' }]);
     seed('tenant_subscriptions', [{ id: 1, tenant_id: 1, plan_id: 2, effective_from: '2020-01-01', effective_to: null }]);
     seed('billing_metrics', [{ id: 1, tenant_id: 1, period_year: 2026, period_month: 6, sales_count: 2, sales_value: 1000000, rental_units: 3, rental_income: 50000, active_properties: 10 }]);
+    seed('billing_contacts', [{ id: 1, name: 'Seeded Billing Contact', email: 'bc@x.com' }]);
+    seed('billing_contact_scopes', [{ id: 1, billing_contact_id: 1, tenant_id: 1, scope_type: 'tenant', tenant_project_id: null, tenant_property_id: null }]);
     seed('contact_submissions', [{ id: 1, ref_number: 'REF-1', name: 'X', email: 'x@x.com', message: 'hi' }]);
     seed('amr_roles', [{ id: 1, name: 'staff', label: 'Staff', is_system: true }]);
     seed('amr_users', [{
@@ -101,6 +103,16 @@ describe('NonDB mode — reads still work', () => {
         expect(sales.amount).toBe(50000);  // 5% of 1,000,000
         expect(rental.amount).toBe(5000);  // 10% of 50,000
     });
+
+    it('GET /api/billing-contacts/resolve resolves the seeded tenant-level scope from files, same as DB mode', async () => {
+        const res = await request(app)
+            .get('/api/billing-contacts/resolve?tenant_id=1')
+            .set(auth('staff'));
+        assertJson(res);
+        expect(res.status).toBe(200);
+        expect(res.body.data.billing_contact_id).toBe(1);
+        expect(res.body.data.matched_scope).toBe('tenant');
+    });
 });
 
 describe('NonDB mode — writes are rejected', () => {
@@ -117,6 +129,11 @@ describe('NonDB mode — writes are rejected', () => {
         ['POST',   '/api/subscriptions/plans',                'admin',     { name: 'X' }],
         ['DELETE', '/api/subscriptions/plans/1',              'admin',     undefined],
         ['POST',   '/api/subscriptions',                      'admin',     { tenant_id: 1, plan_id: 1, effective_from: '2026-01-01' }],
+        ['POST',   '/api/billing-contacts',                   'admin',     { name: 'X', email: 'x@x.com' }],
+        ['PUT',    '/api/billing-contacts/1',                 'admin',     { name: 'X' }],
+        ['DELETE', '/api/billing-contacts/1',                 'admin',     undefined],
+        ['POST',   '/api/billing-contacts/1/scopes',          'admin',     { tenant_id: 1, scope_type: 'tenant' }],
+        ['DELETE', '/api/billing-contacts/scopes/1',          'admin',     undefined],
         ['POST',   '/api/contact',                            null,        { name: 'X', email: 'x@x.com', message: 'hi' }],
         ['POST',   '/api/admin/users',                        'siteAdmin', { email: 'x@x.com', name: 'X' }],
         ['PUT',    '/api/admin/users/1',                      'siteAdmin', { name: 'X' }],

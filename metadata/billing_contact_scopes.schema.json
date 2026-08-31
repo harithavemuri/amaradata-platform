@@ -1,0 +1,19 @@
+{
+  "table": "billing_contact_scopes",
+  "description": "Maps a billing_contacts row to a scope: a whole tenant, one project within a tenant, or one property within a project. tenant_project_id/tenant_property_id are the tenant's own internal ids (opaque to AmaraData). A contact can hold multiple scope rows across different tenants (cross-tenant billing contact).",
+  "columns": [
+    { "name": "id",                 "type": "serial",    "primaryKey": true },
+    { "name": "billing_contact_id", "type": "integer",   "notNull": true, "references": "billing_contacts.id" },
+    { "name": "tenant_id",          "type": "integer",   "notNull": true, "references": "tenants.id" },
+    { "name": "scope_type",         "type": "varchar(20)", "notNull": true },
+    { "name": "tenant_project_id",  "type": "integer" },
+    { "name": "tenant_property_id", "type": "integer" },
+    { "name": "created_at",         "type": "timestamp", "notNull": true },
+    { "name": "updated_at",         "type": "timestamp", "notNull": true }
+  ],
+  "constraints": [
+    { "type": "CHECK", "expression": "scope_type IN ('tenant','project','property')" },
+    { "type": "CHECK", "expression": "shape must match scope_type — see billing_contact_scope_shape in schema.sql" },
+    { "type": "UNIQUE", "columns": ["tenant_id", "scope_type", "tenant_project_id", "tenant_property_id"], "note": "expression index with COALESCE(...,0) to normalize NULLs" }
+  ]
+}
