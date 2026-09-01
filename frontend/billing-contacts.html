@@ -32,7 +32,7 @@
                 <div class="amrd-card" style="padding:0">
                     <div class="amrd-table-wrap">
                     <table class="amrd-table">
-                        <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Scopes</th><th></th></tr></thead>
+                        <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Billing Scopes</th><th></th></tr></thead>
                         <tbody id="bc-tbody"></tbody>
                     </table>
                     </div>
@@ -57,7 +57,7 @@
                     <td><strong>${c.name}</strong></td>
                     <td>${c.email}</td>
                     <td>${c.phone || '—'}</td>
-                    <td><button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="openScopes(${c.id})">Manage Scopes</button></td>
+                    <td><button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="openScopes(${c.id})">Manage Billing Scopes</button></td>
                     <td>
                         ${window.__amrd.isReadOnly() ? '' : `
                             <button class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="openContactForm(${c.id})">Edit</button>
@@ -139,7 +139,7 @@
             slot.innerHTML = `
                 <div style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center">
                     <div style="background:#fff;border-radius:12px;padding:28px;width:100%;max-width:600px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-                        <h3 style="margin:0 0 4px;font-size:16px;color:#0f172a">Scopes</h3>
+                        <h3 style="margin:0 0 4px;font-size:16px;color:#0f172a">Billing Scopes</h3>
                         <p style="margin:0 0 16px;font-size:12px;color:#94a3b8">
                             Which tenant(s)/project(s)/propert(y/ies) this contact is billed for. The same
                             contact can be scoped across MULTIPLE tenants — each row below is independent.
@@ -148,7 +148,7 @@
                         <div id="scopes-body">Loading…</div>
                         ${window.__amrd.isReadOnly() ? '' : `
                             <div style="margin-top:16px;padding-top:16px;border-top:1px solid #f1f5f9">
-                                <h4 style="font-size:13px;margin:0 0 8px">Add Scope(s)</h4>
+                                <h4 style="font-size:13px;margin:0 0 8px">Add Billing Scope(s)</h4>
                                 <div class="amrd-form-row">
                                     <div><label>Tenant(s) *</label>
                                         <select id="s-tenant" multiple size="4" style="width:100%">
@@ -182,7 +182,7 @@
                                     </div>
                                     <div></div>
                                 </div>
-                                <button class="amrd-btn amrd-btn-primary amrd-btn-sm" style="margin-top:10px" onclick="addScopes(${contactId})">Add Scope(s)</button>
+                                <button class="amrd-btn amrd-btn-primary amrd-btn-sm" style="margin-top:10px" onclick="addScopes(${contactId})">Add Billing Scope(s)</button>
                                 <div id="scopes-add-note" style="font-size:12px;color:#64748b;margin-top:8px"></div>
                             </div>
                         `}
