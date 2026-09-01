@@ -64,12 +64,73 @@ error) rather than changing that route's role gate, which is out of scope
 for this feature and used elsewhere (`tenants.html`'s Modules button) for
 a reason not investigated here.
 
-**No "list properties" endpoint exists anywhere** (tenant-side or
-AmaraData-side) — property id is always free-typed by staff, sourced from
-the tenant's own admin UI. A live property picker would need new
-tenant-side work (a new service-authenticated endpoint on rohas-group,
-mirroring how `owner-portal.js`'s `GET /search-owners` already works) —
-not built, flagged as a known limitation.
+**Property picker built (2026-08-31, api_version 1.3.56 / amaradata-platform
+1.3.16)** — closes the gap noted below. New `GET /api/billing/properties?project_id=&q=`
+on rohas-group (`backend/routes/billing.js`), same `serviceAuthMiddleware`/
+`AMARADATA_API_KEY` as `/project-modules` and `/metrics` (a billing-config
+lookup, not an owner-portal concern — deliberately NOT the owner-portal key).
+Requires `project_id` (browse one project's `rental_properties`, no query
+needed) or a 2+ character `q` (search by `property_code`/`property_name`
+across every rental-management-enabled project via the same `forEachProject`
++ `getEnabledModules` pattern `/metrics` already uses) — same "can't dump
+everything with zero scoping" rule as `search-owners`. Returns
+`{id, property_code, property_name, city, status, project_id, project_name}`.
+
+- **`backend/services/billing-tenant-client.js`**: new `fetchProperties(tenant, {project_id, q})`,
+  reuses the existing `callBillingApi()` helper (same dedicated billing key
+  as `fetchMetrics`).
+- **`backend/routes/tenants.js`**: new `GET /api/tenants/:id/billing-properties`,
+  `requireSuperAdmin` — same gate as `/owner-candidates`, for consistency,
+  even though (like owner-candidates) it goes through a dedicated service key
+  rather than SSO impersonation. This is a real, pre-existing asymmetry
+  (projects' `/modules` proxy is *also* `requireSuperAdmin` despite
+  billing-contacts' own write actions only needing `requireAdmin`) — not
+  introduced by this change, just matched for consistency rather than fixed.
+- **Frontend**: Property ID(s) row gained a `<select multiple>` picker +
+  optional search box + "Load Properties" button, identical UX pattern to
+  the existing Project(s) picker — `loadTenantProperties()` scopes the
+  lookup to the FIRST project id already typed/picked in the Project ID(s)
+  field (property ids are only meaningful within one project), and
+  `onPropertyPickerChange()` appends picked ids into the same comma-separated
+  field so picked and hand-typed ids can mix, exactly like projects.
+- **Test coverage**: rohas-group `testing/unittests/api/billing-routes.test.js`
+  (8 new tests, both DB and NonDB mode — DB mode asserts against the real
+  seeded `RP-AMR-201` row); amaradata-platform `src/test/billing-properties-routes.test.js`
+  (8 tests, `billing-tenant-client.fetchProperties` monkey-patched the same
+  way `owner-links-routes.test.js` patches `owner-portal-tenant-client`).
+  Full suites re-passed both repos: rohas-group 185 files/3355 tests (DB) +
+  199 files/3771 tests (NonDB); amaradata-platform 291 (DB) + 42 (NonDB) + 453
+  (unittests).
+- **Verification**: via the real-Postgres DB-mode test run (not mocked) —
+  the DB-mode assertions in `billing-routes.test.js` exercise the actual SQL
+  against `rohas_amaracasa_test.rental_properties`, so this stood in for a
+  manual curl session (local `.env` has no `AMARADATA_API_KEY` set for the
+  dev DB, so a live curl check would have needed extra one-off setup with no
+  real added confidence over the DB-mode test).
+- **Gotcha hit while testing**: `TEST_DB=1 npx vitest run <file>` directly
+  (bypassing `npm run test:db`'s `db-global-setup.js` reseed step) left
+  accumulated stray `booking_receipts` rows in `rohas_amaracasa_test` from
+  many prior ad-hoc runs of `billing-routes.test.js`'s cooling-off tests
+  (which create receipts but never clean them up) — caused one unrelated
+  assertion to fail with a stale total. Fixed by truncating the table by
+  hand; the real fix going forward is always running via `npm run test:db`
+  (which reseeds from `transactiondata/` first), not a bare `vitest run
+  --config vitest.config.db.js` invocation.
+- **Separate infra gotcha, not code**: two `npm test`/`npm run test:db`
+  background runs got killed mid-flight this session (once by an
+  inadvertent `ScheduleWakeup stop:true` call with no active loop, once by
+  the documented Windows exit-127 spawnSync flakiness) and each left
+  `transactiondata/*.json` corrupted (one file truncated to 0 bytes, several
+  others rewritten with 50k+ line deletions) — recovered both times via
+  `git checkout -- transactiondata/`. No real data was at risk (all `_test`
+  DB / local JSON scratch), but worth remembering: after ANY interrupted or
+  backgrounded rohas-group test run, check `git status --porcelain
+  transactiondata/` before trusting the working tree, not just after a clean
+  run.
+
+**Previously flagged gap, now closed by the above:** ~~No "list properties"
+endpoint exists anywhere (tenant-side or AmaraData-side) — property id is
+always free-typed by staff, sourced from the tenant's own admin UI.~~
 
 **Frontend:** new `frontend/billing-contacts.html`, added to the main nav
 (`platform.js`'s `NAV` array, between Billing Metrics and Email) — list +

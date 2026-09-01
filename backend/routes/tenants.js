@@ -12,6 +12,8 @@ const tenantSsoClient = require('../services/tenant-sso-client');
 // Same not-destructured reasoning as tenantSsoClient above — tests monkey-patch
 // this module's exports directly.
 const ownerPortalTenantClient = require('../services/owner-portal-tenant-client');
+// Same not-destructured reasoning — tests monkey-patch this module's exports directly.
+const billingTenantClient = require('../services/billing-tenant-client');
 
 async function getTenant(req, id) {
     if (req.db.mode === 'nondb') {
@@ -182,6 +184,31 @@ router.get('/:id/owner-candidates', requireSuperAdmin, async (req, res) => {
         if (e.tenantUnreachable) return res.status(502).json({ error: `Tenant site unavailable: ${e.message}` });
         if (e.tenantStatus) return res.status(e.tenantStatus).json({ error: e.message });
         sendError(res, e, '[tenants/owner-candidates]');
+    }
+});
+
+// GET /api/tenants/:id/billing-properties?project_id=&q= — proxies to the
+// tenant's own GET /api/billing/properties using that tenant's dedicated
+// billing API key (billing-tenant-client.js) — NOT the SSO staff-
+// impersonation flow the /modules routes use, and NOT owner-candidates'
+// owner-portal key either (least-privilege, dedicated credential per
+// integration). Powers billing-contacts.html's property picker for
+// property-level billing scopes — see [[project-billing-contact-routing]].
+router.get('/:id/billing-properties', requireSuperAdmin, async (req, res) => {
+    const projectId = req.query.project_id;
+    const q = req.query.q ? String(req.query.q).trim() : undefined;
+    if (!projectId && (!q || q.length < 2)) {
+        return res.status(400).json({ error: 'project_id or q (2+ characters) is required' });
+    }
+    try {
+        const tenant = await getTenant(req, req.params.id);
+        if (!tenant) return res.status(404).json({ error: 'Not found' });
+        const results = await billingTenantClient.fetchProperties(tenant, { project_id: projectId, q });
+        res.json({ success: true, data: results });
+    } catch (e) {
+        if (e.tenantUnreachable) return res.status(502).json({ error: `Tenant site unavailable: ${e.message}` });
+        if (e.tenantStatus) return res.status(e.tenantStatus).json({ error: e.message });
+        sendError(res, e, '[tenants/billing-properties]');
     }
 });
 

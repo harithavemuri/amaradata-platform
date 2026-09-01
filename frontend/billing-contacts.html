@@ -176,11 +176,18 @@
                                     </div>
                                 </div>
                                 <div class="amrd-form-row" id="s-property-row" style="display:none">
+                                    <div><label>Propert(y/ies)</label>
+                                        <select id="s-property-picker" multiple size="4" style="width:100%" onchange="onPropertyPickerChange()">
+                                        </select>
+                                        <div style="display:flex;gap:6px;margin-top:4px">
+                                            <input id="s-property-search" placeholder="search by code/name (optional)" style="flex:1">
+                                            <button type="button" class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="loadTenantProperties()">Load Properties</button>
+                                        </div>
+                                    </div>
                                     <div><label>Property ID(s) *</label>
                                         <input id="s-property-id" placeholder="e.g. 1, 2, 3">
-                                        <div style="font-size:11px;color:#94a3b8;margin-top:2px">Comma-separated tenant property ids (within the one project above) — no live picker yet.</div>
+                                        <div style="font-size:11px;color:#94a3b8;margin-top:2px">Comma-separated tenant property ids (within the one project above).</div>
                                     </div>
-                                    <div></div>
                                 </div>
                                 <button class="amrd-btn amrd-btn-primary amrd-btn-sm" style="margin-top:10px" onclick="addScopes(${contactId})">Add Billing Scope(s)</button>
                                 <div id="scopes-add-note" style="font-size:12px;color:#64748b;margin-top:8px"></div>
@@ -245,10 +252,10 @@
 
         // Reuses the same SSO project-modules proxy tenants.html's "Modules"
         // button already calls — the only tenant-side endpoint AmaraData has
-        // that returns real {project_id, project_name} pairs. There's no
-        // equivalent "list properties" endpoint yet, so property id stays a
-        // free-text field the staff member fills in from the tenant's own
-        // admin UI — see project-billing-contact-routing.md.
+        // that returns real {project_id, project_name} pairs. Properties have
+        // their own dedicated picker below (loadTenantProperties, via
+        // GET /api/tenants/:id/billing-properties) — see
+        // project-billing-contact-routing.md.
         //
         // That endpoint is super_admin-only (tenants.js's requireSuperAdmin),
         // one level stricter than billing-contacts' own requireAdmin — a
@@ -280,6 +287,53 @@
         function onProjectPickerChange() {
             const picked = [...document.getElementById('s-project-picker').selectedOptions].map((o) => o.value);
             const field = document.getElementById('s-project-id');
+            const existing = parseIdList(field.value);
+            field.value = [...new Set([...existing, ...picked.map((p) => parseInt(p, 10))])].join(', ');
+        }
+
+        // Powers the Property picker via GET /api/tenants/:id/billing-properties
+        // (billing-tenant-client.js, this integration's own dedicated key —
+        // NOT the SSO flow loadTenantProjects above uses, and NOT the
+        // owner-portal key either). Scoped to the one Project ID already
+        // entered/picked above (property ids are only meaningful within a
+        // project) — takes the FIRST parsed project id if several were typed,
+        // since a property-level bulk-add only ever runs against one project
+        // anyway. An optional free-text search narrows the list further; left
+        // blank it lists every property in that project (same "browse with no
+        // query" convenience as Load Projects).
+        //
+        // Same requireSuperAdmin gate as Load Projects (see
+        // project-billing-contact-routing.md) — a plain admin can still fully
+        // use this page by typing the Property ID(s) directly instead.
+        async function loadTenantProperties() {
+            const tenantIds = selectedTenantIds();
+            const picker = document.getElementById('s-property-picker');
+            const errEl = document.getElementById('scopes-err');
+            errEl.textContent = '';
+            if (tenantIds.length !== 1) { errEl.textContent = 'Select exactly one tenant to load its properties.'; return; }
+            const projectIds = parseIdList(document.getElementById('s-project-id').value);
+            if (!projectIds.length) { errEl.textContent = 'Enter or pick a Project ID first — properties are looked up within one project.'; return; }
+            const q = document.getElementById('s-property-search').value.trim();
+            try {
+                const params = new URLSearchParams({ project_id: projectIds[0] });
+                if (q) params.set('q', q);
+                const res = await window.__amrd.apiFetch(`/api/tenants/${tenantIds[0]}/billing-properties?${params.toString()}`);
+                picker.innerHTML = (res.data || [])
+                    .map((p) => `<option value="${p.id}">${p.property_code}${p.property_name ? ` — ${p.property_name}` : ''}</option>`)
+                    .join('');
+            } catch (e) {
+                errEl.textContent = window.__amrd.getStaff()?.role === 'super_admin'
+                    ? e.message
+                    : 'Only super_admin can browse the live property list — enter the Property ID(s) directly instead.';
+            }
+        }
+
+        // Same "pick from list feeds the same free-text field" pattern as
+        // onProjectPickerChange — picking from the list and typing by hand
+        // can be mixed in one add.
+        function onPropertyPickerChange() {
+            const picked = [...document.getElementById('s-property-picker').selectedOptions].map((o) => o.value);
+            const field = document.getElementById('s-property-id');
             const existing = parseIdList(field.value);
             field.value = [...new Set([...existing, ...picked.map((p) => parseInt(p, 10))])].join(', ');
         }
@@ -358,6 +412,8 @@
         window.onScopeTypeChange   = onScopeTypeChange;
         window.loadTenantProjects  = loadTenantProjects;
         window.onProjectPickerChange = onProjectPickerChange;
+        window.loadTenantProperties  = loadTenantProperties;
+        window.onPropertyPickerChange = onPropertyPickerChange;
         window.addScopes        = addScopes;
         window.removeScope      = removeScope;
 

@@ -63,4 +63,18 @@ async function fetchMetrics(tenant, year, month) {
     return result.data;
 }
 
-module.exports = { callBillingApi, fetchMetrics };
+// Powers billing-contacts.html's property picker for property-level billing
+// scopes. Mirrors ownerPortalTenantClient.searchOwners's shape but hits the
+// tenant's GET /api/billing/properties (this integration's own dedicated key,
+// not the owner-portal one) — project_id and/or q, at least one required
+// (enforced tenant-side too; validated again here so a bad caller gets a
+// clear 400 instead of a confusing empty result).
+async function fetchProperties(tenant, { project_id, q } = {}) {
+    const params = new URLSearchParams();
+    if (project_id) params.set('project_id', project_id);
+    if (q) params.set('q', q);
+    const result = await callBillingApi(tenant, { method: 'GET', path: `/api/billing/properties?${params.toString()}` });
+    return result.data;
+}
+
+module.exports = { callBillingApi, fetchMetrics, fetchProperties };
