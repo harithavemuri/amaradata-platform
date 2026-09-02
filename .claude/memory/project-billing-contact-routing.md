@@ -107,6 +107,27 @@ everything with zero scoping" rule as `search-owners`. Returns
   manual curl session (local `.env` has no `AMARADATA_API_KEY` set for the
   dev DB, so a live curl check would have needed extra one-off setup with no
   real added confidence over the DB-mode test).
+- **Deployed to production 2026-09-02** — rohas-group v1.3.56 (tag pushed),
+  amaradata-platform v1.3.16 (tag pushed, all 13 `scripts/deploy.js` phases
+  passed including DB-mode regression and post-deploy smoke). Confirmed live
+  via `GET https://rohas.amaradata.com/health` → `api_version: "1.3.56"`.
+  The real network hop from amaradata-platform's proxy to rohas-group's new
+  endpoint was NOT separately re-verified live end-to-end after deploy
+  (would have required re-enabling the already-disabled prod smoke account
+  just for this) — confidence instead comes from: the same `billing_api_key`
+  credential path is already proven live via `GET /api/billing/metrics`
+  (see `project-billing-metrics-collector.md`), and both sides' full test
+  suites (unit + DB-mode regression) passed pre-deploy. Flagged as the one
+  gap in verification depth for this feature.
+- **Post-deploy security check** (standing rule): reviewed both new
+  endpoints — `GET /api/billing/properties` is mounted under `/api/billing`
+  in rohas-group's `server.js`, inheriting `serviceAuthMiddleware` at the
+  router level (not per-route), so it was never at risk of being
+  accidentally unauthenticated. Response fields are an explicit allow-list
+  (no PII/owner/financial data), query is scoped (`project_id` or 2+ char
+  `q`, `LIMIT 50`). `GET /api/tenants/:id/billing-properties` matches the
+  existing `owner-candidates` precedent (`requireSuperAdmin`, dedicated
+  service key never reaching the browser). No new findings.
 - **Gotcha hit while testing**: `TEST_DB=1 npx vitest run <file>` directly
   (bypassing `npm run test:db`'s `db-global-setup.js` reseed step) left
   accumulated stray `booking_receipts` rows in `rohas_amaracasa_test` from
