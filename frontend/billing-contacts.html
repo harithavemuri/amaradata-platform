@@ -154,6 +154,11 @@
                                         <select id="s-tenant" multiple size="4" style="width:100%">
                                             ${_myTenants.map((t) => `<option value="${t.id}">${t.name}</option>`).join('')}
                                         </select>
+                                        <div style="margin-top:4px">
+                                            <button type="button" class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="setAllSelected('s-tenant', true)">All</button>
+                                            <button type="button" class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="setAllSelected('s-tenant', false)">None</button>
+                                            <button type="button" class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="invertSelected('s-tenant')">Invert</button>
+                                        </div>
                                         <div style="font-size:11px;color:#94a3b8;margin-top:2px">Ctrl/Cmd-click to select multiple. For Project/Property scope, select exactly one.</div>
                                     </div>
                                     <div><label>Scope Type *</label>
@@ -168,7 +173,12 @@
                                     <div><label>Project(s)</label>
                                         <select id="s-project-picker" multiple size="4" style="width:100%" onchange="onProjectPickerChange()">
                                         </select>
-                                        <button type="button" class="amrd-btn amrd-btn-ghost amrd-btn-sm" style="margin-top:4px" onclick="loadTenantProjects()">Load Projects</button>
+                                        <div style="margin-top:4px">
+                                            <button type="button" class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="loadTenantProjects()">Load Projects</button>
+                                            <button type="button" class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="setAllSelected('s-project-picker', true, onProjectPickerChange)">All</button>
+                                            <button type="button" class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="setAllSelected('s-project-picker', false, onProjectPickerChange)">None</button>
+                                            <button type="button" class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="invertSelected('s-project-picker', onProjectPickerChange)">Invert</button>
+                                        </div>
                                     </div>
                                     <div><label>Project ID(s) *</label>
                                         <input id="s-project-id" placeholder="e.g. 101, 102, 103">
@@ -182,6 +192,11 @@
                                         <div style="display:flex;gap:6px;margin-top:4px">
                                             <input id="s-property-search" placeholder="search by code/name (optional)" style="flex:1">
                                             <button type="button" class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="loadTenantProperties()">Load Properties</button>
+                                        </div>
+                                        <div style="margin-top:4px">
+                                            <button type="button" class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="setAllSelected('s-property-picker', true, onPropertyPickerChange)">All</button>
+                                            <button type="button" class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="setAllSelected('s-property-picker', false, onPropertyPickerChange)">None</button>
+                                            <button type="button" class="amrd-btn amrd-btn-ghost amrd-btn-sm" onclick="invertSelected('s-property-picker', onPropertyPickerChange)">Invert</button>
                                         </div>
                                     </div>
                                     <div><label>Property ID(s) *</label>
@@ -241,6 +256,23 @@
 
         function selectedTenantIds() {
             return [...document.getElementById('s-tenant').selectedOptions].map((o) => parseInt(o.value, 10));
+        }
+
+        // All/None/Invert convenience actions for the three multi-select
+        // pickers above (standing rule for every multi-select control — see
+        // feedback-multiselect-all-none-invert.md). Programmatically setting
+        // .selected does not fire a native change event, so onProjectPickerChange/
+        // onPropertyPickerChange are passed in explicitly for the two pickers
+        // whose selection needs to stay synced into the free-text id field;
+        // the tenant picker has no such side effect and passes nothing.
+        function setAllSelected(selectId, selected, afterChange) {
+            for (const opt of document.getElementById(selectId).options) opt.selected = selected;
+            if (afterChange) afterChange();
+        }
+
+        function invertSelected(selectId, afterChange) {
+            for (const opt of document.getElementById(selectId).options) opt.selected = !opt.selected;
+            if (afterChange) afterChange();
         }
 
         // Comma/whitespace-separated list of ids -> deduped array of ints,
@@ -416,6 +448,8 @@
         window.onPropertyPickerChange = onPropertyPickerChange;
         window.addScopes        = addScopes;
         window.removeScope      = removeScope;
+        window.setAllSelected   = setAllSelected;
+        window.invertSelected   = invertSelected;
 
         load();
         await runSearch();
