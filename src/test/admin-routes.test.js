@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import request from 'supertest';
 import app from '../../server.js';
 import { uid, auth, assertJson } from './helpers.js';
@@ -487,6 +487,77 @@ describe('Admin routes (super_admin only)', () => {
             expect(entry).toBeTruthy();
             expect(entry.method).toBe('password');
             expect(entry.name).toBe('Audit Test User');
+        });
+    });
+
+    // Stubs global fetch — real network calls to real tenant site_urls have
+    // no place in an automated test run. Scoped to just this describe block
+    // (beforeEach/afterEach) so no other test in this file is affected, same
+    // pattern as tenant-sso-client.test.js's fetch stubbing.
+    describe('GET /api/admin/tenants-health', () => {
+        let fetchMock;
+        beforeEach(() => {
+            fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ status: 'OK', mode: 'db' }) });
+            vi.stubGlobal('fetch', fetchMock);
+        });
+        afterEach(() => vi.unstubAllGlobals());
+
+        it('without auth → 401', async () => {
+            const res = await request(app).get('/api/admin/tenants-health');
+            assertJson(res);
+            expect(res.status).toBe(401);
+        });
+
+        it('with staff role → 403', async () => {
+            const res = await request(app).get('/api/admin/tenants-health').set(auth('staff'));
+            assertJson(res);
+            expect(res.status).toBe(403);
+        });
+
+        it('→ 200 with one result per tenant, each carrying the normalized health shape', async () => {
+            const tenant = await request(app).post('/api/tenants')
+                .set(auth('siteAdmin'))
+                .send({ name: `Health Test Tenant ${uid()}`, slug: `health-test-${uid()}`, site_url: 'https://tenant.example.com' });
+            expect(tenant.status).toBe(201);
+
+            const res = await request(app).get('/api/admin/tenants-health').set(auth('siteAdmin'));
+            assertJson(res);
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(Array.isArray(res.body.data.tenants)).toBe(true);
+
+            const entry = res.body.data.tenants.find(t => t.tenant_id === tenant.body.data.id);
+            expect(entry).toMatchObject({ reachable: true, status_code: 200, error: null, remote: { status: 'OK', mode: 'db' } });
+            expect(typeof entry.latency_ms).toBe('number');
+            expect(fetchMock).toHaveBeenCalledWith('https://tenant.example.com/health', expect.any(Object));
+        });
+
+        it('marks a tenant unreachable without failing the rest of the request', async () => {
+            const tenant = await request(app).post('/api/tenants')
+                .set(auth('siteAdmin'))
+                .send({ name: `Down Tenant ${uid()}`, slug: `down-tenant-${uid()}`, site_url: 'https://down.example.com' });
+            expect(tenant.status).toBe(201);
+
+            fetchMock.mockRejectedValueOnce(new Error('ECONNREFUSED'));
+
+            const res = await request(app).get('/api/admin/tenants-health').set(auth('siteAdmin'));
+            assertJson(res);
+            expect(res.status).toBe(200);
+            const entry = res.body.data.tenants.find(t => t.tenant_id === tenant.body.data.id);
+            expect(entry).toMatchObject({ reachable: false });
+            expect(entry.error).toMatch(/ECONNREFUSED/);
+        });
+
+        it('marks a tenant with no site_url as not configured, without calling fetch for it', async () => {
+            const tenant = await request(app).post('/api/tenants')
+                .set(auth('siteAdmin'))
+                .send({ name: `No Site Tenant ${uid()}`, slug: `no-site-${uid()}` });
+            expect(tenant.status).toBe(201);
+
+            const res = await request(app).get('/api/admin/tenants-health').set(auth('siteAdmin'));
+            assertJson(res);
+            const entry = res.body.data.tenants.find(t => t.tenant_id === tenant.body.data.id);
+            expect(entry).toMatchObject({ reachable: false, error: 'No site_url configured' });
         });
     });
 });

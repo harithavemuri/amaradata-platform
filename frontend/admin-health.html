@@ -24,7 +24,59 @@ document.addEventListener('DOMContentLoaded', async () => {
             render(healthRes.data, progressRes.data?.tables || {});
         } catch (e) {
             root.innerHTML = `<p style="color:#dc2626;padding:20px">Failed to load health data: ${e.message}</p>`;
+            return;
         }
+        // Fetched separately from the portal's own health above: one tenant's
+        // slow/unreachable site must never delay or blank out the portal
+        // panel that already rendered successfully.
+        loadTenantHealth();
+    }
+
+    async function loadTenantHealth() {
+        const el = document.getElementById('amrd-tenant-health');
+        if (!el) return;
+        try {
+            const res = await window.__amrd.apiFetch('/api/admin/tenants-health');
+            renderTenantHealth(res.data.tenants || []);
+        } catch (e) {
+            el.innerHTML = `<p style="color:#dc2626;padding:12px 16px">Failed to load tenant health: ${e.message}</p>`;
+        }
+    }
+
+    function renderTenantHealth(tenants) {
+        const el = document.getElementById('amrd-tenant-health');
+        if (!el) return;
+        if (!tenants.length) {
+            el.innerHTML = '<p style="color:#94a3b8;padding:12px 16px">No tenants configured.</p>';
+            return;
+        }
+        const rows = tenants.map(t => {
+            const statusBadge = !t.site_url
+                ? badge('not configured', '#94a3b8')
+                : (t.reachable ? badge('reachable', '#16a34a') : badge('unreachable', '#dc2626'));
+            const remoteVersion = t.remote?.api_version || t.remote?.ui_version || '';
+            return `
+                <tr>
+                    <td style="padding:8px 16px;font-weight:600;font-size:13px">${t.tenant_name}</td>
+                    <td style="padding:8px 16px;font-size:12px;color:#64748b;font-family:monospace">${t.site_url || '—'}</td>
+                    <td style="padding:8px 16px">${statusBadge}</td>
+                    <td style="padding:8px 16px;text-align:right;font-size:13px">${t.latency_ms !== null ? `${t.latency_ms} ms` : '—'}</td>
+                    <td style="padding:8px 16px;font-size:12px;font-family:monospace;color:#64748b">${remoteVersion || '—'}</td>
+                    <td style="padding:8px 16px;font-size:12px;color:#dc2626" title="${(t.error || '').replace(/"/g, '&quot;')}">${t.error || ''}</td>
+                </tr>`;
+        }).join('');
+        el.innerHTML = `
+            <table style="width:100%;border-collapse:collapse">
+                <thead><tr>
+                    <th style="padding:8px 16px;text-align:left;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em">Tenant</th>
+                    <th style="padding:8px 16px;text-align:left;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em">Site URL</th>
+                    <th style="padding:8px 16px;text-align:left;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em">Status</th>
+                    <th style="padding:8px 16px;text-align:right;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em">Latency</th>
+                    <th style="padding:8px 16px;text-align:left;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em">Remote Version</th>
+                    <th style="padding:8px 16px;text-align:left;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em">Error</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>`;
     }
 
     function fmtSyncedAt(entry) {
@@ -201,6 +253,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </tr></thead>
                     <tbody>${tableRows}</tbody>
                 </table>
+            </div>
+
+            <div class="amrd-card" style="margin-top:20px">
+                <h3 style="margin:0 0 12px;font-size:14px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em">Tenant Health</h3>
+                <div id="amrd-tenant-health"><p style="color:#94a3b8;padding:12px 16px">Loading…</p></div>
             </div>`;
     }
 

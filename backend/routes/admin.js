@@ -8,6 +8,7 @@ const { sendError } = require('../services/http-errors');
 const { blockNonDbWrite } = require('../middleware/block-nondb-write');
 // Not destructured — same mockability reasoning as tenants.js's client requires.
 const ownerPortalTenantClient = require('../services/owner-portal-tenant-client');
+const tenantHealthClient = require('../services/tenant-health-client');
 
 const VALID_ROLES = ['super_admin', 'admin', 'sales_manager', 'billing', 'staff', 'property_owner'];
 
@@ -802,6 +803,28 @@ router.get('/health', async (req, res) => {
         });
     } catch (err) {
         sendError(res, err, '[admin/health]');
+    }
+});
+
+// GET /api/admin/tenants-health — per-tenant health, using each tenant's own
+// public GET /health (no API key needed — same public/no-auth exemption
+// AmaraData's own GET /health has, see server.js), so unlike
+// billing-tenant-client.js / owner-portal-tenant-client.js this needs no
+// secret lookup. checkAllTenantsHealth() never throws for an individual
+// tenant's failure (same per-tenant try/catch contract as
+// jobs/collect-metrics.js's collectAllTenants) — one down tenant must not
+// take out the whole panel, so every tenant is included regardless of
+// status or whether site_url is configured.
+router.get('/tenants-health', async (req, res) => {
+    try {
+        const tenants = req.db.mode === 'nondb'
+            ? req.db.fileDb.find('tenants').sort((a, b) => a.name.localeCompare(b.name))
+            : (await db.query('SELECT id, name, slug, site_url, status FROM tenants ORDER BY name')).rows;
+
+        const results = await tenantHealthClient.checkAllTenantsHealth(tenants);
+        res.json({ success: true, data: { tenants: results } });
+    } catch (err) {
+        sendError(res, err, '[admin/tenants-health]');
     }
 });
 

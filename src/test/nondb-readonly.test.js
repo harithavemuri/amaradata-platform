@@ -113,6 +113,19 @@ describe('NonDB mode — reads still work', () => {
         expect(res.body.data.billing_contact_id).toBe(1);
         expect(res.body.data.matched_scope).toBe('tenant');
     });
+
+    // No fetch stub needed: the seeded 'Acme' tenant has no site_url, and
+    // checkTenantHealth() (backend/services/tenant-health-client.js) returns
+    // its "not configured" result without ever calling fetch — deterministic
+    // in NonDB mode the same way it would be for any DB-mode tenant lacking
+    // a site_url.
+    it('GET /api/admin/tenants-health (super_admin) reads the seeded tenant list from files', async () => {
+        const res = await request(app).get('/api/admin/tenants-health').set(auth('siteAdmin'));
+        assertJson(res);
+        expect(res.status).toBe(200);
+        expect(res.body.data.tenants).toHaveLength(1);
+        expect(res.body.data.tenants[0]).toMatchObject({ tenant_id: 1, tenant_name: 'Acme', reachable: false, error: 'No site_url configured' });
+    });
 });
 
 describe('NonDB mode — writes are rejected', () => {

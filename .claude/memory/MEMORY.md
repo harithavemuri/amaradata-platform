@@ -56,3 +56,4 @@
 - [Billing Contact Routing](project-billing-contact-routing.md) — billing_contacts + billing_contact_scopes: one contact can be scoped to tenant/project/property, cross-tenant capable; most-specific-wins resolution, falls back to tenants.contact_* when no scope matches
 - [Multi-Select All/None/Invert](feedback-multiselect-all-none-invert.md) — every multi-select control must offer Select All, Select None, and Invert; standing rule as of 2026-09-05
 - [Pre-Commit Hook No-Op](feedback-precommit-hook-noop.md) — pre-commit must never run tests/slow work; testing is gated only at deploy time via `npm run deploy`; this repo's hook was found still running the full suite on 2026-09-06 and fixed
+- [Tenant Health Panel](project-tenant-health-panel.md) — System Health page now shows per-tenant health via GET /api/admin/tenants-health, calling each tenant's own public GET /health (no API key needed, unlike billing/owner-portal/SSO clients)
