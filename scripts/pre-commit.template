@@ -1,0 +1,12 @@
+#!/bin/sh
+# Intentionally a no-op. The full test suite used to run here (npm test,
+# plus a best-effort sync-tenant-fixes call), but that made every commit
+# take 3+ minutes and blocked/dirtied test-fixture files on interruption —
+# same problem rohas-group hit and fixed the same way (see its
+# scripts/pre-commit.template). The full suite still gates every real
+# deploy via `npm run deploy` (its first three phases are the full test
+# suite, before anything touches AWS) — that remains the authoritative
+# check; this hook no longer duplicates it. sync-tenant-fixes moved to
+# post-commit.template — still runs automatically, just no longer
+# blocking/delaying the commit itself.
+exit 0

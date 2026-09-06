@@ -1,0 +1,8 @@
+#!/bin/sh
+# Best-effort: sync tenant release-tracking results (bug/enhancement fixes)
+# into the enhancements table for billing visibility. Moved here from
+# pre-commit (see pre-commit.template) so it never blocks/delays a commit —
+# runs after the commit has already landed, non-blocking either way. A
+# missing DB, a tenant repo not present locally, or a parse issue just gets
+# logged and skipped.
+npm run sync-tenant-fixes || echo "[post-commit] sync-tenant-fixes failed (non-blocking) — run 'npm run sync-tenant-fixes' manually to see details"
