@@ -5,6 +5,8 @@ metadata:
   type: feedback
 ---
 
+> **Superseded 2026-10-04:** the user now requires committing and pushing ALL repos before a deploy — see [[feedback-commit-all-repos-before-deploy]]. Kept for history.
+
 Only ever run `git commit`/`git push` in the **amaradata-platform** repo. Never commit or push in **rohas-group**, even though its directory is accessible for reading/investigation.
 
 **Why:** User's explicit correction: "You only commit Amaradata repo." Said after investigating a rohas-group CloudFront certificate issue (found via `git log` in that repo) and asking to "commit and push" — the user clarified the commit/push scope is restricted to amaradata-platform specifically, regardless of which repo a fix/investigation touches.
