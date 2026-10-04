@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
@@ -123,15 +123,70 @@ describe('platform.js — apiFetch', () => {
             expect(badge.textContent).toContain('NonDB Mode');
         });
 
-        it('shows "DB Fallback" label when reason is "fallback"', async () => {
-            vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
-                makeResponse({ headers: new Headers({ 'X-DB-Mode': 'nondb', 'X-DB-Mode-Reason': 'fallback' }) })
-            ));
+        // The automatic DB-fallback chip is invisible by default: a brief blip (e.g. an
+        // Aurora cold start that recovers within seconds) must never flash it. It only
+        // appears once the fallback has persisted, and it goes away again on recovery.
+        describe('automatic DB fallback (hidden until it persists)', () => {
+            const FALLBACK = () => makeResponse({ headers: new Headers({ 'X-DB-Mode': 'nondb', 'X-DB-Mode-Reason': 'db_unavailable' }) });
+            const HEALTHY = () => makeResponse();
 
-            await window.__amrd.apiFetch('/api/test');
-            const badge = document.getElementById('amrd-nondb-badge');
-            expect(badge).not.toBeNull();
-            expect(badge.textContent).toContain('DB Fallback');
+            beforeEach(() => { vi.useFakeTimers(); });
+            afterEach(() => { vi.useRealTimers(); });
+
+            it('is not shown when the first fallback response arrives', async () => {
+                vi.stubGlobal('fetch', vi.fn().mockResolvedValue(FALLBACK()));
+                await window.__amrd.apiFetch('/api/test');
+                expect(document.getElementById('amrd-nondb-badge')).toBeNull();
+            });
+
+            it('is shown, labelled "DB Fallback", once the fallback has persisted past the grace period', async () => {
+                vi.stubGlobal('fetch', vi.fn().mockResolvedValue(FALLBACK()));
+                await window.__amrd.apiFetch('/api/test');
+                vi.advanceTimersByTime(window.__amrd.FALLBACK_GRACE_MS + 1);
+                const badge = document.getElementById('amrd-nondb-badge');
+                expect(badge).not.toBeNull();
+                expect(badge.textContent).toContain('DB Fallback');
+            });
+
+            it('also treats the legacy "fallback" reason as an automatic fallback', async () => {
+                vi.stubGlobal('fetch', vi.fn().mockResolvedValue(makeResponse({ headers: new Headers({ 'X-DB-Mode': 'nondb', 'X-DB-Mode-Reason': 'fallback' }) })));
+                await window.__amrd.apiFetch('/api/test');
+                expect(document.getElementById('amrd-nondb-badge')).toBeNull();
+                vi.advanceTimersByTime(window.__amrd.FALLBACK_GRACE_MS + 1);
+                expect(document.getElementById('amrd-nondb-badge').textContent).toContain('DB Fallback');
+            });
+
+            it('never appears if the database recovers before the grace period ends', async () => {
+                const f = vi.fn().mockResolvedValueOnce(FALLBACK()).mockResolvedValue(HEALTHY());
+                vi.stubGlobal('fetch', f);
+                await window.__amrd.apiFetch('/api/test');
+                vi.advanceTimersByTime(window.__amrd.FALLBACK_GRACE_MS / 2);
+                await window.__amrd.apiFetch('/api/test'); // healthy response = recovery
+                vi.advanceTimersByTime(window.__amrd.FALLBACK_GRACE_MS * 2);
+                expect(document.getElementById('amrd-nondb-badge')).toBeNull();
+            });
+
+            it('disappears again when a healthy response arrives after it was shown', async () => {
+                const f = vi.fn().mockResolvedValueOnce(FALLBACK()).mockResolvedValue(HEALTHY());
+                vi.stubGlobal('fetch', f);
+                await window.__amrd.apiFetch('/api/test');
+                vi.advanceTimersByTime(window.__amrd.FALLBACK_GRACE_MS + 1);
+                expect(document.getElementById('amrd-nondb-badge')).not.toBeNull();
+                await window.__amrd.apiFetch('/api/test');
+                expect(document.getElementById('amrd-nondb-badge')).toBeNull();
+            });
+
+            it('a later fallback response past the grace period shows it even without the timer firing', async () => {
+                vi.stubGlobal('fetch', vi.fn().mockResolvedValue(FALLBACK()));
+                await window.__amrd.apiFetch('/api/test');
+                vi.setSystemTime(Date.now() + window.__amrd.FALLBACK_GRACE_MS + 1);
+                await window.__amrd.apiFetch('/api/test');
+                expect(document.getElementById('amrd-nondb-badge')).not.toBeNull();
+            });
+
+            it('the status dot is steady - no pulsing animation', () => {
+                expect(PLATFORM_CODE).not.toMatch(/amrd-nondb-pulse/);
+            });
         });
 
         it('badge shown only once across multiple requests', async () => {

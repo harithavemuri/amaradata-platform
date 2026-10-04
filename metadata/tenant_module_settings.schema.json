@@ -1,0 +1,56 @@
+{
+  "table": "tenant_module_settings",
+  "description": "Platform-owned desired enablement of a tenant's per-project feature modules (sales_management/rental_management/ai_management). Source of truth; the tenant site enforces its own copy, kept in sync by PUT/POST sync on /api/tenants/:id/modules.",
+  "columns": [
+    {
+      "name": "id",
+      "type": "serial",
+      "primaryKey": true
+    },
+    {
+      "name": "tenant_id",
+      "type": "integer",
+      "notNull": true,
+      "references": "tenants.id"
+    },
+    {
+      "name": "project_id",
+      "type": "varchar(100)",
+      "notNull": true
+    },
+    {
+      "name": "module",
+      "type": "varchar(50)",
+      "notNull": true
+    },
+    {
+      "name": "enabled",
+      "type": "boolean",
+      "notNull": true
+    },
+    {
+      "name": "updated_by",
+      "type": "varchar(255)"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp",
+      "notNull": true
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamp",
+      "notNull": true
+    }
+  ],
+  "constraints": [
+    {
+      "type": "UNIQUE",
+      "columns": [
+        "tenant_id",
+        "project_id",
+        "module"
+      ]
+    }
+  ]
+}

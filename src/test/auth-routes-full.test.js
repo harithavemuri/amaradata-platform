@@ -195,14 +195,51 @@ describe('Auth routes — full coverage', () => {
             expect(res.body).toHaveProperty('error');
         });
 
-        it('with valid auth and aud → 200', async () => {
-            const res = await request(app).post('/api/auth/sso/issue')
-                .set(auth('admin'))
-                .send({ aud: 'rohas' });
-            assertJson(res);
-            expect(res.status).toBe(200);
-            expect(res.body.success).toBe(true);
-            expect(res.body).toHaveProperty('sso_token');
+        describe('target resolved from the tenants table', () => {
+            let activeSlug, suspendedSlug, noSiteSlug;
+
+            beforeAll(async () => {
+                const mk = async (body) => {
+                    const r = await request(app).post('/api/tenants').set(auth('siteAdmin')).send(body);
+                    return r.body.data.slug;
+                };
+                activeSlug    = await mk({ name: 'SSO Active',    slug: `ssoact-${uid()}`,  status: 'active',    site_url: 'https://active.example.com/' });
+                suspendedSlug = await mk({ name: 'SSO Suspended', slug: `ssosus-${uid()}`,  status: 'suspended', site_url: 'https://suspended.example.com' });
+                noSiteSlug    = await mk({ name: 'SSO NoSite',    slug: `ssonos-${uid()}`,  status: 'active' });
+            });
+
+            it('active tenant → 200, login_url built from the tenant site_url', async () => {
+                const res = await request(app).post('/api/auth/sso/issue').set(auth('admin')).send({ aud: activeSlug });
+                assertJson(res);
+                expect(res.status).toBe(200);
+                expect(res.body.success).toBe(true);
+                expect(res.body.login_url).toBe(`https://active.example.com/auth/sso?sso_token=${res.body.sso_token}`);
+            });
+
+            it('aud is matched case-insensitively', async () => {
+                const res = await request(app).post('/api/auth/sso/issue').set(auth('admin')).send({ aud: activeSlug.toUpperCase() });
+                expect(res.status).toBe(200);
+            });
+
+            it('unknown tenant → 404, no token minted', async () => {
+                const res = await request(app).post('/api/auth/sso/issue').set(auth('admin')).send({ aud: `nope-${uid()}` });
+                assertJson(res);
+                expect(res.status).toBe(404);
+                expect(res.body).not.toHaveProperty('sso_token');
+            });
+
+            it('suspended tenant → 403, no token minted', async () => {
+                const res = await request(app).post('/api/auth/sso/issue').set(auth('admin')).send({ aud: suspendedSlug });
+                assertJson(res);
+                expect(res.status).toBe(403);
+                expect(res.body).not.toHaveProperty('sso_token');
+            });
+
+            it('active tenant with no site_url → 200 with login_url null', async () => {
+                const res = await request(app).post('/api/auth/sso/issue').set(auth('admin')).send({ aud: noSiteSlug });
+                expect(res.status).toBe(200);
+                expect(res.body.login_url).toBeNull();
+            });
         });
     });
 

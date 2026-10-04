@@ -3,6 +3,8 @@ import { test, expect } from './helpers/perf-tracking.js';
 import { loginAs, apiGet, apiPost, apiDelete, testTag, testSlug, testEmail, randomRoleName } from './helpers/edit-save.js';
 import { SEED_USERS } from './helpers/seed-users.js';
 
+test.skip(process.env.REGRESSION_NONDB === '1', 'NonDB mode is read-only (see project-nondb-read-only.md): this spec creates/edits records through the UI, so it only runs in DB mode.');
+
 test.describe('User Groups — edit/save coverage (super_admin only)', () => {
     test.beforeEach(async ({ page }) => {
         await loginAs(page, SEED_USERS.super_admin);

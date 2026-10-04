@@ -102,6 +102,12 @@ const TENANTS = [
         writerUser: 'rohas_writer',
         readerUser: 'rohas_reader',
     },
+    {
+        tenant:     'amaradata-usmle',
+        dbName:     'amaradata_usmle',
+        writerUser: 'amaradata_usmle_writer',
+        readerUser: 'amaradata_usmle_reader',
+    },
 ];
 
 function aws(args) {

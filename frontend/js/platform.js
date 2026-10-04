@@ -104,13 +104,25 @@
         return _refreshing;
     }
 
-    /* ── NonDB indicator ──────────────────────────────────────────── */
-    let _nonDbShown = false;
+    /* ── NonDB indicator ────────────────────────────────────────────
+       Invisible by default. 'env' (NONDB_MODE=true) is a deliberate configuration, so
+       it shows immediately. An automatic DB fallback ('db_unavailable' from the server,
+       'fallback' accepted too) is often a brief blip - e.g. an Aurora cold start that
+       recovers within seconds - so its "DB Fallback" chip only appears once the fallback
+       has persisted for FALLBACK_GRACE_MS, and it goes away again as soon as a healthy
+       response arrives. The dot is steady (no pulsing), since a blinking chip read as
+       flicker. */
+    const FALLBACK_GRACE_MS = 20000;
+    let _nonDbShown    = false;
+    let _fallbackSince = null;   // timestamp of the first fallback response of the current outage
+    let _fallbackTimer = null;
+
     function _showNonDbBadge(reason) {
         if (_nonDbShown) return;
         _nonDbShown = true;
-        const label = reason === 'fallback' ? '⚠ DB Fallback' : '⚠ NonDB Mode';
-        const tip   = reason === 'fallback'
+        const isFallback = reason === 'fallback' || reason === 'db_unavailable';
+        const label = isFallback ? '⚠ DB Fallback' : '⚠ NonDB Mode';
+        const tip   = isFallback
             ? 'PostgreSQL unavailable — serving data from local files'
             : 'Running in file-based mode (NONDB_MODE=true)';
         const badge = document.createElement('span');
@@ -126,6 +138,36 @@
         }
     }
 
+    function _hideNonDbBadge() {
+        const badge = document.getElementById('amrd-nondb-badge');
+        if (badge) badge.remove();
+        _nonDbShown = false;
+    }
+
+    function _clearFallbackWatch() {
+        if (_fallbackTimer) clearTimeout(_fallbackTimer);
+        _fallbackTimer = null;
+        _fallbackSince = null;
+    }
+
+    // Called with every API response's X-DB-Mode / X-DB-Mode-Reason headers.
+    function _trackDbMode(mode, reason) {
+        if (mode !== 'nondb') {            // healthy response: recovery - clear any pending/visible fallback chip
+            if (_fallbackSince !== null || _nonDbShown) { _clearFallbackWatch(); _hideNonDbBadge(); }
+            return;
+        }
+        if (reason !== 'fallback' && reason !== 'db_unavailable') { _showNonDbBadge(reason || 'env'); return; }
+        const now = Date.now();
+        if (_fallbackSince === null) _fallbackSince = now;
+        if (now - _fallbackSince >= FALLBACK_GRACE_MS) { _showNonDbBadge(reason); return; }
+        if (!_fallbackTimer && !_nonDbShown) {
+            _fallbackTimer = setTimeout(() => {
+                _fallbackTimer = null;
+                if (_fallbackSince !== null) _showNonDbBadge(reason);
+            }, FALLBACK_GRACE_MS - (now - _fallbackSince) + 1);
+        }
+    }
+
     /* ── API fetch helper ──────────────────────────────────────────── */
     async function apiFetch(path, opts = {}, _retry = true) {
         const headers = {
@@ -136,7 +178,7 @@
         const token = getToken();
         if (token) headers['Authorization'] = `Bearer ${token}`;
         const res  = await fetch(`${API}${path}`, { ...opts, headers });
-        if (res.headers.get('X-DB-Mode') === 'nondb') _showNonDbBadge(res.headers.get('X-DB-Mode-Reason') || 'env');
+        _trackDbMode(res.headers.get('X-DB-Mode'), res.headers.get('X-DB-Mode-Reason'));
         if (res.status === 401 && _retry) {
             try {
                 await _refreshToken();
@@ -324,8 +366,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#008cbb;box-sh
 }
 @media print{.amrd-sidebar,.amrd-topbar{display:none!important;}.amrd-main{overflow:visible!important;}}
 #amrd-nondb-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:20px;font-size:11px;font-weight:700;flex-shrink:0;cursor:default;}
-.amrd-nondb-dot{width:7px;height:7px;border-radius:50%;background:#f59e0b;animation:amrd-nondb-pulse 2s ease-in-out infinite;flex-shrink:0;}
-@keyframes amrd-nondb-pulse{0%,100%{opacity:1}50%{opacity:.3}}`;
+.amrd-nondb-dot{width:7px;height:7px;border-radius:50%;background:#f59e0b;flex-shrink:0;}`;
         document.head.appendChild(s);
     }
 
@@ -498,6 +539,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#008cbb;box-sh
 
     window.__amrd = {
         login, logout, apiFetch, gqlFetch, getStaff, isLoggedIn, requireLogin, renderSidebar, isReadOnly,
-        paginate, renderPagination, exportCsv,
+        paginate, renderPagination, exportCsv, FALLBACK_GRACE_MS,
     };
 })();

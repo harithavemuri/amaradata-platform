@@ -373,11 +373,29 @@ router.post('/sso/issue', requireAuth, async (req, res) => {
     const { aud } = req.body;  // e.g. "rohas" — caller specifies target tenant
     if (!aud) return res.status(400).json({ error: 'aud (target tenant) is required' });
 
-    const user     = req.staff;
-    const ssoToken = signSsoToken(ssoSecret, { aud, sub: user.email, name: user.name, role: user.role });
+    // The target comes from the tenants table, never from a deploy-time env var:
+    // login_url is that tenant's own site_url, and a tenant that isn't 'active'
+    // can't be signed in to at all (no token is minted).
+    let tenant;
+    try {
+        if (req.db.mode === 'nondb') {
+            tenant = req.db.fileDb.find('tenants').find(t => String(t.slug).toLowerCase() === String(aud).toLowerCase());
+        } else {
+            const { rows } = await db.query('SELECT slug, status, site_url FROM tenants WHERE lower(slug) = lower($1)', [String(aud)]);
+            tenant = rows[0];
+        }
+    } catch (e) {
+        return sendError(res, e, '[auth/sso/issue]');
+    }
+    if (!tenant) return res.status(404).json({ error: 'Unknown tenant' });
+    if (tenant.status !== 'active') return res.status(403).json({ error: `Tenant is ${tenant.status} — sign-in is disabled` });
 
-    const rohasUrl = process.env.ROHAS_URL || '';
-    const loginUrl = rohasUrl ? `${rohasUrl}/auth/sso?sso_token=${ssoToken}` : null;
+    const user     = req.staff;
+    const ssoToken = signSsoToken(ssoSecret, { aud: tenant.slug, sub: user.email, name: user.name, role: user.role });
+
+    const loginUrl = tenant.site_url
+        ? `${tenant.site_url.replace(/\/$/, '')}/auth/sso?sso_token=${ssoToken}`
+        : null;
 
     res.json({ success: true, sso_token: ssoToken, login_url: loginUrl });
 });

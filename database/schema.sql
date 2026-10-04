@@ -222,6 +222,26 @@ CREATE TABLE IF NOT EXISTS owner_tenant_links (
 CREATE INDEX IF NOT EXISTS idx_otl_owner  ON owner_tenant_links(owner_user_id);
 CREATE INDEX IF NOT EXISTS idx_otl_tenant ON owner_tenant_links(tenant_id);
 
+-- Platform-owned (source of truth) feature-module enablement per tenant. The
+-- tenant site still enforces it at request time from its own
+-- project_module_mapping; PUT /api/tenants/:id/modules saves a row here first,
+-- then pushes it to the tenant, and POST /api/tenants/:id/modules/sync
+-- re-pushes any row that has drifted. project_id is the tenant's own project id,
+-- opaque to AmaraData (stored as text so any tenant id scheme round-trips).
+CREATE TABLE IF NOT EXISTS tenant_module_settings (
+    id          SERIAL PRIMARY KEY,
+    tenant_id   INTEGER      NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    project_id  VARCHAR(100) NOT NULL,
+    module      VARCHAR(50)  NOT NULL,
+    enabled     BOOLEAN      NOT NULL,
+    updated_by  VARCHAR(255),
+    created_at  TIMESTAMP    NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMP    NOT NULL DEFAULT NOW(),
+    UNIQUE (tenant_id, project_id, module)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tms_tenant ON tenant_module_settings(tenant_id);
+
 -- A billing contact independent of any single tenant — one contact can be
 -- scoped (via billing_contact_scopes below) to a whole tenant, one specific
 -- project within a tenant, one specific property within a project, or

@@ -82,6 +82,7 @@ test.describe('Email page', () => {
 // folder CRUD never touches S3, so it's fully exercisable in this suite even
 // though EMAIL_BUCKET is never set here.
 test.describe('Email — folders', () => {
+    test.skip(process.env.REGRESSION_NONDB === '1', 'NonDB mode is read-only (see project-nondb-read-only.md): this spec creates/edits records through the UI, so it only runs in DB mode.');
     test.beforeEach(async ({ page }) => {
         await login(page, SEED_USERS.admin);
         await page.goto('/email');

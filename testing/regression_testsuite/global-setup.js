@@ -52,9 +52,21 @@ module.exports = async function globalSetup() {
         for (const table of TABLES) {
             writeFileSync(resolve(TEST_DATA_DIR, `${table}.json`), '[]');
         }
+        // NonDB mode is read-only, so POST /api/auth/create-user is blocked (403): seed the per-role users straight into the
+        // fixture file the server reads instead, shaped like a real amr_users row (login matches `username`, never email).
+        const bcrypt = require('bcryptjs');
+        const now = new Date().toISOString();
+        const rows = Object.values(SEED_USERS).map((u, i) => ({
+            id: i + 1, username: u.email, email: u.email, name: u.name, role: u.role,
+            password_hash: bcrypt.hashSync(u.password, 4), is_active: true,
+            created_at: now, updated_at: now,
+        }));
+        writeFileSync(resolve(TEST_DATA_DIR, 'amr_users.json'), JSON.stringify(rows, null, 2));
+        rows.forEach((u) => console.log(`[setup] ${u.role} user ready: ${u.email}`));
+        return;
     }
 
-    // Seed one user per role via API (both modes) — needed by role-login-smoke.spec.js
+    // DB mode: seed one user per role via API — needed by role-login-smoke.spec.js
     // and by the edit-save specs for screens that require requireSuperAdmin.
     for (const user of Object.values(SEED_USERS)) {
         const res = await fetch(`${BASE_URL}/api/auth/create-user`, {

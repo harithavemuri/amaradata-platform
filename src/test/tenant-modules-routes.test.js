@@ -128,4 +128,79 @@ describe('Tenant modules routes (SSO proxy)', () => {
             );
         });
     });
+
+    // The platform is the source of truth for enablement: every PUT is persisted
+    // here first (idempotent upsert), then pushed to the tenant, which stays
+    // eventually consistent. A failed push never loses the desired state.
+    describe('platform-owned desired state', () => {
+        let id;
+        beforeAll(async () => {
+            const r = await request(app).post('/api/tenants').set(auth('siteAdmin'))
+                .send({ name: 'Desired State Tenant', slug: `desired-${uid()}`, status: 'active', site_url: 'https://desired.example.com' });
+            id = r.body.data.id;
+        });
+
+        const put = (body) => request(app).put(`/api/tenants/${id}/modules`).set(auth('siteAdmin')).send(body);
+        const get = () => request(app).get(`/api/tenants/${id}/modules`).set(auth('siteAdmin'));
+        const tenantRows = (rows) => callTenantApiMock.mockResolvedValueOnce({ success: true, data: rows });
+
+        it('PUT persists the desired state and GET reports it alongside the tenant state', async () => {
+            callTenantApiMock.mockResolvedValueOnce({ success: true, data: { project_id: 7, module: 'ai_management', enabled: true } });
+            expect((await put({ project_id: 7, module: 'ai_management', enabled: true })).status).toBe(200);
+
+            tenantRows([
+                { project_id: 7, project_name: 'P7', module: 'ai_management', enabled: true },
+                { project_id: 7, project_name: 'P7', module: 'sales_management', enabled: true },
+            ]);
+            const res = await get();
+            const ai = res.body.data.find(r => r.module === 'ai_management');
+            const sales = res.body.data.find(r => r.module === 'sales_management');
+            expect(ai).toMatchObject({ desired_enabled: true, in_sync: true });
+            expect(sales).toMatchObject({ desired_enabled: null, in_sync: true });
+        });
+
+        it('PUT is idempotent — repeating it keeps a single desired row', async () => {
+            callTenantApiMock.mockResolvedValue({ success: true, data: {} });
+            await put({ project_id: 8, module: 'rental_management', enabled: false });
+            await put({ project_id: 8, module: 'rental_management', enabled: false });
+            callTenantApiMock.mockReset();
+            tenantRows([{ project_id: 8, project_name: 'P8', module: 'rental_management', enabled: false }]);
+            const res = await get();
+            expect(res.body.data.filter(r => r.project_id == 8 && r.module === 'rental_management')).toHaveLength(1);
+        });
+
+        it('tenant unreachable on PUT → 502 but the desired state is still saved, and GET flags drift', async () => {
+            callTenantApiMock.mockRejectedValueOnce(Object.assign(new Error('down'), { tenantUnreachable: true }));
+            const res = await put({ project_id: 9, module: 'sales_management', enabled: false });
+            expect(res.status).toBe(502);
+            expect(res.body.desired_saved).toBe(true);
+
+            tenantRows([{ project_id: 9, project_name: 'P9', module: 'sales_management', enabled: true }]);
+            const row = (await get()).body.data.find(r => r.project_id == 9);
+            expect(row).toMatchObject({ desired_enabled: false, enabled: true, in_sync: false });
+        });
+
+        it('POST /modules/sync pushes only the rows that have drifted', async () => {
+            // project 9 drifted above; project 7/8 match
+            tenantRows([
+                { project_id: 7, module: 'ai_management', enabled: true },
+                { project_id: 8, module: 'rental_management', enabled: false },
+                { project_id: 9, module: 'sales_management', enabled: true },
+            ]);
+            callTenantApiMock.mockResolvedValueOnce({ success: true, data: {} });
+            const res = await request(app).post(`/api/tenants/${id}/modules/sync`).set(auth('siteAdmin'));
+            assertJson(res);
+            expect(res.status).toBe(200);
+            expect(res.body.data).toMatchObject({ pushed: 1, failed: 0 });
+            expect(callTenantApiMock).toHaveBeenLastCalledWith(
+                expect.objectContaining({ id }), expect.anything(),
+                { method: 'PUT', path: '/api/admin/project-modules', body: { project_id: '9', module: 'sales_management', enabled: false } }
+            );
+        });
+
+        it('sync requires super_admin', async () => {
+            const res = await request(app).post(`/api/tenants/${id}/modules/sync`).set(auth('admin'));
+            expect(res.status).toBe(403);
+        });
+    });
 });

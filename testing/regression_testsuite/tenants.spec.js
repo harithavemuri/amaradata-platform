@@ -55,6 +55,7 @@ test.describe('Tenants page — basics', () => {
 
 // ── Add Tenant form ───────────────────────────────────────────────────────────
 test.describe('Tenants page — Add Tenant form', () => {
+    test.skip(process.env.REGRESSION_NONDB === '1', 'NonDB mode is read-only (see project-nondb-read-only.md): this spec creates/edits records through the UI, so it only runs in DB mode.');
     test.beforeEach(async ({ page }) => {
         await loginAdmin(page);
         await page.goto('/tenants');
@@ -109,6 +110,7 @@ test.describe('Tenants page — Add Tenant form', () => {
 
 // ── Create tenant ─────────────────────────────────────────────────────────────
 test.describe('Tenants page — create tenant', () => {
+    test.skip(process.env.REGRESSION_NONDB === '1', 'NonDB mode is read-only (see project-nondb-read-only.md): this spec creates/edits records through the UI, so it only runs in DB mode.');
     test.beforeEach(async ({ page }) => {
         await loginAdmin(page);
         await page.goto('/tenants');
@@ -178,6 +180,7 @@ test.describe('Tenants page — create tenant', () => {
 
 // ── Edit tenant ───────────────────────────────────────────────────────────────
 test.describe('Tenants page — edit tenant', () => {
+    test.skip(process.env.REGRESSION_NONDB === '1', 'NonDB mode is read-only (see project-nondb-read-only.md): this spec creates/edits records through the UI, so it only runs in DB mode.');
     let tenantName;
     let tenantSlug;
 

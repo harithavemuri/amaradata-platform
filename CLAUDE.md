@@ -145,6 +145,27 @@ See `.project-constraints` — serverless-only (Lambda + API Gateway). No EC2, D
 
 `specs/constitution.md` is the binding rule set (code quality, security, data layer, frontend, testing, deployment) — most of it is mirrored into this file, but check it directly when in doubt. `specs/sso-architecture.md` documents the cross-tenant SSO design (see below).
 
+### Business model & sibling repos (`C:\Haritha\github\`)
+
+This repo is the SaaS control plane for property owners managing sales and rentals through the tenant app. A **tenant** (a `tenants` row, `slug` = the tenant stack's `Tenant` CloudFormation parameter) is the property/rental owner who wants their own site, e.g. `rohas` → `rohas.amaradata.com`. Each tenant stack is the same `tenant-group` codebase deployed with its own `Tenant` parameter and databases. **Colocation:** owners who don't need a dedicated site are hosted as projects inside one shared stack — `cloud` (`cloud.amaradata.com`, display name "Cloud (Shared)", stack `cloud-prod`, DB `amaradata_cloud`, seeded projects `salesonly`/`rentalonly`/`salesandrental`). Owners then check dues/payments on `amaradata-portal`.
+
+**What this repo actually controls today (verified in code, not aspiration):**
+- **Per-project feature modules** (`sales_management`, `rental_management`, `ai_management`): **this repo is the source of truth** (`tenant_module_settings`, keyed `tenant_id`+opaque `project_id`+`module`). `PUT /api/tenants/:id/modules` (`requireSuperAdmin`) upserts the desired row first, then pushes it to the tenant's own `/api/admin/project-modules` via an SSO token exchange (`backend/services/tenant-sso-client.js`, target = `tenants.site_url`); if the tenant is unreachable it returns 502 with `desired_saved: true`. `POST /api/tenants/:id/modules/sync` re-pushes only drifted rows; `GET` annotates each tenant row with `desired_enabled`/`in_sync`. The tenant still enforces its own `project_module_mapping` at request time (`module-gate.js`), so enablement is eventually consistent, and changes made directly on the tenant are not pulled back — they show as drift. `tenants.html` doesn't display drift or offer a Sync button yet.
+- **`/sso/issue`** (human logins) resolves `aud` against `tenants` (case-insensitive slug): unknown → 404, status ≠ `active` → 403 (no token minted), `login_url` = that tenant's `site_url` + `/auth/sso?...` (null when no `site_url`). The old `ROHAS_URL` env var is gone.
+- **`tenants.status`** (`active|suspended|churned`) is enforced here only at SSO issuance (above), nowhere on the tenant side. **Intended (not built):** disabling a tenant blocks its users from logging in directly to the tenant site; for the shared `cloud` stack, that means blocking the users of the disabled property. That needs a `tenant-group` change plus a status channel from this repo (push vs. tenant pulls — undecided).
+- **Not enablement:** onboarding a tenant is still manual (deploy a `tenant-group` stack with `Tenant=<slug>`, then create the matching `tenants` row) — see `project-tenant-onboarding` in memory.
+- **Remaining gap:** direct logins on tenant sites ignore `tenants.status` (see above).
+- **Undecided (don't assume):** how colocated customers on `cloud` map to `tenants` rows/billing, and how renters are modeled (new `amr_users` role vs separate auth).
+
+**Sibling repos** — each has its own `CLAUDE.md`; read it before working there. Docs and memory here say "rohas-group", but the local folder `tenant-group/` **is** that repo (git remote `harithavemuri/rohas-group`, package name `Rohas`).
+
+| Folder | Role | Relationship to this repo |
+|--------|------|---------------------------|
+| `tenant-group/` | Tenant app (sales, rentals, owners, vendors; Express on 8002, vanilla HTML + React/Vite). Own DBs: one tenant DB + one DB per project (`amaradata_rohas`, `rohas_amaracasa`, …). | Called by this repo only through service-to-service endpoints, each with its own credential: SSO token exchange (shared `SSO_SECRET`), `/api/billing/*` (`X-Amaradata-Api-Key`), `/api/owner-portal/*` (a separate dedicated key), and public `GET /health`. Its release-tracking CSVs feed `jobs/sync-tenant-fixes.js`. |
+| `amaradata-portal/` | Owner portal (`portal.amaradata.com`, port 9100). Owns no DB or schema. **Owners only today** — login accepts `property_owner` and `super_admin` (impersonation); no renter role or screen exists yet. | Reads **this repo's** database directly (`amr_users` where `role='property_owner'`, then `amr_group_members` → `group_tenant` → `tenants`) and shares this repo's JWT secret. Schema changes to those tables or `owner_portal_uid` can break it. Never touches tenant DBs; pulls tenant data live via each tenant's owner-portal API. This repo's login rejects `property_owner`. |
+
+`amaradata-portal`'s tests also run against the shared local `amaradata-platform_test` Postgres DB, and this repo's suites TRUNCATE it at start — don't run the two concurrently. Never `git commit`/push in `tenant-group` (rohas-group) or `amaradata-portal` from here; only `amaradata-platform` gets commits.
+
 ---
 
 ## Architecture
@@ -200,6 +221,7 @@ Single Node/Express server (`server.js`, port 9000) serving both a REST API (`/a
 | `/api/tenants` | `backend/routes/tenants.js` | `requireAuth` |
 | `/api/subscriptions` | `backend/routes/subscriptions.js` | `requireAuth` |
 | `/api/invoices` | `backend/routes/invoices.js` | `requireAuth` |
+| `/api/billing-contacts` | `backend/routes/billing-contacts.js` | `requireAuth` (write routes additionally `requireAdmin`) |
 | `/api/enhancements` | `backend/routes/enhancements.js` | `requireAuth` |
 | `/api/metrics` | `backend/routes/metrics.js` | `requireAuth` |
 | `/api/email` | `backend/routes/email.js` | `requireAuth` + `requireAdmin` per-route (inbox/send/reply via SES + S3; per-user folders/Trash/thread/download via `email_folders`/`email_placements`) |

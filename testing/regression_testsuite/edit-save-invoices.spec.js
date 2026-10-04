@@ -12,6 +12,8 @@ import { SEED_USERS } from './helpers/seed-users.js';
 let tenantId    = null;
 let createdId   = null;
 
+test.skip(process.env.REGRESSION_NONDB === '1', 'NonDB mode is read-only (see project-nondb-read-only.md): this spec creates/edits records through the UI, so it only runs in DB mode.');
+
 test.describe('Invoices — add/save + status-transition coverage', () => {
     test.beforeEach(async ({ page }) => {
         await loginAs(page, SEED_USERS.super_admin);
