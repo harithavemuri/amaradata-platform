@@ -56,6 +56,10 @@ npm run smoke                               # scripts/smoke-prod.js — read-onl
 npm run test:all                            # everything above, DB-mode-first throughout
 npm run test:watch                          # watch mode
 npx vitest run src/test/auth-routes.test.js # run a single test file
+npx vitest run -t "name fragment"           # run tests matching a name
+npm run test:coverage                       # vitest coverage report
+npm run test:regression:ui                  # Playwright interactive UI mode
+npx playwright test --config testing/regression_testsuite/playwright.config.js tenants.spec.js  # single Playwright spec
 ```
 
 Tests use Vitest + jsdom + supertest. Setup: `src/test/setup.js` (points at the real `_test` Postgres DB — see `test-db-config.js`).
