@@ -1,0 +1,193 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  AmaraData ip-sync — keeps the shared Aurora security group's port-5432 allow-list in step with
+  AWS's published ap-south-1 ranges. Runs when AWS announces an IP-range change (SNS) and daily as
+  a fallback. Separate SAM app (like email/) because AWS's AmazonIpSpaceChanged topic lives in
+  us-east-1, so this stack deploys there and manages the ap-south-1 security group through the
+  regional EC2 API.
+
+# Deploy (NOT part of `npm run deploy`; the shared DB infra is outside both app stacks):
+#   cd ip-sync && sam build && sam deploy --region us-east-1
+# Starts in DRY RUN: it only logs the plan (CloudWatch group /aws/lambda/amrd-ip-sync). Review a few
+# runs, then redeploy with DryRun=false. See CLAUDE.md "Aurora security-group IP sync".
+
+Parameters:
+  SecurityGroupId:
+    Type: String
+    Default: sg-085d3a401508c7b5c
+    Description: The shared Aurora cluster's security group (ap-south-1).
+  TargetRegion:
+    Type: String
+    Default: ap-south-1
+    Description: Region the security group (and the ranges to sync) live in.
+  SnsTopicArn:
+    Type: String
+    Default: arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged
+    Description: AWS's public IP-range-change topic. VERIFY this ARN against the AWS docs before the first deploy.
+  DryRun:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: 'true = log the plan only. Nothing changes unless this is "false".'
+  MaxRules:
+    Type: Number
+    Default: 60
+    Description: The security group's inbound-rule quota (raise only after AWS grants an increase).
+  ReserveSlots:
+    Type: Number
+    Default: 2
+    Description: Slots non-EC2 "filler" ranges must leave free so a newly published EC2 range can still be added.
+  GraceDays:
+    Type: Number
+    Default: 14
+    Description: Days a range AWS has removed stays on the group before it is revoked.
+  AlarmTopicArn:
+    Type: String
+    Default: ''
+    Description: Optional SNS topic to notify when the sync fails or cannot cover an EC2 range.
+  TagApplication:
+    Type: String
+    Default: tenant-billing
+  TagProject:
+    Type: String
+    Default: amaradata
+
+Conditions:
+  HasAlarmTopic: !Not [!Equals [!Ref AlarmTopicArn, '']]
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Architectures: [arm64]
+    Tags:
+      tenant:      amaradata
+      application: !Ref TagApplication
+      project:     !Ref TagProject
+      component:   shared
+
+Resources:
+
+  IpSyncLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/amrd-ip-sync
+      RetentionInDays: 30
+      Tags:
+        - { Key: tenant,      Value: amaradata }
+        - { Key: application, Value: !Ref TagApplication }
+        - { Key: project,     Value: !Ref TagProject }
+        - { Key: component,   Value: shared }
+
+  # Runs that fail after Lambda's own retries land here instead of vanishing.
+  IpSyncFailures:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: amrd-ip-sync-failures
+      MessageRetentionPeriod: 1209600
+      Tags:
+        - { Key: tenant,      Value: amaradata }
+        - { Key: application, Value: !Ref TagApplication }
+        - { Key: project,     Value: !Ref TagProject }
+        - { Key: component,   Value: shared }
+
+  IpSyncFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: amrd-ip-sync
+      Description: Syncs the Aurora security group's 5432 rules with AWS's published ranges
+      CodeUri: .
+      Handler: handler.handler
+      MemorySize: 256
+      Timeout: 60
+      LoggingConfig:
+        LogFormat: Text
+        LogGroup: !Ref IpSyncLogGroup
+      Environment:
+        Variables:
+          SECURITY_GROUP_ID: !Ref SecurityGroupId
+          TARGET_REGION:     !Ref TargetRegion
+          DRY_RUN:           !Ref DryRun
+          MAX_RULES:         !Ref MaxRules
+          RESERVE_SLOTS:     !Ref ReserveSlots
+          GRACE_DAYS:        !Ref GraceDays
+          DB_PORT:           '5432'
+      EventInvokeConfig:
+        MaximumRetryAttempts: 2
+        DestinationConfig:
+          OnFailure:
+            Type: SQS
+            Destination: !GetAtt IpSyncFailures.Arn
+      Policies:
+        - Statement:
+            # Read-only; the Describe actions do not support resource-level scoping.
+            - Effect: Allow
+              Action: ec2:DescribeSecurityGroupRules
+              Resource: '*'
+            # Write access is limited to this one security group.
+            - Effect: Allow
+              Action:
+                - ec2:AuthorizeSecurityGroupIngress
+                - ec2:RevokeSecurityGroupIngress
+                - ec2:ModifySecurityGroupRules
+              Resource: !Sub 'arn:aws:ec2:${TargetRegion}:${AWS::AccountId}:security-group/${SecurityGroupId}'
+            - Effect: Allow
+              Action: sqs:SendMessage
+              Resource: !GetAtt IpSyncFailures.Arn
+      Events:
+        AwsIpRangesChanged:
+          Type: SNS
+          Properties:
+            Topic: !Ref SnsTopicArn
+        DailyReconcile:
+          Type: Schedule
+          Properties:
+            Schedule: cron(17 3 * * ? *)    # 03:17 UTC daily — fallback if an SNS notification is missed
+            Description: Daily full reconcile of the Aurora security group's AWS ranges
+
+  # A published EC2 range that could not be added (no free rule slots) needs a human.
+  UncoveredEc2MetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref IpSyncLogGroup
+      FilterPattern: '"ip_sync_uncovered_ec2"'
+      MetricTransformations:
+        - { MetricName: IpSyncUncoveredEc2, MetricNamespace: AmaraData/IpSync, MetricValue: '1', DefaultValue: 0 }
+
+  UncoveredEc2Alarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: amrd-ip-sync-uncovered-ec2-range
+      AlarmDescription: AWS published an EC2 range the Aurora security group has no room for. Free a slot or raise the quota.
+      Namespace: AmaraData/IpSync
+      MetricName: IpSyncUncoveredEc2
+      Statistic: Sum
+      Period: 86400
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlarmTopic, [!Ref AlarmTopicArn], !Ref 'AWS::NoValue']
+
+  SyncErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: amrd-ip-sync-errors
+      AlarmDescription: The Aurora security-group IP sync failed.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - { Name: FunctionName, Value: !Ref IpSyncFn }
+      Statistic: Sum
+      Period: 86400
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlarmTopic, [!Ref AlarmTopicArn], !Ref 'AWS::NoValue']
+
+Outputs:
+  FunctionName:
+    Value: !Ref IpSyncFn
+  FailureQueueUrl:
+    Value: !Ref IpSyncFailures

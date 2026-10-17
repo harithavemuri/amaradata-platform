@@ -64,6 +64,9 @@ const CLUSTER = {
     // neither app's own DBSubnetGroup/DBSecurityGroup resources ever get
     // created either, so this is the actual resource, not a placeholder.
     dbSubnetGroupName:  'rohas-prod-dbsubnetgroup-p4m7z1spf5qm',
+    // Its port-5432 CIDR rules (AWS's ap-south-1 ranges, for the non-VPC Lambdas) are kept in step
+    // by ip-sync/ (separate SAM app, us-east-1) — not created or reconciled by this script.
+    // Non-AWS rules (home IP, DBMigrateFn's SG reference) are left alone by that job.
     vpcSecurityGroupId: 'sg-085d3a401508c7b5c', // rohas-prod-DBSecurityGroup-OEIC70zSDnix
     kmsKeyId:           'arn:aws:kms:ap-south-1:797666412164:key/48e9f7e0-eb49-4776-b5d9-5e61afc89668',
     backupRetentionDays: 7,
