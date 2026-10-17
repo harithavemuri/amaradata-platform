@@ -77,4 +77,12 @@ the commands above need it as written.
 npx vitest run --config testing/unittests/vitest.config.js testing/unittests/unit/ip-sync-*.test.js
 ```
 
-Not yet verified against real AWS: the SNS topic ARN default, and `ModifySecurityGroupRules` relabelling a live rule.
+## Status
+
+Deployed 2026-10-17 as stack `amrd-ip-sync` (us-east-1), **in dry run** (`DryRun=true`). Verified against real AWS: the
+stack creates, the subscription to AWS's `AmazonIpSpaceChanged` topic exists, and a manual invoke reads the live group
+and AWS's list and logs the expected plan. Not yet verified: the write calls (`AuthorizeSecurityGroupIngress`,
+`RevokeSecurityGroupIngress`, `ModifySecurityGroupRules` relabelling a live rule) — nothing has been changed yet.
+
+While the group is full, the "uncovered EC2 range" alarm (`amrd-ip-sync-uncovered-ec2-range`) fires; no alarm topic is
+configured (`AlarmTopicArn`), so nothing is notified until one is set.
