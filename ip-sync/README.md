@@ -81,8 +81,16 @@ npx vitest run --config testing/unittests/vitest.config.js testing/unittests/uni
 
 Deployed 2026-10-17 as stack `amrd-ip-sync` (us-east-1), **in dry run** (`DryRun=true`). Verified against real AWS: the
 stack creates, the subscription to AWS's `AmazonIpSpaceChanged` topic exists, and a manual invoke reads the live group
-and AWS's list and logs the expected plan. Not yet verified: the write calls (`AuthorizeSecurityGroupIngress`,
-`RevokeSecurityGroupIngress`, `ModifySecurityGroupRules` relabelling a live rule) — nothing has been changed yet.
+and AWS's list and logs the expected plan.
 
-While the group is full, the "uncovered EC2 range" alarm (`amrd-ip-sync-uncovered-ec2-range`) fires; no alarm topic is
-configured (`AlarmTopicArn`), so nothing is notified until one is set.
+Turned on the same day (`DryRun=false`, `GraceDays=14`). The first live write failed with AccessDenied: IAM checks
+`ModifySecurityGroupRules` / authorize / revoke against each rule's own ARN (`security-group-rule/sgr-...`) as well as
+the group's, and the policy only allowed the group — fixed (the group ARN stays pinned; only the rule ARN is a wildcard).
+After the fix all three write calls ran against the real group: the 3 ranges AWS no longer published were relabelled,
+then revoked, `3.2.116.0/24` was added (group 60 -> 58 rules), a further run was a no-op, and a production smoketest login
+on cloud and rohas passed afterwards. For that catch-up `GraceDays` was temporarily 0, then restored to 14.
+
+The "uncovered EC2 range" alarm (`amrd-ip-sync-uncovered-ec2-range`) fires when the group has no room for a published
+EC2 range; no alarm topic is configured (`AlarmTopicArn`), so nothing is notified until one is set.
+
+After any refresh, check one production smoketest login on both cloud and rohas.

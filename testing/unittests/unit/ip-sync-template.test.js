@@ -25,11 +25,20 @@ describe('@application:platform @boundedcontext:infrastructure @feature:ip-sync 
         expect(T).toMatch(/Schedule: cron\(/);
     });
 
-    it('can only modify rules on the one managed security group (no wildcard write resource)', () => {
-        const write = T.match(/Action:\n(\s+- ec2:[A-Za-z]+\n)+\s+Resource: (.+)\n/);
-        expect(write, 'write statement not found').not.toBeNull();
-        expect(write[2]).toMatch(/security-group\/\$\{SecurityGroupId\}/);
-        expect(write[2]).not.toMatch(/\*/);
+    // IAM authorizes these calls against BOTH the group's ARN and the individual rule's ARN
+    // (security-group-rule/sgr-...). The first live run failed with AccessDenied on the rule ARN
+    // when only the group ARN was allowed — the doubles in ip-sync-handler.test.js can't see that.
+    // The group ARN stays pinned to the one managed group; only the rule ARN is a wildcard, because
+    // rule ids are not known at deploy time.
+    it('write access: pinned to the one managed security group, plus the rule ARNs IAM also checks', () => {
+        const write = T.match(/Action:\n(?:\s+- ec2:[A-Za-z]+\n)+\s+Resource:\n((?:\s+- .+\n)+)/);
+        expect(write, 'write statement (resource list) not found').not.toBeNull();
+        const resources = write[1].split('\n').map((l) => l.replace(/^\s+- /, '').trim()).filter(Boolean);
+        expect(resources.some((r) => /security-group\/\$\{SecurityGroupId\}/.test(r))).toBe(true);
+        expect(resources.some((r) => /security-group-rule\/\*/.test(r))).toBe(true);
+        // the only wildcard allowed is the rule ARN
+        expect(resources.filter((r) => r.includes('*') && !/security-group-rule\/\*/.test(r))).toEqual([]);
+        expect(resources.filter((r) => /security-group\//.test(r) && !r.includes('${SecurityGroupId}'))).toEqual([]);
     });
 
     it('write actions are limited to authorize / revoke / modify rules', () => {

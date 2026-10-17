@@ -124,13 +124,17 @@ Resources:
             - Effect: Allow
               Action: ec2:DescribeSecurityGroupRules
               Resource: '*'
-            # Write access is limited to this one security group.
+            # Write access is limited to this one security group. IAM checks these calls against
+            # the group's ARN AND each affected rule's ARN (security-group-rule/sgr-...); rule ids
+            # are not known at deploy time, so that one is a wildcard — the group ARN stays pinned.
             - Effect: Allow
               Action:
                 - ec2:AuthorizeSecurityGroupIngress
                 - ec2:RevokeSecurityGroupIngress
                 - ec2:ModifySecurityGroupRules
-              Resource: !Sub 'arn:aws:ec2:${TargetRegion}:${AWS::AccountId}:security-group/${SecurityGroupId}'
+              Resource:
+                - !Sub 'arn:aws:ec2:${TargetRegion}:${AWS::AccountId}:security-group/${SecurityGroupId}'
+                - !Sub 'arn:aws:ec2:${TargetRegion}:${AWS::AccountId}:security-group-rule/*'
             - Effect: Allow
               Action: sqs:SendMessage
               Resource: !GetAtt IpSyncFailures.Arn
